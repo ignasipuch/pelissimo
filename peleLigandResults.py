@@ -81,8 +81,7 @@ print('*      Ligand\'s internal energy from induced fit results          *')
 print('*******************************************************************')
 print(' ')
 
-
-# Storng information and copying files
+# Storing information and copying files
 if os.path.isdir(path_clusters): 
 
     files = os.listdir(path_clusters)
