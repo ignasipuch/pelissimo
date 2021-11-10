@@ -93,6 +93,9 @@ if os.path.isdir(path_clusters):
             labels.append((document.split('cluster_'))[1].split('.pdb')[0])
             shutil.copy(os.path.join(path_clusters,document), path_energies_input)
 
+# List of clusters' letters for the run_file
+run_file_labels = ' '.join(labels)
+
 #
 print(' -   Number of clusters obtained in the simulation:',len(labels))
 #
@@ -106,15 +109,15 @@ for cluster in clusters:
 
         lines = (l for l in filein if residue_name in l)
         new_path = path_energies_simulation + '/' + cluster.split('.pdb')[0]
-        new_path_DataLocal = new_path + '/DataLocal'
+        path_DataLocal = path_energies_simulation + '/DataLocal'
 
         if  os.path.exists(new_path) == False:
             os.mkdir(new_path)
 
-        if  os.path.exists(new_path + '/DataLocal') == False:
-            os.mkdir(new_path_DataLocal)
+        if  os.path.exists(path_DataLocal) == False:
+            os.mkdir(path_DataLocal)
 
-        copy_tree(os.path.join(path_simulation,'DataLocal'), new_path_DataLocal)
+        copy_tree(os.path.join(path_simulation,'DataLocal'), path_DataLocal)
            
         with open(os.path.join(new_path,cluster), 'w') as fileout:
 
@@ -195,28 +198,33 @@ for label in labels:
         '   ]\n'
         '}\n'
         )
-    
-    with open (os.path.join(path_energies_simulation + '/cluster_' + label,'run'), 'w') as fileout:
-
-        fileout.writelines(
-        '#!/bin/bash\n'
-        '#SBATCH -J ' + label +'\n'
-        '#SBATCH --output=PELE_' + label + '.out\n'
-        '#SBATCH --error=PELE_' + label + '.err\n'
-        '#SBATCH --ntasks=4\n'
-        '#SBATCH --qos=debug\n'
-        '#SBATCH --time=01:00:00\n'
-        '\n'
-        'module purge\n'
-        'module load intel mkl impi gcc\n'
-        'module load impi\n'
-        'module load boost/1.64.0\n'
-        '\n'
-        '/gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial energy' + label + '.conf\n'
-        )
-    
+        
     cont += 1
 
+with open (os.path.join(path_energies_simulation,'run'), 'w') as fileout:
+
+    fileout.writelines(
+    '#!/bin/bash\n'
+    '#SBATCH -J PELEnergy\n'
+    '#SBATCH --output=PELE.out\n'
+    '#SBATCH --error=PELE.err\n'
+    '#SBATCH --qos=debug\n'
+    '#SBATCH --time=01:00:00\n'
+    '\n'
+    'module purge\n'
+    'module load intel mkl impi gcc\n'
+    'module load impi\n'
+    'module load boost/1.64.0\n'
+    '\n'
+    'list="' + run_file_labels + '"\n'
+    '\n'
+    'for i in $list\n'
+    'do\n'
+    '\n'
+    '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial /gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_peleRes/simulation/cluster_${i}/energy${i}.conf\n'
+    '\n'
+    'done\n'
+    )
 
 
 
