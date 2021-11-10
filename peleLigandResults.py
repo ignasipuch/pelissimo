@@ -81,6 +81,8 @@ print('*      Ligand\'s internal energy from induced fit results          *')
 print('*******************************************************************')
 print(' ')
 
+
+# Storng information and copying files
 if os.path.isdir(path_clusters): 
 
     files = os.listdir(path_clusters)
@@ -205,11 +207,11 @@ with open (os.path.join(path_energies_simulation,'run'), 'w') as fileout:
 
     fileout.writelines(
     '#!/bin/bash\n'
-    '#SBATCH -J PELEnergy\n'
-    '#SBATCH --output=PELE.out\n'
-    '#SBATCH --error=PELE.err\n'
+    '#SBATCH -J PELEne\n'
+    '#SBATCH --output=PELEne.out\n'
+    '#SBATCH --error=PELEne.err\n'
     '#SBATCH --qos=debug\n'
-    '#SBATCH --time=01:00:00\n'
+    '#SBATCH --time=00:30:00\n'
     '\n'
     'module purge\n'
     'module load intel mkl impi gcc\n'
@@ -221,7 +223,14 @@ with open (os.path.join(path_energies_simulation,'run'), 'w') as fileout:
     'for i in $list\n'
     'do\n'
     '\n'
+    '    echo " --------------------------------------------------------------------"\n'
+    '    echo "|                            CLUSTER $i                              |"\n'
+    '    echo " --------------------------------------------------------------------"\n'
     '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial /gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_peleRes/simulation/cluster_${i}/energy${i}.conf\n'
+    '    echo " "\n'
+    '    echo "**********************************************************************"\n'
+    '    echo "**********************************************************************"\n'
+    '    echo " "\n'
     '\n'
     'done\n'
     )
@@ -234,6 +243,10 @@ print('                    --Duration of the execution--                   ')
 print('                      %s seconds' % (time.time() - start_time)  )
 print(' ')
 print('*******************************************************************')
+print(' -   To run the energy calculation for all the clusters:')
+print('     :> cd ' + residue_name + '_peleRes/simulation')
+print('     :> sbatch run')
+print(' -   Results are stored in PELEne.out.')
 #
 
                 
