@@ -302,7 +302,7 @@ def linen_results(input_folder,
     print(' (2) ')
     print(' -   To gather the results in a csv file:')
     print(' -   Go to ' + residue_name + '_linen/simulation directory.')
-    print('     :> python /path/to/code/pelelinen.py -a analyze')
+    print('     :> python /path/to/code/linen_res.py -a analyze')
     print(' -   Results are stored in energy.csv.')
     print(' ')
     print('-------------------------------------------------------------------')
