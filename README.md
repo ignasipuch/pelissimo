@@ -1,7 +1,7 @@
 # Pelissimo
 ## Development of a energy correctors to PELE predictions.
 
-#### author: Ignasi Puch-Giner
+---
 
 LInEN: Ligand Internal Energy calculation with different approaches.
 
