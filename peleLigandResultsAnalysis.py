@@ -22,8 +22,8 @@ with open (os.path.join(path,'PELEne.out'),'r') as filein:
             line = line.split('ENERGY VACUUM + SGB + CONSTRAINTS + SELF + NON POLAR:')
             linenergies.append(float(line[1].strip()))
 
-    sorted_clusters = [x for _, x in sorted(zip(linenergies, lineclusters), reverse=True)]
-    sorted_energies = sorted(linenergies, reverse=True)
+    sorted_clusters = [x for _, x in sorted(zip(linenergies, lineclusters))]
+    sorted_energies = sorted(linenergies)
 
 sorted_energies_corrected = np.array(sorted_energies) - min(linenergies)
 
