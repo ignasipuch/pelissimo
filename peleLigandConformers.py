@@ -96,6 +96,7 @@ print('     -   Number of conformations:',str(conformations_number) +'.')
 
 # Original conformation information
 m = Chem.MolFromPDBFile(path_ligand) 
+print(Chem.MolToSmiles(m))
 weight = ExactMolWt(m)
 rotatable_bonds = CalcNumRotatableBonds(m)
 
