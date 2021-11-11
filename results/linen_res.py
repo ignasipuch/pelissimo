@@ -289,8 +289,6 @@ def linen_results(input_folder,
         'done\n'
         )
 
-
-
     #
     print(' ')
     print('------------------------------ INFO -------------------------------')
