@@ -280,7 +280,7 @@ def linen_results(input_folder,
         '    echo " --------------------------------------------------------------------"\n'
         '    echo "|                            CLUSTER $i                              |"\n'
         '    echo " --------------------------------------------------------------------"\n'
-        '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial /gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_peleRes/simulation/cluster_${i}/energy${i}.conf\n'
+        '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial ' + path_energies_simulation + '/cluster_${i}/energy${i}.conf\n'
         '    echo " "\n'
         '    echo "**********************************************************************"\n'
         '    echo "**********************************************************************"\n'
@@ -294,15 +294,24 @@ def linen_results(input_folder,
     #
     print(' ')
     print('------------------------------ INFO -------------------------------')
-    print(' ')
+    print(' (1) ')
     print(' -   To run the energy calculation for all the clusters:')
     print('     :> cd ' + residue_name + '_linen/simulation')
     print('     :> sbatch run')
     print(' -   Results are stored in PELEne.out.')
+    print(' (2) ')
+    print(' -   To gather the results in a csv file:')
+    print(' -   Go to ' + residue_name + '_linen/simulation directory.')
+    print('     :> python /path/to/code/pelelinen.py -a analyze')
+    print(' -   Results are stored in energy.csv.')
     print(' ')
     print('-------------------------------------------------------------------')
 
 def linen_analyze():
+
+    """
+    It gathers the results obtained from the PELE calculation.
+    """
 
     path = str(pathlib.Path().absolute())
 
