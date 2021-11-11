@@ -39,16 +39,16 @@ conf_file_name = args.conf_file_name
 
 # Creating a variable with the paths that we are going to use
 path = str(pathlib.Path().absolute())
-path_simulation = path + '/' + input_folder
-path_results = path_simulation + '/' + clusters_folder
+path_previous_simulation = path + '/' + input_folder
+path_results = path_previous_simulation + '/' + clusters_folder
 path_clusters = path_results + '/clusters' 
 
 # Checking existance
-if os.path.isdir(path_simulation) == False:
+if os.path.isdir(path_previous_simulation) == False:
     raise Exception('PathSimulationError: There is no folder with this name. Please check the path and the folder name.')
 
 # Listing directories inside the directory
-files = os.listdir(path_simulation)
+files = os.listdir(path_previous_simulation)
 
 # Creating a folder to store the info for the calculations
 path_energies = path + '/' + residue_name + '_peleRes'
@@ -118,7 +118,7 @@ for cluster in clusters:
         if  os.path.exists(path_DataLocal) == False:
             os.mkdir(path_DataLocal)
 
-        copy_tree(os.path.join(path_simulation,'DataLocal'), path_DataLocal)
+        copy_tree(os.path.join(path_previous_simulation,'DataLocal'), path_DataLocal)
            
         with open(os.path.join(new_path,cluster), 'w') as fileout:
 
@@ -126,7 +126,7 @@ for cluster in clusters:
 
 
 # Copying .conf document and extracting information
-files =  files = os.listdir(path_simulation)
+files =  files = os.listdir(path_previous_simulation)
 
 #
 print(' -   Extracting information from ' + conf_file_name + '.conf.' )
@@ -136,7 +136,7 @@ for document in files:
 
     if conf_file_name + '.conf' in document:
 
-        with open (os.path.join(path_simulation,document)) as filein:
+        with open (os.path.join(path_previous_simulation,document)) as filein:
 
             for line in filein:
 
