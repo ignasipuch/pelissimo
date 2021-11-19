@@ -105,8 +105,6 @@ def linen_results(input_folder,
         if os.path.isdir(path_previous_simulation) == False:
             raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
 
-        files = os.listdir(path_previous_simulation)
-
         path_energies = path + '/' + residue_name + '_linen'
         path_energies_input = path_energies + '/' + 'input'
         path_energies_simulation = path_energies + '/' + 'simulation'
