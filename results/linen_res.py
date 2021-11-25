@@ -118,10 +118,12 @@ def linen_results(input_folder,
         if  os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        return  path_previous_simulation, path_clusters, path_energies_input, path_energies_simulation
+        return  path_previous_simulation, path_results, path_clusters, path_energies_input, path_energies_simulation
 
+    #---
     
-    path_previous_simulation, path_clusters, path_energies_input, path_energies_simulation = path_definer(input_folder,clusters_folder)
+    path_previous_simulation, path_results, path_clusters, path_energies_input, path_energies_simulation = \
+    path_definer(input_folder,clusters_folder)
 
     print(' ')
     print('*******************************************************************')
@@ -133,6 +135,8 @@ def linen_results(input_folder,
 
     cluster_files = []
     labels = []
+
+    shutil.copy(os.path.join(path_results,'data.csv'), path_energies_input)
 
     # Storing information and copying files
     if os.path.isdir(path_clusters): 
