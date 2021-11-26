@@ -513,18 +513,15 @@ def linen_correction(input_folder,
                 if folder.isnumeric():
     
                     full_path = os.path.join(path_output,folder)
-                    full_new_path = os.path.join(path_energies_output,folder)
-    
-                    if os.path.exists(full_new_path) == False:
-                        os.mkdir(full_new_path)
-    
+  
                 files_subdir = os.listdir(full_path)
     
                 for report in files_subdir:
     
-                    if report.startswith(report_name):
+                    if report.startswith(report_name) and report.split(report_name + '_')[1].isnumeric():
     
-                        shutil.copy(os.path.join(full_path,report), full_new_path)
+                        shutil.copy(os.path.join(full_path,report), \
+                            os.path.join(full_path,'mod_' + report_name + '_' + report.split(report_name + '_')[1]))
                         cont_reports += 1
                     
                     else: continue
@@ -652,7 +649,8 @@ def linen_correction(input_folder,
         fileout.writelines(
         'from pele_platform.analysis import Analysis\n'
         '\n'
-        'analysis = Analysis(resname="' + residue_name + '", chain="L", simulation_output="output", report="' + report_name + '", cpus=48)\n'
+        'analysis = Analysis(resname="' + residue_name +\
+            '", chain="L", simulation_output="output", report="' + 'mod_' + report_name + '", cpus=48)\n'
         'analysis.generate(path="analysis", clustering_type="meanshift")\n'
         )
     
@@ -660,7 +658,7 @@ def linen_correction(input_folder,
     for key in report_paths_dictionary:
 
         # Path to new report
-        path_string_out = key.replace(report_name,report_name + '_mod')
+        path_string_out = key.replace(report_name,'mod_' + report_name )
         
         # Searches to make in this file
         steps_in_report = step[:report_paths_dictionary[key]]
