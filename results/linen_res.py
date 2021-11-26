@@ -194,7 +194,7 @@ def linen_results(input_folder,
                 with open(os.path.join(new_path,cluster), 'w') as fileout:
 
                     fileout.writelines(lines)
-                    
+
         else: continue
 
 
@@ -320,7 +320,7 @@ def linen_results(input_folder,
     print(' -   Go to ' + residue_name + '_linen/simulation directory.')
     print('     :> python /path/to/code/linen_res.py -a analyze')
     print(' ')
-    print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
+    print(' ->   ->    For help: python path/to/code/linen_res.py -h    <-  <-')
     print(' ')
     print('-------------------------------------------------------------------')
 
@@ -378,9 +378,11 @@ def linen_analyze():
     print(' -   Results have been stored in energy.csv.')
     print(' -   To apply the corrections obtained:')
     print('     :> cd ../.. ')
-    print('     :> python linen_res.py -a correct')
-    print(' -    If wanted the flag -df can be added.')
-    print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
+    print('     :> python path/to/code/linen_res.py -a correct')
+    print(' -   If wanted the flag -df can be added to specify filtering')
+    print('     method.')
+    print(' ')
+    print(' ->   ->    For help: python path/to/code/linen_res.py -h    <-  <-')
     print(' ')
 
 def linen_correction(input_folder,
@@ -623,7 +625,7 @@ def linen_correction(input_folder,
     print(' -   Implementing correction.')
     #
 
-    with open (os.path.join(path_energies,'run_analysis'), 'w') as fileout:
+    with open (os.path.join(path_previous_simulation,'run_analysis'), 'w') as fileout:
 
         fileout.writelines(
         '#!/bin/bash\n'
@@ -645,7 +647,7 @@ def linen_correction(input_folder,
         'python script.py\n'
         )
         
-    with open (os.path.join(path_energies,'script.py'), 'w') as fileout:
+    with open (os.path.join(path_previous_simulation,'script.py'), 'w') as fileout:
 
         fileout.writelines(
         'from pele_platform.analysis import Analysis\n'
@@ -654,22 +656,11 @@ def linen_correction(input_folder,
         'analysis.generate(path="analysis", clustering_type="meanshift")\n'
         )
     
-    #
-    print(' -   run_analysis and script.py files have been generated.')
-    print(' -   To perform a new analysis:')
-    print('     :> cd ' + residue_name + '_linen')
-    print('     :> sbatch run_analysis')
-    print(' -   The new plots and files will be in /analysis.')
-    print(' ')
-    print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
-    print(' ')
-    #
-
     # Main loop 
     for key in report_paths_dictionary:
 
         # Path to new report
-        path_string_out = key.replace(input_folder,residue_name + '_linen')
+        path_string_out = key.replace(report_name,report_name + '_mod')
         
         # Searches to make in this file
         steps_in_report = step[:report_paths_dictionary[key]]
@@ -735,6 +726,17 @@ def linen_correction(input_folder,
                     cont += 1
 
             step = step[report_paths_dictionary[key]:]
+
+    #
+    print(' -   run_analysis and script.py files have been generated.')
+    print(' -   To perform a new analysis:')
+    print('     :> cd ' + input_folder)
+    print('     :> sbatch run_analysis')
+    print(' -   The new plots and files will be in /analysis.')
+    print(' ')
+    print(' ->   ->    For help: python path/to/code/linen_res.py -h    <-  <-')
+    print(' ')
+    #
 
 def main(args):
     """
