@@ -588,7 +588,7 @@ def linen_correction(input_folder,
 
                     # Important folders' paths
                     path_string = line[-2].split('trajectory_')[0]
-                    path_string = path_previous_simulation + path_string.split('LIG_Pele')[1]
+                    path_string = path_previous_simulation + path_string.split(input_folder)[1]
 
                     # Report number
                     whole_path = str(line[-2])
@@ -597,7 +597,8 @@ def linen_correction(input_folder,
 
                     step.append(int(line[0]))   # Step to be modified
                     cluster.append(int(line[-1].split('\n')[0]))    # Cluster to which the snapshot belongs to
-                    report_paths.append(os.path.join(path_string,'report_' + str(report_num)))  # Report paths to be open
+                    report_paths.append(os.path.join(path_string,\
+                        report_name + '_' + str(report_num)))  # Report paths to be open
                     folders.append(path_string[:-1].replace(input_folder,residue_name + '_linen'))  # Folders to be created
 
             cont += 1
