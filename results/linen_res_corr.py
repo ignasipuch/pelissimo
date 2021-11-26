@@ -8,10 +8,7 @@ from distutils.dir_util import copy_tree
 import numpy as np
 from collections import Counter
 
-# Labels dictionary 
-
-labels = ['A','B','C','D','E','F','G','H',]
-
+# Labels dictionaries
 labelsdict_ltn = {
   'A': '0','B': '1','C': '2','D': '3','E': '4','F': '5','G': '6','H': '7','I': '8','J': '9',
   'K': '10','L': '11','M': '12','N': '13','O': '14','P': '15','Q': '16','R': '17','S': '18',
@@ -43,12 +40,16 @@ def parse_args(args):
         default = 'LIG', help="Ligand's residue name.")
     parser.add_argument("-cl", "--clusters_folder", type=str, dest = "clusters_folder",\
         default = 'results', help="Name of the directory containing the folder: clusters.")
+    parser.add_argument("-df", "--data_filter", type=str, dest = "data_filter",\
+        default = 'clusters', help="Filter you want to apply to the data. 1) clusters: Only \
+        keeps the snaphots that belong to one of the clusters. 2) none: Keeps all the \
+        snapshots no matter the cluster they belong to.")
 
     parsed_args = parser.parse_args(args)
 
     return parsed_args
 
-def linen_correction(input_folder, residue_name, clusters_folder):
+def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
     """
     It prepares everything to perform a PELE energy calculation 
     of all the clustered positions of a previous induced fit 
@@ -127,27 +128,27 @@ def linen_correction(input_folder, residue_name, clusters_folder):
     = path_definer(input_folder,residue_name,clusters_folder)
 
     # Copying reports
-    if os.path.isdir(path_output):
-
-        files = os.listdir(path_output)
-
-        for folder in files:
-
-            if folder.isnumeric():
-
-                full_path = os.path.join(path_output,folder)
-                full_new_path = os.path.join(path_energies_output,folder)
-
-                if os.path.exists(full_new_path) == False:
-                    os.mkdir(full_new_path)
-
-            files_subdir = os.listdir(full_path)
-
-            for report in files_subdir:
-
-                if 'report' in report:
-
-                    shutil.copy(os.path.join(full_path,report), full_new_path)    
+    #if os.path.isdir(path_output):
+#
+    #    files = os.listdir(path_output)
+#
+    #    for folder in files:
+#
+    #        if folder.isnumeric():
+#
+    #            full_path = os.path.join(path_output,folder)
+    #            full_new_path = os.path.join(path_energies_output,folder)
+#
+    #            if os.path.exists(full_new_path) == False:
+    #                os.mkdir(full_new_path)
+#
+    #        files_subdir = os.listdir(full_path)
+#
+    #        for report in files_subdir:
+#
+    #            if 'report' in report:
+#
+    #                shutil.copy(os.path.join(full_path,report), full_new_path)    
 
     # Retrieving cluster information
     cont = 0
@@ -179,6 +180,7 @@ def linen_correction(input_folder, residue_name, clusters_folder):
     path = []
     cluster = []
     report_paths = []
+    folders = []
     report_paths_out = []
 
 
@@ -189,51 +191,64 @@ def linen_correction(input_folder, residue_name, clusters_folder):
             if cont != 0:
       
                 line = line.split(',')      
-                line_1 = line[-1].split()[0]
+                cluster_label = line[-1].split()[0]
 
 
-                if any(label == line_1 for label in labels):
+                if any(label == cluster_label for label in labels):
 
                     path_string = line[-2].split('trajectory_')[0]
-                    path_string_out = path_string.replace(input_folder,residue_name + '_linen')
-
 
                     ###########################################################################
 
                     path_string = path_string.replace('/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/','/mnt/c/Users/Ignasi/Desktop/Ignasi/Estudis/PhD/code/code_pelissimo/results/')
-                    path_string_out = path_string_out.replace('/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/','/mnt/c/Users/Ignasi/Desktop/Ignasi/Estudis/PhD/code/code_pelissimo/results/')
 
                     ###########################################################################
 
-                    report_num = str(line[-2])
-                    report_num = report_num.split('/')[-1]  
+                    whole_path = str(line[-2])
+
+                    report_num = whole_path.split('/')[-1]  
                     report_num = report_num.split('.pdb')[0].split('_')[1]
 
                     step.append(int(line[0]))   
                     cluster.append(int(line[-1].split('\n')[0]))
-                    report_paths.append(os.path.join(path_string,'report_' + str(report_num)))    
-                    report_paths_out.append(os.path.join(path_string_out,'report_' + str(report_num)))             
+                    report_paths.append(os.path.join(path_string,'report_' + str(report_num)))   
+                    folders.append(path_string[:-1].replace(input_folder,residue_name + '_linen')) 
 
             cont += 1
 
 
-    # Correction 
+    # Folders to create
+    folders = sorted(Counter(folders))
 
+    # Report pathsto open
     report_paths_dictionary = Counter(report_paths)
     report_paths = sorted(report_paths)
 
     cont_cluster = 0
     cont_paths = 0
 
+    #Generating folders
+    for folder in folders:
+
+        if  os.path.exists(folder) == False:
+            os.mkdir(folder)
+
     for key in report_paths_dictionary:
 
+        # Path to new report
+        path_string_out = key.replace(input_folder,residue_name + '_linen')
+        
+        # Searches to make in this file
         steps_in_report = step[:report_paths_dictionary[key]]
+        print(steps_in_report)
     
         cont = 0
 
-        with open(report_paths_out[cont_paths], 'w') as fileout:
+        with open(path_string_out, 'w') as fileout:
 
             with open(key) as filein:
+
+                print(path_string_out)
 
                 for line in filein:
 
@@ -242,6 +257,8 @@ def linen_correction(input_folder, residue_name, clusters_folder):
                         line = line.split()
 
                         if int(line[1]) == steps_in_report[0] and len(steps_in_report) > 1:
+
+                            print(line[1], steps_in_report[0])
 
                             # Using list with all the clusters to obtain number
                             cluster_number = str(cluster[cont_cluster])
@@ -264,6 +281,9 @@ def linen_correction(input_folder, residue_name, clusters_folder):
 
                         elif int(line[1]) == steps_in_report[0] and len(steps_in_report) == 1:
 
+                            print(line[1], steps_in_report[0])
+                            print(' ')
+
                             cluster_number = str(cluster[cont_cluster])
                             cluster_letter = labelsdict_ntl[cluster_number]
                             cluster_energy = clustersdict[cluster_letter]
@@ -277,8 +297,16 @@ def linen_correction(input_folder, residue_name, clusters_folder):
                         
                         else:
 
-                            fileout.write("     ".join(line) + '\n')
-                    
+                            if data_filter == 'None':
+
+                                fileout.write("     ".join(line) + '\n')
+
+                            elif data_filter == 'clusters' or data_filter == 'cluster': continue
+                        
+                            else: 
+
+                                raise Exception('DataFilterError: The filtering method introduced is not valid, either clusters or none.')
+
                     else:
 
                         fileout.write(line)
@@ -288,10 +316,6 @@ def linen_correction(input_folder, residue_name, clusters_folder):
 
             step = step[report_paths_dictionary[key]:]
             cont_paths += 1
-
-
-
-
 
 
 def main(args):
@@ -307,7 +331,8 @@ def main(args):
 
     linen_correction(input_folder = args.input_folder,
                      residue_name = args.residue_name,
-                     clusters_folder = args.clusters_folder)
+                     clusters_folder = args.clusters_folder,
+                     data_filter = args.data_filter)
 
 
 if __name__ == '__main__':
