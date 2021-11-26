@@ -102,16 +102,17 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
         """        
         
         path = str(pathlib.Path().absolute())
-        path_previous_simulation = path + '/' + input_folder
-        path_results = path_previous_simulation + '/' + clusters_folder
+        path_previous_simulation = os.path.join(path,input_folder)
+        path_results = os.path.join(path_previous_simulation,clusters_folder)
+        path_output = os.path.join(path_previous_simulation,'output')
 
         if os.path.isdir(path_previous_simulation) == False:
             raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
 
-        path_energies = path + '/' + residue_name + '_linen'
-        path_energies_input = path_energies + '/' + 'input'
-        path_energies_simulation = path_energies + '/' + 'simulation'
-        path_energies_output = path_energies + '/output'
+        path_energies = os.path.join(path,residue_name + '_linen')
+        path_energies_input = os.path.join(path_energies,'input')
+        path_energies_simulation = os.path.join(path_energies,'simulation')
+        path_energies_output = os.path.join(path_energies,'output')
 
         if  os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
@@ -125,12 +126,37 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
         if  os.path.exists(path_energies_output) == False:
             os.mkdir(path_energies_output)
 
-        return  path, path_previous_simulation, path_results,\
+        return  path_previous_simulation, path_results, path_output,\
         path_energies_input, path_energies_simulation, path_energies_output
 
     # Paths        
-    path_absolute, _, path_results, _, path_energies_simulation, _\
+    path_previous_simulation, path_results, path_output, _, path_energies_simulation, path_energies_output\
     = path_definer(input_folder,residue_name,clusters_folder)
+
+    if data_filter == 'none':
+
+        # Copying reports
+        if os.path.isdir(path_output):
+    
+            files = os.listdir(path_output)
+    
+            for folder in files:
+    
+                if folder.isnumeric():
+    
+                    full_path = os.path.join(path_output,folder)
+                    full_new_path = os.path.join(path_energies_output,folder)
+    
+                    if os.path.exists(full_new_path) == False:
+                        os.mkdir(full_new_path)
+    
+                files_subdir = os.listdir(full_path)
+    
+                for report in files_subdir:
+    
+                    if 'report' in report:
+    
+                        shutil.copy(os.path.join(full_path,report), full_new_path)
 
     # Retrieving cluster information
     cont = 0
@@ -177,7 +203,7 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
 
                     # Important folders' paths
                     path_string = line[-2].split('trajectory_')[0]
-                    path_string = os.path.join(path_absolute,input_folder) + path_string.split('LIG_Pele')[1]
+                    path_string = path_previous_simulation + path_string.split('LIG_Pele')[1]
 
                     # Report number
                     whole_path = str(line[-2])
@@ -264,7 +290,7 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
                         
                         else:
 
-                            if data_filter == 'None':
+                            if data_filter == 'none':
 
                                 fileout.write("     ".join(line) + '\n')
 
