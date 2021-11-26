@@ -133,7 +133,22 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
     path_previous_simulation, path_results, path_output, _, path_energies_simulation, path_energies_output\
     = path_definer(input_folder,residue_name,clusters_folder)
 
-    if data_filter == 'none':
+    print(' ')
+    print('*******************************************************************')
+    print('*                          peleLInEn                              *')
+    print('* --------------------------------------------------------------- *')
+    print('*      Ligand\'s internal energy from induced fit results          *')
+    print('* --------------------------------------------------------------- *')
+    print('*                          Correction                             *')
+    print('*******************************************************************')
+    print(' ')
+
+    if data_filter == 'none' or data_filter == 'None':
+
+        #
+        print(' -   Data filter chosen: ' + data_filter + '. Keeping all the data.')
+        print('     -   Copying all the reports.')       
+        #
 
         # Copying reports
         if os.path.isdir(path_output):
@@ -157,6 +172,18 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
                     if 'report' in report:
     
                         shutil.copy(os.path.join(full_path,report), full_new_path)
+    
+    elif data_filter == 'cluster' or data_filter == 'clusters':
+
+        #
+        print(' -   Data filter chosen: ' + data_filter+ '.')
+        print('     -   Only keeping snapshots belonging to main clusters.')
+        #
+
+    else:
+
+        raise Exception('DataFilterError: The data filter method chosen is not valid. \
+        Please choose either: (1) clusters, or (2) none.')
 
     # Retrieving cluster information
     cont = 0
@@ -233,6 +260,10 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
         if  os.path.exists(folder) == False:
             os.mkdir(folder)
 
+    #
+    print(' -   Implementing correction.')
+    #
+
     # Main loop 
     for key in report_paths_dictionary:
 
@@ -290,20 +321,15 @@ def linen_correction(input_folder, residue_name, clusters_folder, data_filter):
                         
                         else:
 
-                            if data_filter == 'none':
+                            if data_filter == 'none' or data_filter == 'None':
 
                                 fileout.write("     ".join(line) + '\n')
 
                             elif data_filter == 'clusters' or data_filter == 'cluster': continue
-                        
-                            else: 
-
-                                raise Exception('DataFilterError: The filtering method introduced is not valid, either clusters or none.')
 
                     else:
 
                         fileout.write(line)
-
 
                     cont += 1
 
