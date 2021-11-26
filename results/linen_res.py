@@ -106,8 +106,8 @@ def linen_results(input_folder,
             raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
 
         path_energies = path + '/' + residue_name + '_linen'
-        path_energies_input = path_energies + '/' + 'input'
-        path_energies_simulation = path_energies + '/' + 'simulation'
+        path_energies_input = path_energies + '/input'
+        path_energies_simulation = path_energies + '/simulation'
 
         if  os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
@@ -118,11 +118,13 @@ def linen_results(input_folder,
         if  os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        return  path_previous_simulation, path_results, path_clusters, path_energies_input, path_energies_simulation
+        return  path_previous_simulation, path_results, path_clusters,\
+        path_energies_input, path_energies_simulation
 
     #---
     
-    path_previous_simulation, path_results, path_clusters, path_energies_input, path_energies_simulation = \
+    path_previous_simulation, path_results, path_clusters,\
+    path_energies_input, path_energies_simulation = \
     path_definer(input_folder,clusters_folder)
 
     print(' ')
