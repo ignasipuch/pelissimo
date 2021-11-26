@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 This module is designed to run PELE energy calculations from clustered results of a 
-previous PELE induced fit simulation.
+previous PELE induced fit simulation and apply the correction to the results.
 """
 
 __author__ = "Ignasi Puch-Giner"
@@ -16,6 +16,7 @@ import shutil
 import time
 from distutils.dir_util import copy_tree
 import numpy as np
+from collections import Counter
 
 def parse_args(args):
     """
@@ -41,8 +42,13 @@ def parse_args(args):
         default = 'results', help="Name of the directory containing the folder: clusters.")
     parser.add_argument("-co", "--conf_file_name", type=str, dest = "conf_file_name",\
         default = 'pele', help="Name of the .conf file used for the simulation.")
+    parser.add_argument("-df", "--data_filter", type=str, dest = "data_filter",\
+        default = 'clusters', help="Filter you want to apply to the data. 1) clusters: Only \
+        keeps the snaphots that belong to one of the clusters. 2) none: Keeps all the \
+        snapshots no matter the cluster they belong to.")
     parser.add_argument("-a", "--action", type=str, dest = "action",\
-        default = 'generate', help="Command to let know the script the action you want: generate or analyze.")
+        default = 'generate', help="Command to let know the script the action you want: (1) generate,\
+        (2) analyze or (3) correct.")
 
     parsed_args = parser.parse_args(args)
 
@@ -132,6 +138,8 @@ def linen_results(input_folder,
     print('*                          peleLInEn                              *')
     print('* --------------------------------------------------------------- *')
     print('*      Ligand\'s internal energy from induced fit results          *')
+    print('* --------------------------------------------------------------- *')
+    print('*                          Generation                             *')
     print('*******************************************************************')
     print(' ')
 
@@ -305,20 +313,32 @@ def linen_results(input_folder,
     print(' -   To gather the results in a csv file:')
     print(' -   Go to ' + residue_name + '_linen/simulation directory.')
     print('     :> python /path/to/code/linen_res.py -a analyze')
-    print(' -   Results are stored in energy.csv.')
+    print(' ')
+    print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
     print(' ')
     print('-------------------------------------------------------------------')
 
 def linen_analyze():
 
     """
-    It gathers the results obtained from the PELE calculation.
+    It gathers the results obtained from the PELE calculation. Putting
+    them in order.
     """
 
     path = str(pathlib.Path().absolute())
 
     lineclusters = []
     linenergies = []
+
+    print(' ')
+    print('*******************************************************************')
+    print('*                          peleLInEn                              *')
+    print('* --------------------------------------------------------------- *')
+    print('*      Ligand\'s internal energy from induced fit results          *')
+    print('* --------------------------------------------------------------- *')
+    print('*                           Analysis                              *')
+    print('*******************************************************************')
+    print(' ')
 
     with open (os.path.join(path,'PELEne.out'),'r') as filein:
 
@@ -348,6 +368,317 @@ def linen_analyze():
         for i in range(len(lineclusters)):
 
             fileout.write(str(sorted_clusters[i]) + ',' + str(sorted_energies[i]) + ',' + str(sorted_energies_corrected[i]) + '\n')
+    
+    print(' -   Results have been stored in energy.csv.')
+    print(' -   To apply the corrections obtained:')
+    print('     :> cd ../.. ')
+    print('     :> python linen_res.py -a correct')
+    print(' -    If wanted the flag -df can be added.')
+    print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
+    print(' ')
+
+def linen_correction(input_folder,
+                     residue_name, 
+                     clusters_folder, 
+                     data_filter):
+    """
+    It applies the corrections calculated once the analyze action has been
+    executed. It does that by (1) reading the energy.csv file generated and the 
+    data.csv from the initial simulation, (2) generates a copy of the folders
+    and (3) applies the energy corrections calculated.
+
+    Parameters
+    ----------
+    input_folder : str
+        The path to the directory created by the induced fit simulation.
+    residue_name : str
+        Residue name of the ligand in the pdb of each cluster.
+    clusters_folder : str
+        Name of the directory where the directory clusters is located (results/analysis).
+    data_filter: str
+        Name of the filtering method you want to apply. Only two methods accepted: 1) clusters or 2) none.
+    """
+
+    def path_definer(input_folder,
+                     residue_name,clusters_folder):
+
+        """
+        Defines all the paths that are going to be used
+
+        Parameters
+        ----------
+        input_folder : str
+            The path to the directory created by the induced fit simulation.
+        residue_name : str
+            Residue name of the ligand in the pdb of each cluster
+        clusters_folder : str
+            Name of the directory where the directory clusters is located (results/analysis).
+
+        Returns
+        -------
+        path: str
+            The absolute path from where the code is being executed.
+        path_previous_simulation: str
+            The path to the directory generated by the simulation we want to analyze the clusters
+            from.
+        path_results: str 
+            The path to the directory generated by the simulation where all the processed data is kept.
+        path_energies_input : str 
+            The path to the generated directory containing the input proportioned.
+        path_energies_simulation : str
+            The path to the generated directory containing all the necessary files to perform the
+            PELE energy calculation.
+        path_energies_output : str
+            The path to the generated directory that is going to contain the modified reports from the corrections.
+        """        
+        
+        path = str(pathlib.Path().absolute())
+        path_previous_simulation = os.path.join(path,input_folder)
+        path_results = os.path.join(path_previous_simulation,clusters_folder)
+        path_output = os.path.join(path_previous_simulation,'output')
+
+        if os.path.isdir(path_previous_simulation) == False:
+            raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
+
+        path_energies = os.path.join(path,residue_name + '_linen')
+        path_energies_input = os.path.join(path_energies,'input')
+        path_energies_simulation = os.path.join(path_energies,'simulation')
+        path_energies_output = os.path.join(path_energies,'output')
+
+        if  os.path.exists(path_energies) == False:
+            os.mkdir(path_energies)
+
+        if  os.path.exists(path_energies_input) == False:
+            os.mkdir(path_energies_input)
+
+        if  os.path.exists(path_energies_simulation) == False:
+            os.mkdir(path_energies_simulation)
+
+        if  os.path.exists(path_energies_output) == False:
+            os.mkdir(path_energies_output)
+
+        return  path_previous_simulation, path_results, path_output,\
+        path_energies_input, path_energies_simulation, path_energies_output
+
+    # Dictionaries for the clusters
+
+    labelsdict_ltn = {
+      'A': '0','B': '1','C': '2','D': '3','E': '4','F': '5','G': '6','H': '7','I': '8','J': '9',
+      'K': '10','L': '11','M': '12','N': '13','O': '14','P': '15','Q': '16','R': '17','S': '18',
+      'T': '19','U': '20','V': '21','W': '22','X': '23','Y': '24','Z': '25'
+    }
+
+    labelsdict_ntl = inv_map = {v: k for k, v in labelsdict_ltn.items()}  
+
+
+    # Paths        
+    path_previous_simulation, path_results, path_output, _, path_energies_simulation, path_energies_output\
+    = path_definer(input_folder,residue_name,clusters_folder)
+
+    print(' ')
+    print('*******************************************************************')
+    print('*                          peleLInEn                              *')
+    print('* --------------------------------------------------------------- *')
+    print('*      Ligand\'s internal energy from induced fit results          *')
+    print('* --------------------------------------------------------------- *')
+    print('*                          Correction                             *')
+    print('*******************************************************************')
+    print(' ')
+
+    if data_filter == 'none' or data_filter == 'None':
+
+        #
+        print(' -   Data filter chosen: ' + data_filter + '. Keeping all the data.')
+        print('     -   Copying all the reports.')       
+        #
+
+        # Copying reports
+        if os.path.isdir(path_output):
+    
+            files = os.listdir(path_output)
+    
+            for folder in files:
+    
+                if folder.isnumeric():
+    
+                    full_path = os.path.join(path_output,folder)
+                    full_new_path = os.path.join(path_energies_output,folder)
+    
+                    if os.path.exists(full_new_path) == False:
+                        os.mkdir(full_new_path)
+    
+                files_subdir = os.listdir(full_path)
+    
+                for report in files_subdir:
+    
+                    if 'report' in report:
+    
+                        shutil.copy(os.path.join(full_path,report), full_new_path)
+    
+    elif data_filter == 'cluster' or data_filter == 'clusters':
+
+        #
+        print(' -   Data filter chosen: ' + data_filter+ '.')
+        print('     -   Only keeping snapshots belonging to main clusters.')
+        #
+
+    else:
+
+        raise Exception('DataFilterError: The data filter method chosen is not valid. \
+        Please choose either: (1) clusters, or (2) none.')
+
+    # Retrieving cluster information
+    cont = 0
+
+    labels_letter = []
+    labels = []
+    cluster_energy = []
+    clustersdict = {}
+
+    # Opening file with data from PELE energy simulation.
+    with open(os.path.join(path_energies_simulation,'energy.csv')) as filein:
+
+        for line in filein:
+
+            if cont != 0:  
+
+                line = line.split(',')
+                labels_letter.append(line[0])
+                labels.append(labelsdict_ltn[line[0]])
+                cluster_energy.append(line[2])
+                clustersdict[line[0]] = float(line[2])
+
+
+            cont += 1      
+
+    # Retrieving simulation information
+    cont = 0
+
+    step = []
+    cluster = []
+    report_paths = []
+    folders = []
+
+    with open(os.path.join(path_results,'data.csv')) as filein:
+
+        for line in filein:
+
+            if cont != 0:
+      
+                line = line.split(',')      
+                cluster_label = line[-1].split()[0]
+
+                if any(label == cluster_label for label in labels):
+
+                    # Important folders' paths
+                    path_string = line[-2].split('trajectory_')[0]
+                    path_string = path_previous_simulation + path_string.split('LIG_Pele')[1]
+
+                    # Report number
+                    whole_path = str(line[-2])
+                    report_num = whole_path.split('/')[-1]  
+                    report_num = report_num.split('.pdb')[0].split('_')[1]
+
+                    step.append(int(line[0]))   # Step to be modified
+                    cluster.append(int(line[-1].split('\n')[0]))    # Cluster to which the snapshot belongs to
+                    report_paths.append(os.path.join(path_string,'report_' + str(report_num)))  # Report paths to be open
+                    folders.append(path_string[:-1].replace(input_folder,residue_name + '_linen'))  # Folders to be created
+
+            cont += 1
+
+
+    # Folders to create
+    folders = sorted(Counter(folders))
+
+    # Report paths to open
+    report_paths_dictionary = Counter(report_paths)
+    report_paths = sorted(report_paths)
+
+    cont_cluster = 0
+
+    # Generating folders
+    for folder in folders:
+
+        if  os.path.exists(folder) == False:
+            os.mkdir(folder)
+
+    #
+    print(' -   Implementing correction.')
+    print(' ')
+    print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
+    print(' ')
+    #
+
+    # Main loop 
+    for key in report_paths_dictionary:
+
+        # Path to new report
+        path_string_out = key.replace(input_folder,residue_name + '_linen')
+        
+        # Searches to make in this file
+        steps_in_report = step[:report_paths_dictionary[key]]
+    
+        cont = 0
+
+        with open(path_string_out, 'w') as fileout:
+
+            with open(key) as filein:
+
+                for line in filein:
+
+                    if cont != 0:
+
+                        line = line.split()
+
+                        if int(line[1]) == steps_in_report[0] and len(steps_in_report) > 1:
+
+                            # Using list with all the clusters to obtain number
+                            cluster_number = str(cluster[cont_cluster])
+
+                            # Using dictionary from number to letter to obtain letter
+                            cluster_letter = labelsdict_ntl[cluster_number]
+
+                            # Using dictionary from letter to energy to obtain energy
+                            cluster_energy = clustersdict[cluster_letter]
+
+                            # Recalculating energy
+                            line[4] =  str(float(line[4]) - cluster_energy)
+                           
+                            # Writing
+                            fileout.write("     ".join(line) + '\n')
+
+                            # Updating counters
+                            steps_in_report = steps_in_report[1:]
+                            cont_cluster += 1
+
+                        elif int(line[1]) == steps_in_report[0] and len(steps_in_report) == 1:
+
+                            cluster_number = str(cluster[cont_cluster])
+                            cluster_letter = labelsdict_ntl[cluster_number]
+                            cluster_energy = clustersdict[cluster_letter]
+
+                            line[4] = str(float(line[4]) - cluster_energy)
+
+                            # Writing
+                            fileout.write("     ".join(line) + '\n')
+
+                            cont_cluster += 1
+                        
+                        else:
+
+                            if data_filter == 'none' or data_filter == 'None':
+
+                                fileout.write("     ".join(line) + '\n')
+
+                            elif data_filter == 'clusters' or data_filter == 'cluster': continue
+
+                    else:
+
+                        fileout.write(line)
+
+                    cont += 1
+
+            step = step[report_paths_dictionary[key]:]
 
 def main(args):
     """
@@ -371,9 +702,15 @@ def main(args):
 
         linen_analyze()
 
+    elif args.action == 'correct':
+
+        linen_correction(input_folder = args.input_folder,
+                         residue_name = args.residue_name,
+                         clusters_folder = args.clusters_folder,
+                         data_filter = args.data_filter)
+
     else: 
         raise('ActionError: The actions the script can perform are either: generate or analyze. ')
-
 
 if __name__ == '__main__':
 
