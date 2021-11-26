@@ -8,6 +8,19 @@ from distutils.dir_util import copy_tree
 import numpy as np
 from collections import Counter
 
+# Labels dictionary 
+
+labels = ['A','B','C','D','E','F','G','H',]
+
+labelsdict_ltn = {
+  'A': '0','B': '1','C': '2','D': '3','E': '4','F': '5','G': '6','H': '7','I': '8','J': '9',
+  'K': '10','L': '11','M': '12','N': '13','O': '14','P': '15','Q': '16','R': '17','S': '18',
+  'T': '19','U': '20','V': '21','W': '22','X': '23','Y': '24','Z': '25'
+}
+
+labelsdict_ntl = inv_map = {v: k for k, v in labelsdict_ltn.items()}    
+
+
 def parse_args(args):
     """
     It parses the command-line arguments.
@@ -34,8 +47,6 @@ def parse_args(args):
     parsed_args = parser.parse_args(args)
 
     return parsed_args
-
-labels = ['A','B','C','D','E','F','G','H',]
 
 def linen_correction(input_folder, residue_name, clusters_folder):
     """
@@ -94,6 +105,7 @@ def linen_correction(input_folder, residue_name, clusters_folder):
         path_energies = path + '/' + residue_name + '_linen'
         path_energies_input = path_energies + '/' + 'input'
         path_energies_simulation = path_energies + '/' + 'simulation'
+        path_energies_output = path_energies + '/output'
 
         if  os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
@@ -104,19 +116,71 @@ def linen_correction(input_folder, residue_name, clusters_folder):
         if  os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        return  path_previous_simulation, path_output, path_results, path_energies_input, path_energies_simulation
-        
-    _, path_output, path_results, _, _ = path_definer(input_folder,residue_name,clusters_folder)
+        if  os.path.exists(path_energies_output) == False:
+            os.mkdir(path_energies_output)
 
+        return  path_previous_simulation, path_output, path_results,\
+        path_energies_input, path_energies_simulation, path_energies_output
+
+    # Paths        
+    _, path_output, path_results, _, path_energies_simulation, path_energies_output\
+    = path_definer(input_folder,residue_name,clusters_folder)
+
+    # Copying reports
+    if os.path.isdir(path_output):
+
+        files = os.listdir(path_output)
+
+        for folder in files:
+
+            if folder.isnumeric():
+
+                full_path = os.path.join(path_output,folder)
+                full_new_path = os.path.join(path_energies_output,folder)
+
+                if os.path.exists(full_new_path) == False:
+                    os.mkdir(full_new_path)
+
+            files_subdir = os.listdir(full_path)
+
+            for report in files_subdir:
+
+                if 'report' in report:
+
+                    shutil.copy(os.path.join(full_path,report), full_new_path)    
+
+    # Retrieving cluster information
+    cont = 0
+
+    labels_letter = []
+    labels = []
+    cluster_energy = []
+    clustersdict = {}
+
+    with open(os.path.join(path_energies_simulation,'energy.csv')) as filein:
+
+        for line in filein:
+
+            if cont != 0:  
+
+                line = line.split(',')
+                labels_letter.append(line[0])
+                labels.append(labelsdict_ltn[line[0]])
+                cluster_energy.append(line[2])
+                clustersdict[line[0]] = float(line[2])
+
+
+            cont += 1      
+
+    # Retrieving simulation information
     cont = 0
 
     step = []
     path = []
     cluster = []
     report_paths = []
+    report_paths_out = []
 
-    for i in range(len(labels)):
-        labels[i] = str(i)
 
     with open(os.path.join(path_results,'data.csv')) as filein:
 
@@ -127,9 +191,19 @@ def linen_correction(input_folder, residue_name, clusters_folder):
                 line = line.split(',')      
                 line_1 = line[-1].split()[0]
 
+
                 if any(label == line_1 for label in labels):
 
                     path_string = line[-2].split('trajectory_')[0]
+                    path_string_out = path_string.replace(input_folder,residue_name + '_linen')
+
+
+                    ###########################################################################
+
+                    path_string = path_string.replace('/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/','/mnt/c/Users/Ignasi/Desktop/Ignasi/Estudis/PhD/code/code_pelissimo/results/')
+                    path_string_out = path_string_out.replace('/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/','/mnt/c/Users/Ignasi/Desktop/Ignasi/Estudis/PhD/code/code_pelissimo/results/')
+
+                    ###########################################################################
 
                     report_num = str(line[-2])
                     report_num = report_num.split('/')[-1]  
@@ -137,12 +211,88 @@ def linen_correction(input_folder, residue_name, clusters_folder):
 
                     step.append(int(line[0]))   
                     cluster.append(int(line[-1].split('\n')[0]))
-                    report_paths.append(os.path.join(path_string,'report_' + str(report_num)))                    
+                    report_paths.append(os.path.join(path_string,'report_' + str(report_num)))    
+                    report_paths_out.append(os.path.join(path_string_out,'report_' + str(report_num)))             
 
             cont += 1
 
+
+    # Correction 
+
     report_paths_dictionary = Counter(report_paths)
     report_paths = sorted(report_paths)
+
+    cont_cluster = 0
+    cont_paths = 0
+
+    for key in report_paths_dictionary:
+
+        steps_in_report = step[:report_paths_dictionary[key]]
+    
+        cont = 0
+
+        with open(report_paths_out[cont_paths], 'w') as fileout:
+
+            with open(key) as filein:
+
+                for line in filein:
+
+                    if cont != 0:
+
+                        line = line.split()
+
+                        if int(line[1]) == steps_in_report[0] and len(steps_in_report) > 1:
+
+                            # Using list with all the clusters to obtain number
+                            cluster_number = str(cluster[cont_cluster])
+
+                            # Using dictionary from number to letter to obtain letter
+                            cluster_letter = labelsdict_ntl[cluster_number]
+
+                            # Using dictionary from letter to energy to obtain energy
+                            cluster_energy = clustersdict[cluster_letter]
+
+                            # Recalculating energy
+                            line[4] =  str(float(line[4]) - cluster_energy)
+                           
+                            # Writing
+                            fileout.write("     ".join(line) + '\n')
+
+                            # Updating counters
+                            steps_in_report = steps_in_report[1:]
+                            cont_cluster += 1
+
+                        elif int(line[1]) == steps_in_report[0] and len(steps_in_report) == 1:
+
+                            cluster_number = str(cluster[cont_cluster])
+                            cluster_letter = labelsdict_ntl[cluster_number]
+                            cluster_energy = clustersdict[cluster_letter]
+
+                            line[4] = str(float(line[4]) - cluster_energy)
+
+                            # Writing
+                            fileout.write("     ".join(line) + '\n')
+
+                            cont_cluster += 1
+                        
+                        else:
+
+                            fileout.write("     ".join(line) + '\n')
+                    
+                    else:
+
+                        fileout.write(line)
+
+
+                    cont += 1
+
+            step = step[report_paths_dictionary[key]:]
+            cont_paths += 1
+
+
+
+
+
 
 def main(args):
     """
