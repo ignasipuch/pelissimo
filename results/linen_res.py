@@ -175,23 +175,27 @@ def linen_results(input_folder,
 
     for cluster in clusters:
 
-        with open(os.path.join(path_energies_input,cluster)) as filein:
+        if cluster.startswith('cluster'):
 
-            lines = (l for l in filein if residue_name in l)
-            new_path = path_energies_simulation + '/' + cluster.split('.pdb')[0]
-            path_DataLocal = path_energies_simulation + '/DataLocal'
+            with open(os.path.join(path_energies_input,cluster)) as filein:
 
-            if  os.path.exists(new_path) == False:
-                os.mkdir(new_path)
+                lines = (l for l in filein if residue_name in l)
+                new_path = path_energies_simulation + '/' + cluster.split('.pdb')[0]
+                path_DataLocal = path_energies_simulation + '/DataLocal'
 
-            if  os.path.exists(path_DataLocal) == False:
-                os.mkdir(path_DataLocal)
+                if  os.path.exists(new_path) == False:
+                    os.mkdir(new_path)
 
-            copy_tree(os.path.join(path_previous_simulation,'DataLocal'), path_DataLocal)
+                if  os.path.exists(path_DataLocal) == False:
+                    os.mkdir(path_DataLocal)
 
-            with open(os.path.join(new_path,cluster), 'w') as fileout:
+                copy_tree(os.path.join(path_previous_simulation,'DataLocal'), path_DataLocal)
 
-                fileout.writelines(lines)
+                with open(os.path.join(new_path,cluster), 'w') as fileout:
+
+                    fileout.writelines(lines)
+                    
+        else: continue
 
 
     # Copying .conf document and extracting information
