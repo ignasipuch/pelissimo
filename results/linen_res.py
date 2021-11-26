@@ -42,6 +42,8 @@ def parse_args(args):
         default = 'results', help="Name of the directory containing the folder: clusters.")
     parser.add_argument("-co", "--conf_file_name", type=str, dest = "conf_file_name",\
         default = 'pele', help="Name of the .conf file used for the simulation.")
+    parser.add_argument("-rn", "--report_name", type=str, dest = "report_name",\
+        default = 'report', help="Name of the report files used for the simulation.")
     parser.add_argument("-df", "--data_filter", type=str, dest = "data_filter",\
         default = 'clusters', help="Filter you want to apply to the data. 1) clusters: Only \
         keeps the snaphots that belong to one of the clusters. 2) none: Keeps all the \
@@ -379,7 +381,8 @@ def linen_analyze():
 
 def linen_correction(input_folder,
                      residue_name, 
-                     clusters_folder, 
+                     clusters_folder,
+                     report_name, 
                      data_filter):
     """
     It applies the corrections calculated once the analyze action has been
@@ -458,7 +461,7 @@ def linen_correction(input_folder,
             os.mkdir(path_energies_output)
 
         return  path_previous_simulation, path_results, path_output,\
-        path_energies_input, path_energies_simulation, path_energies_output
+        path_energies, path_energies_input, path_energies_simulation, path_energies_output
 
     # Dictionaries for the clusters
 
@@ -468,11 +471,11 @@ def linen_correction(input_folder,
       'T': '19','U': '20','V': '21','W': '22','X': '23','Y': '24','Z': '25'
     }
 
-    labelsdict_ntl = inv_map = {v: k for k, v in labelsdict_ltn.items()}  
+    labelsdict_ntl = {v: k for k, v in labelsdict_ltn.items()}  
 
 
     # Paths        
-    path_previous_simulation, path_results, path_output, _, path_energies_simulation, path_energies_output\
+    path_previous_simulation, path_results, path_output, path_energies, _, path_energies_simulation, path_energies_output\
     = path_definer(input_folder,residue_name,clusters_folder)
 
     print(' ')
@@ -491,6 +494,8 @@ def linen_correction(input_folder,
         print(' -   Data filter chosen: ' + data_filter + '. Keeping all the data.')
         print('     -   Copying all the reports.')       
         #
+
+        cont_reports = 0
 
         # Copying reports
         if os.path.isdir(path_output):
@@ -511,9 +516,17 @@ def linen_correction(input_folder,
     
                 for report in files_subdir:
     
-                    if 'report' in report:
+                    if report.startswith(report_name):
     
                         shutil.copy(os.path.join(full_path,report), full_new_path)
+                        cont_reports += 1
+                    
+                    else: continue
+
+                if cont_reports == 0:
+
+                    raise Exception('ReportNameError: No reports beginning with \"' + report_name + '\" were found in '\
+                    + full_path + '.')
     
     elif data_filter == 'cluster' or data_filter == 'clusters':
 
@@ -604,6 +617,45 @@ def linen_correction(input_folder,
 
     #
     print(' -   Implementing correction.')
+    #
+
+    with open (os.path.join(path_energies,'run_analysis'), 'w') as fileout:
+
+        fileout.writelines(
+        '#!/bin/bash\n'
+        '#SBATCH --job-name=analysis\n'
+        '#SBATCH --output=analysis.out\n'
+        '#SBATCH --error=analysis.err\n'
+        '#SBATCH --ntasks=48\n'
+        '#SBATCH --qos=debug\n'
+        '#SBATCH --time=00-01:00:00\n'
+        '\n' 
+        'module load ANACONDA/2019.10\n'
+        'module load intel mkl impi gcc # 2> /dev/null\n'
+        'module load impi\n'
+        'module load boost/1.64.0\n'
+        '\n' 
+        'eval "$(conda shell.bash hook)"\n'
+        'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.0\n'
+        '\n' 
+        'python script.py\n'
+        )
+        
+    with open (os.path.join(path_energies,'script.py'), 'w') as fileout:
+
+        fileout.writelines(
+        'from pele_platform.analysis import Analysis\n'
+        '\n'
+        'analysis = Analysis(resname="' + residue_name + '", chain="L", simulation_output="output", report="' + report_name + '", cpus=48)\n'
+        'analysis.generate(path="analysis", clustering_type="meanshift")\n'
+        )
+    
+    #
+    print(' -   run_analysis and script.py files have been generated.')
+    print(' -   To perform a new analysis:')
+    print('     :> cd ' + residue_name + '_linen')
+    print('     :> sbatch run_analysis')
+    print(' -   The new plots and files will be in /analysis.')
     print(' ')
     print(' ->   ->   ->    For help: python linen_res.py -h    <-  <-  <-')
     print(' ')
@@ -707,6 +759,7 @@ def main(args):
         linen_correction(input_folder = args.input_folder,
                          residue_name = args.residue_name,
                          clusters_folder = args.clusters_folder,
+                         report_name = args.report_name,
                          data_filter = args.data_filter)
 
     else: 
