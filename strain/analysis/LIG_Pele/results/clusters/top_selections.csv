@@ -1,0 +1,9 @@
+Cluster label,epoch,trajectory,Step,currentEnergy,Binding Energy,sasaLig
+C,12,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/12/trajectory_18.pdb,6,-9886.16,-34.1885,0.0162101
+A,3,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/3/trajectory_10.pdb,1,-9883.15,-32.5319,0.0247053
+F,15,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/15/trajectory_18.pdb,5,-9881.51,-34.4938,0.0221769
+B,17,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/17/trajectory_8.pdb,3,-9875.2,-33.0539,0.0034606
+D,4,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/4/trajectory_3.pdb,3,-9879.46,-29.7363,0.00684837
+E,6,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/6/trajectory_37.pdb,2,-9881.61,-33.1269,0.00791914
+H,9,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/9/trajectory_7.pdb,10,-9882.75,-26.9508,0.0342332
+G,9,/gpfs/projects/bsc72/ignasi/PhD/strain/second_set/MTAP/OPLS/normal/1CB0/LIG_Pele/output/9/trajectory_2.pdb,2,-9880.96,-28.4783,0.019076
