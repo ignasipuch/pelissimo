@@ -1,12 +1,12 @@
-# Pelissimo
+# PhD
 ## Development of a energy correctors to PELE predictions.
 
 ---
 
-LInEN: Ligand Internal Energy calculation with different approaches.
+LInEN: Ligand Internal Energy calculation with different approaches (ConACry).
 
- 1. From induced fit results.
- 2. From confomer ensamble creation.
- 3. From PELE simulation
+ 1. From conformer ensamble creation: 'linen_con'
+ 2. From the analysis made by the platform: 'linen_a'
+ 3. From the crystallographic structur: 'linen_cry'
 
 
