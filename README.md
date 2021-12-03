@@ -2,16 +2,13 @@
 ## Development of a energy correctors to PELE predictions.
 
 ---
-alchem: Directory with all the code related to alchemPELE. 
-- Contains:
+- alchem: Directory with all the code related to alchemPELE. Contains:
  1. alchem_a.py: Script to retrieve the reports related to an AdaptivePELE trajectory.
 
-binding_energy: Directory with the code related to calculating the binding energy of a simulation.
-- Contains: 
+- binding_energy: Directory with the code related to calculating the binding energy of a simulation. Contains: 
  1. statistics.py: Script to read all the energetic information of a simulation and calculating different scoring functions.
 
-strain: Directory with the code related to the calculation of the LInEN (Ligand Internal Energy) with different approaches (ConACry).
-- Contains:
+- strain: Directory with the code related to the calculation of the LInEN (Ligand Internal Energy) with different approaches (ConACry). Contains:
  1. analysis
    a. linen_a.py: Script to calculate LInEN with the platform's analysis of the PELE simulation.
    b. LIG_Pele: Directory to test the script.
