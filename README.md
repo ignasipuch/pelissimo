@@ -10,12 +10,18 @@
 
 - strain: Directory with the code related to the calculation of the LInEN (Ligand Internal Energy) with different approaches (ConACry). Contains:
  1. analysis
+
    a. linen_a.py: Script to calculate LInEN with the platform's analysis of the PELE simulation.
+
    b. LIG_Pele: Directory to test the script.
+
    c. LIG_linen_a: Directory to test the script.
- 2. conformer: 
+
+ 2. conformer:
+ 
    a. linen_con.py: Script to calculate LInEN with conformation ensamble generation of the ligand.
- 3. crystal: 
+ 3. crystal:
+ 
    a. linen_cry.py: Script to calculate LInEN with a PELE simulation of the ligand. 
 
 
