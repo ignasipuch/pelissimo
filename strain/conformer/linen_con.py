@@ -6,206 +6,271 @@ import os
 import pathlib 
 import argparse
 import shutil
-import matplotlib.pyplot as plt 
 import time
-from itertools import cycle
+from distutils.dir_util import copy_tree
+import numpy as np
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.Descriptors import ExactMolWt
 from rdkit.Chem.rdMolDescriptors import CalcNumRotatableBonds
 from rdkit.ML.Cluster import Butina
-import numpy as np
 
+def parse_args(args):
+    """
+    Function
+    ----------
+    It parses the command-line arguments.
 
+    Parameters
+    ----------
+    - args : list[str]
+        List of command-line arguments to parse
 
-# *********************************************************************** #
-#                        PREPARING READING OF FILES                       #
-# *********************************************************************** #
-
-# Time
-start_time = time.time()
-
-# Parse command line
-parser = argparse.ArgumentParser()
-
-# Inputs
-parser.add_argument("-r", "--residue_name", type=str, dest = "residue_name",\
-    default = 'LIG', help="Ligand's chain name.")
-parser.add_argument("-f", "--file", type=str, dest = "input_file",\
-    default = None, help="Name of the file to analyze.")
-parser.add_argument("-cn", "--conformations_number", type=int, dest = "conformations_number",\
-    default = 50, help="Number of conformers to be generated for the inputed file.")
-
-args = parser.parse_args()
-
-residue_name = args.residue_name
-input_file = args.input_file
-conformations_number = args.conformations_number
-
-# Creating a variable with the path of the file
-path = str(pathlib.Path().absolute())
-filepath = path + '/' + input_file
-
-path_energies = path + '/' + residue_name + '_peleConf'
-path_energies_input = path_energies + '/' + 'input'
-path_energies_simulation = path_energies + '/' + 'simulation'
-
-if  os.path.exists(path_energies) == False:
-    os.mkdir(path_energies)
-
-if  os.path.exists(path_energies_input) == False:
-    os.mkdir(path_energies_input)
-
-if  os.path.exists(path_energies_simulation) == False:
-    os.mkdir(path_energies_simulation)
-
-# *********************************************************************** #
-#                    COPYING FILES TO NEW DIRECTORY                       #
-# *********************************************************************** #
-
-# Printing header
-print(' ')
-print('*******************************************************************')
-print('*                    peleLigandConformations                      *')
-print('* --------------------------------------------------------------- *')
-print('*      Ligand\'s internal energy from conformer generation         *')
-print('*******************************************************************')
-print(' ')
-
-# Copying complexed crystal
-shutil.copy(filepath, path_energies_input)
-
-# Ligand's path
-path_ligand = os.path.join(path_energies_simulation,'ligand.pdb')
-
-# Removing the protein from the pdb.
-with open(filepath) as filein:
+    Returns
+    ----------
+    - parsed_args : argparse.Namespace
+        It contains the command-line arguments that are supplied by the user
+    """
+    parser = argparse.ArgumentParser()
     
-    lines = (l for l in filein if residue_name in l)
-        
-    with open(path_ligand, 'w') as fileout:
+    parser.add_argument("-r", "--residue_name", type=str, dest = "residue_name",\
+        default = 'LIG', help="Ligand's chain name.")
+    parser.add_argument("-f", "--file", type=str, dest = "input_file",\
+        default = None, help="Name of the file to analyze.")
+    parser.add_argument("-cn", "--conformations_number", type=int, dest = "conformations_number",\
+        default = 50, help="Number of conformers to be generated for the inputed file.")
+    parser.add_argument("-co", "--conf_file_name", type=str, dest = "conf_file_name",\
+        default = 'pele', help="Name of the .conf file used for the simulation.")
 
-        fileout.writelines(lines)
+    parsed_args = parser.parse_args(args)
 
-# Print
-print(' -   Input:')
-print('     -   File to analyze:',input_file + '.')
-print('     -   Number of conformations:',str(conformations_number) +'.')
-#
+    return parsed_args
 
-# Original conformation information
-m = Chem.MolFromPDBFile(path_ligand) 
-print(Chem.MolToSmiles(m))
-weight = ExactMolWt(m)
-rotatable_bonds = CalcNumRotatableBonds(m)
+def path_definer(input_file,residue_name):
+    """
+    Function
+    ----------
+    Defines all the paths that are going to be used
+    Parameters
 
-# Making sure all the Hydrogen's are right.
-m = AllChem.RemoveHs(m)
-mh = AllChem.AddHs(m, addCoords=True)
+    Parameters
+    ----------
+    - input_folder : str
+        The path to the directory created by the induced fit simulation.
 
-# Print 
-print(' -   Information:')
-print('     -   Molecular weight:', weight)
-print('     -   Number of rotatable bonds:',rotatable_bonds)
-print(' -   Generating conformations...')
-# 
-
-# Creating conformations
-cids = AllChem.EmbedMultipleConfs(mh, numConfs=conformations_number, numThreads=0)
-
-# Dictionary to store information
-conformer_properties_dictionary = {}
-
-# For all the conformations created calculate the energy of minimized conformation.
-# Each entry of the dictionary will have two subentries with the convergence and the energy value.
-for cid in cids:
+    Returns
+    ----------
+    - path_output: str
+        The path to the output directory generated in the simulation.
+    - path_reports : str
+        The path to the generated directory that will contain the copied reports.
+        cluster.
+    """        
     
-    ff = AllChem.MMFFGetMoleculeForceField(mh, AllChem.MMFFGetMoleculeProperties(mh), confId=cid)
-    ff.Initialize()
-    ff.CalcEnergy()
-    results = {}
-    results["converged"] = ff.Minimize(maxIts=2000)
-    results["energy_abs"] = ff.CalcEnergy()
+    path = str(pathlib.Path().absolute())
+    path_pdb = os.path.join(path,input_file)
 
-    conformer_properties_dictionary[cid] = results
+    path_energies = os.path.join(path,residue_name + '_linen_con')
+    path_energies_input = os.path.join(path_energies,'input')
+    path_energies_simulation = os.path.join(path_energies,'simulation')
+    path_energies_clusters = os.path.join(path_energies_simulation,'clusters')
 
-# Calculation of the RMSD of all the conformations to the original molecule.
-dmat = AllChem.GetConformerRMSMatrix(mh, prealigned=False)
+    if  os.path.exists(path_energies) == False:
+        os.mkdir(path_energies)
 
-# RDKit Machine learning module to cluster the conformations and create clusters.
-# The result is a tuple of tuples where each tuple is a cluster and the content are the 
-# the conformation numbers.
-rms_clusters = Butina.ClusterData(dmat, mh.GetNumConformers(), 2.0, isDistData=True, reordering=True)
+    if  os.path.exists(path_energies_input) == False:
+        os.mkdir(path_energies_input)
 
-print(' -   Number of clusters:',len(rms_clusters))
-
-cluster_number = 0
-min_energy = 10e10
-
-# For all the entry in the tuple
-for cluster in rms_clusters:
+    if  os.path.exists(path_energies_simulation) == False:
+        os.mkdir(path_energies_simulation)
     
-    cluster_number += 1
-    rmslist = []
+    if  os.path.exists(path_energies_clusters) == False:
+        os.mkdir(path_energies_clusters)
 
-    # Aligning
-    AllChem.AlignMolConformers(mh, confIds=cids, RMSlist=rmslist)
+    return path, path_pdb, path_energies_input, path_energies_clusters
+
+def linen_conformer(conformations_number,
+                    conf_file_name,
+                    path,
+                    path_pdb,
+                    path_energies_input,
+                    path_energies_clusters):
     
-    for cid in cluster:
+    print(' ')
+    print('*******************************************************************')
+    print('*                    peleLigandConformations                      *')
+    print('* --------------------------------------------------------------- *')
+    print('*      Ligand\'s internal energy from conformer generation         *')
+    print('*******************************************************************')
+    print(' ')
 
-        # Check minimium energies
-        e = results["energy_abs"]
+    start_time = time.time()
+    
+    shutil.copy(path_pdb, path_energies_input)
 
-        if e < min_energy:
+    if os.path.isdir(os.path.join(path,'DataLocal')):
+        copy_tree(os.path.join(path,'DataLocal'), path_energies_clusters)
+    
+    else: 
+        print(
+        '\n'
+        '                              WARNING:                               \n'
+        '     No DataLocal folder was found in this directory. If linen_a.py  \n'
+        '     is to be used, the DataLocal folder will have to be copied in   \n'
+        '     the /LIG_linen_con folder.                                      \n'
+        '\n'
+        )
+    
+    if os.path.isfile(os.path.join(path,conformations_number + '.conf')):
+        copy_tree(os.path.join(path,conformations_number + '.conf'), path_energies_clusters)
 
-            min_energy = e
-            results = conformer_properties_dictionary[cid]
-            results["cluster_number"] = cluster_number
-            results["cluster_centroid"] = cluster[0] + 1
-            index = cluster.index(cid)
+    else: 
+        print(
+        '\n'
+        '                             WARNING 2:                              \n'
+        '     No pele.conf file was found in this directory. If linen_a.py    \n'
+        '     is to be used, the script will assign default values to the     \n'
+        '     forcefield and the solvent.                                     \n'
+        '\n'
+        )
 
-            if index > 0:
+    if len((l for l in open(path_pdb) if 'CONECT' in l)) == 0:
+        raise Exception('NoConnectivityError: The pdb of the ligand must have\
+            connectivity. Otherwise it cannot be assigned and the conformations\
+            will make no sense.')
 
-            	results["rms_to_centroid"] = rmslist[index-1]
+    # Preparing molecule
+    m = Chem.MolFromPDBFile(path_pdb) 
+    weight = ExactMolWt(m)
+    rotatable_bonds = CalcNumRotatableBonds(m)
 
-            else:
+    m = AllChem.RemoveHs(m)
+    mh = AllChem.AddHs(m, addCoords=True)
 
-            	results["rms_to_centroid"] = 0.0
+    # Print
+    print(' -   Input:')
+    print('     -   File to analyze:',path_pdb.split('/')[-1] + '.')
+    print('     -   Number of conformations:',str(conformations_number) + '.')
+    print(' -   Information:')
+    print('     -   Molecular weight:', weight)
+    print('     -   Number of rotatable bonds:',rotatable_bonds)
+    print(' -   Generating conformations...')
+    # 
 
-#w = Chem.SDWriter(path_energies_simulation + '/clusters.pdb')
+    # Creating conformations and calculating
+    cids = AllChem.EmbedMultipleConfs(mh, numConfs=conformations_number, numThreads=0)
 
-cont = -1
-labels = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T']
+    conformer_properties_dictionary = {}
 
-for cluster in rms_clusters:
+    for cid in cids:
 
-    cont += 1
+        ff = AllChem.MMFFGetMoleculeForceField(mh, AllChem.MMFFGetMoleculeProperties(mh), confId=cid)
+        ff.Initialize()
+        ff.CalcEnergy()
+        results = {}
+        results["converged"] = ff.Minimize(maxIts=2000)
+        results["energy_abs"] = ff.CalcEnergy()
 
-    for cid in cluster:
+        conformer_properties_dictionary[cid] = results
 
-        for name in mh.GetPropNames():
+    dmat = AllChem.GetConformerRMSMatrix(mh, prealigned=False)
 
-            mh.ClearProp(name)
+    rms_clusters = Butina.ClusterData(dmat, mh.GetNumConformers(), 2.0, isDistData=True, reordering=True)
 
-        conformer_properties = conformer_properties_dictionary[cid]
-        mh.SetIntProp("conformer_id", cid + 1)
+    #
+    print(' -   Number of clusters:', len(rms_clusters))
+    #
 
-        for key in conformer_properties.keys():
+    cluster_number = 0
+    min_energy = 10e10
 
-            mh.SetProp(key, str(conformer_properties[key]))
-            e = conformer_properties["energy_abs"]
+    for cluster in rms_clusters:
 
-            if e:
+        cluster_number += 1
+        rmslist = []
 
-                mh.SetDoubleProp("energy_delta", e - min_energy)
+        AllChem.AlignMolConformers(mh, confIds=cids, RMSlist=rmslist)
 
-        Chem.rdmolfiles.MolToPDBFile(mh, path_energies_simulation + '/cluster_' + labels[cont] + '.pdb', confId = cid)
+        for cid in cluster:
 
-#
-print(' ')
-print('                    --Duration of the execution--                   ')
-print('                      %s seconds' % (time.time() - start_time)  )
-print(' ')
-print('*******************************************************************')
-#
+            e = results["energy_abs"]
+
+            if e < min_energy:
+
+                min_energy = e
+                results = conformer_properties_dictionary[cid]
+                results["cluster_number"] = cluster_number
+                results["cluster_centroid"] = cluster[0] + 1
+                index = cluster.index(cid)
+
+                if index > 0:
+
+                	results["rms_to_centroid"] = rmslist[index-1]
+
+                else:
+
+                	results["rms_to_centroid"] = 0.0
+
+    cont = -1
+    labels = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T']
+
+    for cluster in rms_clusters:
+
+        cont += 1
+
+        for cid in cluster:
+
+            for name in mh.GetPropNames():
+
+                mh.ClearProp(name)
+
+            conformer_properties = conformer_properties_dictionary[cid]
+            mh.SetIntProp("conformer_id", cid + 1)
+
+            for key in conformer_properties.keys():
+
+                mh.SetProp(key, str(conformer_properties[key]))
+                e = conformer_properties["energy_abs"]
+
+                if e:
+
+                    mh.SetDoubleProp("energy_delta", e - min_energy)
+
+            Chem.rdmolfiles.MolToPDBFile(mh, path_energies_clusters + '/cluster_' + labels[cont] + '.pdb', confId = cid)
+
+    #
+    print(' ')
+    print('                    --Duration of the execution--                   ')
+    print('                      %s seconds' % (time.time() - start_time)  )
+    print(' ')
+    print('*******************************************************************')
+    #
+
+def main(args):
+    """
+    Function
+    ----------
+    It runs statistics function. 
+
+    Parameters
+    ----------
+    - args : argparse.Namespace
+        It contains the command-line arguments that are supplied by the user
+    """
+
+    path, path_pdb, path_energies_input, path_energies_clusters =\
+    path_definer(input_file=args.input_file,residue_name=args.residue_name)
+
+    linen_conformer(conformations_number = args.conformations_number,
+                    conf_file_name = args.conf_file_name,
+                    path=path,
+                    path_pdb = path_pdb,
+                    path_energies_input = path_energies_input,
+                    path_energies_clusters = path_energies_clusters
+                    )
+
+if __name__ == '__main__':
+
+    args = parse_args(sys.argv[1:])
+    main(args)
