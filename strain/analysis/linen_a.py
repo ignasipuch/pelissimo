@@ -112,14 +112,14 @@ def linen_results(input_folder,
         """        
         
         path = str(pathlib.Path().absolute())
-        path_previous_simulation = path + '/' + input_folder
-        path_results = path_previous_simulation + '/' + clusters_folder
-        path_clusters = path_results + '/clusters' 
+        path_previous_simulation = os.path.join(path,input_folder)
+        path_results = os.path.join(path_previous_simulation,clusters_folder)
+        path_clusters = os.path.join(path_results,'clusters') 
 
         if os.path.isdir(path_previous_simulation) == False:
             raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
 
-        path_energies = os.path.join(path,residue_name,'_linen_a')
+        path_energies = os.path.join(path,residue_name + '_linen_a')
         path_energies_input = os.path.join(path_energies,'input')   
         path_energies_simulation = os.path.join(path_energies,'simulation')
 
@@ -153,8 +153,6 @@ def linen_results(input_folder,
 
     cluster_files = []
     labels = []
-
-    shutil.copy(os.path.join(path_results,'data.csv'), path_energies_input)
 
     # Storing information and copying files
     if os.path.isdir(path_clusters): 
@@ -211,9 +209,13 @@ def linen_results(input_folder,
     print(' -   Extracting information from ' + conf_file_name + '.conf.' )
     #
 
+    cont_conf = 0
+
     for document in files:
 
         if conf_file_name + '.conf' in document:
+
+            cont_conf = 1
 
             with open (os.path.join(path_previous_simulation,document)) as filein:
 
@@ -233,6 +235,12 @@ def linen_results(input_folder,
                     elif "OBC" in line:
 
                         solvent = 'OBC'
+
+        if cont_conf == 0:
+
+            print('     -   No .conf file was found.' )
+            forcefield = 'OPLS2005'
+            solvent = 'VDGBNP'
 
     #
     print('     -   Forcefield used:', forcefield + '.' )
@@ -467,7 +475,6 @@ def linen_correction(input_folder,
         path_energies = os.path.join(path,residue_name + '_linen')
         path_energies_input = os.path.join(path_energies,'input')
         path_energies_simulation = os.path.join(path_energies,'simulation')
-        path_energies_output = os.path.join(path_energies,'output')
 
         if  os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
@@ -478,11 +485,8 @@ def linen_correction(input_folder,
         if  os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        if  os.path.exists(path_energies_output) == False:
-            os.mkdir(path_energies_output)
-
         return  path_previous_simulation, path_results, path_output,\
-        path_energies_simulation
+        path_energies_input, path_energies_simulation
 
     # Dictionaries for the clusters
     labelsdict_ltn = {
@@ -494,7 +498,8 @@ def linen_correction(input_folder,
     labelsdict_ntl = {v: k for k, v in labelsdict_ltn.items()}  
 
     # Paths        
-    path_previous_simulation, path_results, path_output, path_energies_simulation\
+    path_previous_simulation, path_results, path_output,\
+    path_energies_input, path_energies_simulation\
     = path_definer(input_folder,residue_name,clusters_folder)
 
     #
@@ -508,6 +513,12 @@ def linen_correction(input_folder,
     print('*******************************************************************')
     print(' ')
     #
+
+    if os.path.isfile(os.path.join(path_results,'data.csv')):
+        shutil.copy(os.path.join(path_results,'data.csv'), path_energies_input)
+    
+    else:
+        raise Exception('DataSimulationNotFound: No data.csv file was found in ')
 
     if data_filter == 'none' or data_filter == 'None':
 
