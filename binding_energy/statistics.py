@@ -33,7 +33,6 @@ def parse_args(args):
     """
     parser = argparse.ArgumentParser()
 
-    # Inputs
     parser.add_argument("-d", "--directory", type=str, dest = "input_folder",\
         default = 'output', help="Name of the directory where the files to\
         analyze are located.")
