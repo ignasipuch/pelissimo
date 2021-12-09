@@ -236,11 +236,11 @@ def linen_results(input_folder,
 
                         solvent = 'OBC'
 
-        if cont_conf == 0:
+    if cont_conf == 0:
 
-            print('     -   No .conf file was found.' )
-            forcefield = 'OPLS2005'
-            solvent = 'VDGBNP'
+        print('     -   No .conf file was found.' )
+        forcefield = 'OPLS2005'
+        solvent = 'VDGBNP'
 
     #
     print('     -   Forcefield used:', forcefield + '.' )
