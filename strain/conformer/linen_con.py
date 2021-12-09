@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
+"""
+This module is designed to run create N conformers of a ligand and prepare
+a PELE energy calculation of them.
+"""
 
-# Imports
+__author__ = "Ignasi Puch-Giner"
+__maintainer__ = "Ignasi Puch-Giner"
+__email__ = "ignasi.puchginer@bsc.es"
+
 import sys
 import os
 import pathlib 
@@ -75,6 +82,7 @@ def path_definer(input_file,residue_name):
     path_energies_input = os.path.join(path_energies,'input')
     path_energies_simulation = os.path.join(path_energies,'simulation')
     path_energies_clusters = os.path.join(path_energies_simulation,'clusters')
+    path_energies_DataLocal = os.path.join(path_energies,'DataLocal')
 
     if  os.path.exists(path_energies) == False:
         os.mkdir(path_energies)
@@ -88,14 +96,19 @@ def path_definer(input_file,residue_name):
     if  os.path.exists(path_energies_clusters) == False:
         os.mkdir(path_energies_clusters)
 
-    return path, path_pdb, path_energies_input, path_energies_clusters
+    if  os.path.exists(path_energies_DataLocal) == False:
+        os.mkdir(path_energies_DataLocal)
+
+    return path, path_pdb, path_energies_input, path_energies, path_energies_clusters, path_energies_DataLocal
 
 def linen_conformer(conformations_number,
                     conf_file_name,
                     path,
                     path_pdb,
                     path_energies_input,
-                    path_energies_clusters):
+                    path_energies,
+                    path_energies_clusters,
+                    path_energies_DataLocal):
     
     print(' ')
     print('*******************************************************************')
@@ -110,11 +123,10 @@ def linen_conformer(conformations_number,
     shutil.copy(path_pdb, path_energies_input)
 
     if os.path.isdir(os.path.join(path,'DataLocal')):
-        copy_tree(os.path.join(path,'DataLocal'), path_energies_clusters)
+        copy_tree(os.path.join(path,'DataLocal'), path_energies_DataLocal)
     
     else: 
         print(
-        '\n'
         '                              WARNING:                               \n'
         '     No DataLocal folder was found in this directory. If linen_a.py  \n'
         '     is to be used, the DataLocal folder will have to be copied in   \n'
@@ -122,23 +134,20 @@ def linen_conformer(conformations_number,
         '\n'
         )
     
-    if os.path.isfile(os.path.join(path,conformations_number + '.conf')):
-        copy_tree(os.path.join(path,conformations_number + '.conf'), path_energies_clusters)
+    if os.path.isfile(os.path.join(path,conf_file_name + '.conf')):
+        shutil.copy(os.path.join(path,conf_file_name + '.conf'), path_energies)
 
     else: 
         print(
-        '\n'
-        '                             WARNING 2:                              \n'
+        '                              WARNING:                               \n'
         '     No pele.conf file was found in this directory. If linen_a.py    \n'
         '     is to be used, the script will assign default values to the     \n'
         '     forcefield and the solvent.                                     \n'
         '\n'
         )
 
-    if len((l for l in open(path_pdb) if 'CONECT' in l)) == 0:
-        raise Exception('NoConnectivityError: The pdb of the ligand must have\
-            connectivity. Otherwise it cannot be assigned and the conformations\
-            will make no sense.')
+    if 'CONECT' not in open(path_pdb).read():
+        raise Exception('NoConnectivityError: The pdb of the ligand must have connectivity. Otherwise it cannot be assigned and the conformations will make no sense.')
 
     # Preparing molecule
     m = Chem.MolFromPDBFile(path_pdb) 
@@ -212,8 +221,10 @@ def linen_conformer(conformations_number,
 
                 	results["rms_to_centroid"] = 0.0
 
+    labels = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N',\
+    'O','P','Q','R','S','T','U','V','W','X','Y','Z']
+
     cont = -1
-    labels = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T']
 
     for cluster in rms_clusters:
 
@@ -259,7 +270,7 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
-    path, path_pdb, path_energies_input, path_energies_clusters =\
+    path, path_pdb, path_energies_input, path_energies, path_energies_clusters, path_energies_DataLocal =\
     path_definer(input_file=args.input_file,residue_name=args.residue_name)
 
     linen_conformer(conformations_number = args.conformations_number,
@@ -267,7 +278,9 @@ def main(args):
                     path=path,
                     path_pdb = path_pdb,
                     path_energies_input = path_energies_input,
-                    path_energies_clusters = path_energies_clusters
+                    path_energies = path_energies,
+                    path_energies_clusters = path_energies_clusters,
+                    path_energies_DataLocal= path_energies_DataLocal
                     )
 
 if __name__ == '__main__':
