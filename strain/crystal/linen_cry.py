@@ -39,6 +39,10 @@ def parse_args(args):
         default = 'LIG', help="Ligand's residue name.")
     parser.add_argument("-pdb", "--pdb_name", type=str, dest = "pdb_name",\
         default = None, help="Original pdb name.")
+    parser.add_argument("-ff", "--force_field", type=str, dest = "force_field",\
+        default = None, help="Force field with which the simulation will run.")
+    parser.add_argument("-s", "--solvent_model", type=str, dest = "solvent_model",\
+        default = None, help="Solvent model with which the simulation will run.")   
 
     parsed_args = parser.parse_args(args)
 
@@ -46,7 +50,23 @@ def parse_args(args):
 
 def linen_prepare(input_folder,
                   residue_name,
-                  pdb_name):
+                  pdb_name,
+                  force_field,
+                  solvent_model):
+    """
+    Function
+    ----------
+    Prepares the PELE simulation of the ligand.
+
+    Parameters
+    ----------
+    - input_folder : str
+        The path to the directory created by the induced fit simulation.
+    - residue_name : str
+        Residue name of the ligand in the pdb of each cluster.
+    - pdb_name : str
+        Name of the pdb we ant to perform the simulation with.
+    """
 
     def path_definer(input_folder,
                      residue_name):
@@ -83,27 +103,233 @@ def linen_prepare(input_folder,
             raise Exception('PathError: There is no folder with this name: '\
             + path_previous_simulation + '. Please check the path and the folder name.')
 
-        path_energies = path + '/' + residue_name + '_linen_sim'
-        path_energies_simulation = path_energies + '/simulation'
+        path_energies = path + '/' + residue_name + '_linen_cry'
 
         if  os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
 
-        if  os.path.exists(path_energies_simulation) == False:
-            os.mkdir(path_energies_simulation)
+        return  path,path_previous_simulation, path_energies
 
-        return  path,path_previous_simulation, path_energies_simulation
+    def write_files(force_field,solvent_model,path_energies):
+
+        with open (os.path.join(path_energies,'pele.conf'), 'w') as fileout:
+        
+            fileout.writelines(
+            '{\n'
+            '  "licenseDirectoryPath": "/gpfs/projects/bsc72/PELE++/license",\n'
+            '  "Initialization": {\n'
+            '    "Complex": {\n'
+            '      "files": [\n'
+            '        {\n'
+            '          "path": "' + path_energies + '/ligand.pdb"\n'
+            '        }\n'
+            '      ]\n'
+            '    },\n'
+            '    "ForceField": "' + force_field + '",\n'
+            '    "Solvent": {\n'
+            '      "ionicStrength": 0.15,\n'
+            '      "solventType": "' + solvent_model + '",\n'
+            '      "useDebyeLength": true\n'
+            '    }\n'
+            '  },\n'
+            '  "verboseMode": false,\n'
+            '  "commands": [\n'
+            '    {\n'
+            '      "commandType": "peleSimulation",\n'
+            '      "RandomGenerator": {\n'
+            '        "seed": 12345\n'
+            '      },\n'
+            '      "selectionToPerturb": {\n'
+            '        "chains": {\n'
+            '          "names": [\n'
+            '            "L"\n'
+            '          ]\n'
+            '        }\n'
+            '      },\n'
+            '      "PELE_Output": {\n'
+            '        "savingFrequencyForAcceptedSteps": 1,\n'
+            '        "savingMode": "savingTrajectory",\n'
+            '        "reportPath": "output/report",\n'
+            '        "trajectoryPath": "output/trajectory.pdb"\n'
+            '      },\n'
+            '      "PELE_Parameters": {\n'
+            '        "anmFrequency": 0,\n'
+            '        "sideChainPredictionFrequency": 2,\n'
+            '        "minimizationFrequency": 1,\n'
+            '        "waterPerturbationFrequency": 1,\n'
+            '        "perturbationCOMConstraintConstant": 0,\n'
+            '        "sideChainPredictionRegionRadius": 6,\n'
+            '        "activateProximityDetection": true,\n'
+            '        "temperature": 1500,\n'
+            '        "numberOfPeleSteps": 100\n'
+            '      },\n'
+            '\n'
+            '      "constraints":[\n'
+            '      { "type": "constrainAtomToPosition", "springConstant": 0.5, "equilibriumDistance": 0.0, "constrainThisAtom": "L:290:_C2_" }\n'
+            '      ],\n'
+            '\n'
+            '      "SideChainPerturbation": {\n'
+            '        "sideChainsToPerturb": {\n'
+            '          "links": {\n'
+            '            "ids": [\n'
+            '              "L:290"\n'
+            '            ]\n'
+            '          }\n'
+            '        },\n'
+            '        "parameters": {\n'
+            '          "overlapFactor": 0.5,\n'
+            '          "numberOfTrials": 20,\n'
+            '          "atLeastOneSelectedTrial": true,\n'
+            '          "maxTrialsForAtLeastOne": 50\n'
+            '        }\n'
+            '      },\n'
+            '      "ANM": {\n'
+            '        "algorithm": "CARTESIANS",\n'
+            '        "nodes": {\n'
+            '          "atoms": {\n'
+            '            "names": [\n'
+            '              "_C1_"\n'
+            '            ]\n'
+            '          }\n'
+            '        },\n'
+            '        "ANMMinimizer": {\n'
+            '          "algorithm": "TruncatedNewton",\n'
+            '          "parameters": {\n'
+            '            "MaximumMinimizationIterations": 1,\n'
+            '            "MaximumNewtonIterations": 25,\n'
+            '            "MinimumRMS": 0.2,\n'
+            '            "alphaUpdated": false,\n'
+            '            "nonBondingListUpdatedEachMinStep": false\n'
+            '          }\n'
+            '        },\n'
+            '        "parameters": {\n'
+            '          "modesChangeFrequency": 0\n'
+            '        }\n'
+            '      },\n'
+            '      "Minimizer": {\n'
+            '        "algorithm": "TruncatedNewton",\n'
+            '        "parameters": {\n'
+            '          "MinimumRMS": 0.2,\n'
+            '          "alphaUpdated": false,\n'
+            '          "nonBondingListUpdatedEachMinStep": true\n'
+            '        }\n'
+            '      },\n'
+            '      "PeleTasks": [\n'
+            '        {\n'
+            '          "metrics": [\n'
+            '            {\n'
+            '              "type": "sasa",\n'
+            '              "tag": "sasaLig",\n'
+            '              "selection": {\n'
+            '                "chains": {\n'
+            '                  "names": [\n'
+            '                    "L"\n'
+            '                  ]\n'
+            '                }\n'
+            '              }\n'
+            '            }\n'
+            '          ]\n'
+            '        }\n'
+            '      ]\n'
+            '    }\n'
+            '  ]\n'
+            '}\n'
+            )
+    
+        with open (os.path.join(path_energies,'run'), 'w') as fileout:
+        
+            fileout.writelines(
+            '#!/bin/bash\n'
+            '#SBATCH -J PELEne\n'
+            '#SBATCH --output=PELEne.out\n'
+            '#SBATCH --error=PELEne.err\n'
+            '#SBATCH --qos=debug\n'
+            '#SBATCH --time=00:30:00\n'
+            '\n'
+            'module purge\n'
+            'module load intel mkl impi gcc\n'
+            'module load impi\n'
+            'module load python/2.7.13 boost/1.64.0_py2\n'
+            '\n'
+            'mpirun -np 48 /gpfs/projects/bsc72/PELE++/mniv/V1.7.2-b2/bin/PELE-1.7.2_mpi --control-file ' + path_energies + '/pele.conf --license-directory /gpfs/projects/bsc72/PELE++/license\n'
+            )
+
+        with open (os.path.join(path_energies,'run_analysis'), 'w') as fileout:
+
+            fileout.writelines(
+            '#!/bin/bash\n'
+            '#SBATCH --job-name=analysis\n'
+            '#SBATCH --output=analysis.out\n'
+            '#SBATCH --error=analysis.err\n'
+            '#SBATCH --ntasks=48\n'
+            '#SBATCH --qos=debug\n'
+            '#SBATCH --time=00-01:00:00\n'
+            '\n' 
+            'module load ANACONDA/2019.10\n'
+            'module load intel mkl impi gcc # 2> /dev/null\n'
+            'module load impi\n'
+            'module load boost/1.64.0\n'
+            '\n' 
+            'eval "$(conda shell.bash hook)"\n'
+            'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.0\n'
+            '\n' 
+            'python script.py\n'
+            )
+        
+        with open(os.path.join(path_energies,'script.py'), 'w') as fileout:
+
+            fileout.writelines(
+            'from pele_platform.analysis import Analysis\n'
+            '\n'
+            'analysis = Analysis(resname="' + residue_name +\
+                '", chain="L", simulation_output="output", report="report", cpus=48)\n'
+            'analysis.generate(path="analysis", clustering_type="meanshift")\n'
+            )
 
     #---
 
-    path, path_previous_simulation, path_energies_simulation = \
+    #
+    print(' ')
+    print('*******************************************************************')
+    print('*                         peleLigandCrystal                       *')
+    print('* --------------------------------------------------------------- *')
+    print('*      Ligand\'s internal energy from ligand PELE simulation       *')
+    print('*******************************************************************')
+    print(' ')
+    #
+
+    path, path_previous_simulation, path_energies = \
     path_definer(input_folder,residue_name)
+
+    if force_field is None:
+        print(
+        '                              WARNING:                               \n'
+        '   No force field was introduced with the flag -ff (i.e. -ff         \n'
+        '   OPLS2005).The script automatically sets the forcefield to         \n'
+        '   OPLS2005.'
+        '\n'
+        )
+        force_field = 'OPLS2005'
+
+    if solvent_model is None:
+        print(
+        '                              WARNING:                               \n'
+        '   No solvent model was introduced with the flag -s (i.e. -ff        \n'
+        '   OBC). The script automatically sets the solvent model to          \n'
+        '   VDGBNP.'
+        '\n'
+        )
+        solvent_model = 'VDGBNP'
+
+    print(' -   Copying DataLocal and generating ligand.pdb file.')
+    print(' -   Writing necessary files to run a PELE simulation and')
+    print('     a PELE platform analysis afterwards.')
 
     with open (os.path.join(path,pdb_name)) as filein:
 
         lines = (l for l in filein if residue_name in l)
-        new_path = os.path.join(path_energies_simulation,'ligand.pdb')
-        path_DataLocal = path_energies_simulation + '/DataLocal'
+        new_path = os.path.join(path_energies,'ligand.pdb')
+        path_DataLocal = path_energies + '/DataLocal'
 
         if  os.path.exists(path_DataLocal) == False:
             os.mkdir(path_DataLocal)
@@ -114,7 +340,32 @@ def linen_prepare(input_folder,
             
             fileout.writelines(lines)
 
+    write_files(force_field,solvent_model,path_energies)
+
+    #
+    print(' ')
+    print('------------------------------ INFO -------------------------------')
+    print(' (1) ')
+    print(' -   To run the energy calculation for the ligand:')
+    print(' (1.1)    :> cd ' + residue_name + '_linen_cry.')
+    print(' (1.2)    Modify the following sections of pele.conf:')
+    print(' (1.2.1)     "constraints"')
+    print(' (1.2.2)     "SideChainPerturbation"')
+    print(' (1.3)    :> sbatch run')
+    print(' -   Results are stored in /output.')
+    print(' ')
+    print(' (2) ')
+    print(' -   To perform a clusterization with PELE platform:')
+    print(' -   Go to ' + residue_name + '_linen_cry directory.')
+    print('          :> sbatch run_analysis')
+    print(' ')
+    print(' ->   ->    For help: python path/to/code/linen_cry.py -h    <-  <-')
+    print(' ')
+    print('-------------------------------------------------------------------')
+    #
+
 def main(args):
+
     """
     It reads the command-line arguments and runs linen_results.
     Parameters
@@ -127,7 +378,9 @@ def main(args):
 
     linen_prepare(input_folder = args.input_folder,
                   residue_name = args.residue_name,
-                  pdb_name = args.pdb_name)
+                  pdb_name = args.pdb_name,
+                  force_field = args.force_field,
+                  solvent_model = args.solvent_model)
 
 if __name__ == '__main__':
 
