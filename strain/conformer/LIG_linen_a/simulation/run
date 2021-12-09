@@ -10,7 +10,7 @@ module load intel mkl impi gcc
 module load impi
 module load boost/1.64.0
 
-list="A B C D E F"
+list="A"
 
 for i in $list
 do
