@@ -333,7 +333,7 @@ def linen_results(input_folder,
     print('------------------------------ INFO -------------------------------')
     print(' (1) ')
     print(' -   To run the energy calculation for all the clusters:')
-    print('     :> cd ' + residue_name + '_linen/simulation')
+    print('     :> cd ' + residue_name + '_linen_a/simulation')
     print('     :> sbatch run')
     print(' -   Results are stored in PELEne.out.')
     print(' (2) ')
