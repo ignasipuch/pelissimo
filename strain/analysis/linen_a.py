@@ -248,8 +248,6 @@ def linen_results(input_folder,
     #
 
     # Generating all the necessary control files
-    cont = 0
-
     #
     print(' -   Generating control files for the energy calculation.' )
     #
@@ -298,8 +296,6 @@ def linen_results(input_folder,
             '}\n'
             )
 
-        cont += 1
-
     with open (os.path.join(path_energies_simulation,'run'), 'w') as fileout:
 
         fileout.writelines(
@@ -345,7 +341,7 @@ def linen_results(input_folder,
     print(' -   Go to ' + residue_name + '_linen/simulation directory.')
     print('     :> python /path/to/code/linen_res.py -a analyze')
     print(' ')
-    print(' ->   ->    For help: python path/to/code/linen_res.py -h    <-  <-')
+    print(' ->   ->    For help: python path/to/code/linen_a.py -h    <-  <-')
     print(' ')
     print('-------------------------------------------------------------------')
     #
@@ -412,7 +408,7 @@ def linen_analyze():
     print(' -   If wanted the flag -df can be added to specify filtering')
     print('     method.')
     print(' ')
-    print(' ->   ->    For help: python path/to/code/linen_res.py -h    <-  <-')
+    print(' ->   ->    For help: python path/to/code/linen_a.py -h    <-  <-')
     print(' ')
     #
 
@@ -747,7 +743,7 @@ def linen_correction(input_folder,
     print('     :> sbatch run_analysis')
     print(' -   The new plots and files will be in /analysis.')
     print(' ')
-    print(' ->   ->    For help: python path/to/code/linen_res.py -h    <-  <-')
+    print(' ->   ->    For help: python path/to/code/linen_a.py -h    <-  <-')
     print(' ')
     #
 
