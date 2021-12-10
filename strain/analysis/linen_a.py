@@ -10,12 +10,13 @@ __email__ = "ignasi.puchginer@bsc.es"
 
 import sys
 import os
-import pathlib 
+import pathlib
 import argparse
 import shutil
 from distutils.dir_util import copy_tree
 import numpy as np
 from collections import Counter
+
 
 def parse_args(args):
     """
@@ -37,31 +38,32 @@ def parse_args(args):
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-d", "--directory", type=str, dest = "input_folder",\
-        default = 'LIG_Pele', help="Name of the directory where the simulation\
+    parser.add_argument("-d", "--directory", type=str, dest="input_folder",
+                        default='LIG_Pele', help="Name of the directory where the simulation\
         is located.")
-    parser.add_argument("-r", "--residue_name", type=str, dest = "residue_name",\
-        default = 'LIG', help="Ligand's residue name.")
-    parser.add_argument("-cl", "--clusters_folder", type=str, dest = "clusters_folder",\
-        default = 'results', help="Name of the directory containing the folder: clusters.")
-    parser.add_argument("-co", "--conf_file_name", type=str, dest = "conf_file_name",\
-        default = 'pele', help="Name of the .conf file used for the simulation.")
-    parser.add_argument("-rn", "--report_name", type=str, dest = "report_name",\
-        default = 'report', help="Name of the report files used for the simulation.")
-    parser.add_argument("-df", "--data_filter", type=str, dest = "data_filter",\
-        default = 'clusters', help="Filter you want to apply to the data. 1) clusters: Only \
+    parser.add_argument("-cl", "--clusters_folder", type=str, dest="clusters_folder",
+                        default='results', help="Name of the directory containing the folder: clusters.")
+    parser.add_argument("-co", "--conf_file_name", type=str, dest="conf_file_name",
+                        default='pele', help="Name of the .conf file used for the simulation.")
+    parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
+                        default='report', help="Name of the report files used for the simulation.")
+    parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
+                        default='LIG', help="Ligand's residue name.")
+    parser.add_argument("-df", "--data_filter", type=str, dest="data_filter",
+                        default='clusters', help="Filter you want to apply to the data. 1) clusters: Only \
         keeps the snaphots that belong to one of the clusters. 2) none: Keeps all the \
         snapshots no matter the cluster they belong to.")
-    parser.add_argument("-a", "--action", type=str, dest = "action",\
-        default = 'generate', help="Command to let know the script the action you want: (1) generate,\
+    parser.add_argument("-a", "--action", type=str, dest="action",
+                        default='generate', help="Command to let know the script the action you want: (1) generate,\
         (2) analyze or (3) correct.")
 
     parsed_args = parser.parse_args(args)
 
     return parsed_args
 
+
 def linen_results(input_folder,
-                  residue_name, 
+                  residue_name,
                   clusters_folder,
                   conf_file_name):
     """
@@ -109,37 +111,38 @@ def linen_results(input_folder,
         - path_energies_simulation : str
             The path to the generated directory containing all the necessary files to perform the
             PELE energy calculation.
-        """        
-        
+        """
+
         path = str(pathlib.Path().absolute())
-        path_previous_simulation = os.path.join(path,input_folder)
-        path_results = os.path.join(path_previous_simulation,clusters_folder)
-        path_clusters = os.path.join(path_results,'clusters') 
+        path_previous_simulation = os.path.join(path, input_folder)
+        path_results = os.path.join(path_previous_simulation, clusters_folder)
+        path_clusters = os.path.join(path_results, 'clusters')
 
         if os.path.isdir(path_previous_simulation) == False:
-            raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
+            raise Exception('PathError: There is no folder with this name: ' +
+                            path_previous_simulation + '. Please check the path and the folder name.')
 
-        path_energies = os.path.join(path,residue_name + '_linen_a')
-        path_energies_input = os.path.join(path_energies,'input')   
-        path_energies_simulation = os.path.join(path_energies,'simulation')
+        path_energies = os.path.join(path, residue_name + '_linen_a')
+        path_energies_input = os.path.join(path_energies, 'input')
+        path_energies_simulation = os.path.join(path_energies, 'simulation')
 
-        if  os.path.exists(path_energies) == False:
+        if os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
 
-        if  os.path.exists(path_energies_input) == False:
+        if os.path.exists(path_energies_input) == False:
             os.mkdir(path_energies_input)
 
-        if  os.path.exists(path_energies_simulation) == False:
+        if os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        return  path_previous_simulation, path_results, path_clusters,\
-        path_energies_input, path_energies_simulation
+        return path_previous_simulation, path_results, path_clusters,\
+            path_energies_input, path_energies_simulation
 
     # ---
-    
+
     path_previous_simulation, path_results, path_clusters,\
-    path_energies_input, path_energies_simulation = \
-    path_definer(input_folder,clusters_folder)
+        path_energies_input, path_energies_simulation = \
+        path_definer(input_folder, clusters_folder)
 
     print(' ')
     print('*******************************************************************')
@@ -155,23 +158,25 @@ def linen_results(input_folder,
     labels = []
 
     # Storing information and copying files
-    if os.path.isdir(path_clusters): 
+    if os.path.isdir(path_clusters):
 
         files = os.listdir(path_clusters)
 
-        for document in files: 
+        for document in files:
 
             if 'cluster' in document and '.pdb' in document:
 
-                cluster_files.append(os.path.join(path_energies_simulation,document))
+                cluster_files.append(os.path.join(
+                    path_energies_simulation, document))
                 labels.append((document.split('cluster_'))[1].split('.pdb')[0])
-                shutil.copy(os.path.join(path_clusters,document), path_energies_input)
+                shutil.copy(os.path.join(path_clusters, document),
+                            path_energies_input)
 
     # List of clusters' letters for the run_file
     run_file_labels = ' '.join(labels)
 
     #
-    print(' -   Number of clusters obtained in the simulation:',len(labels))
+    print(' -   Number of clusters obtained in the simulation:', len(labels))
     #
 
     # Removing the protein from the pdbs.
@@ -181,32 +186,34 @@ def linen_results(input_folder,
 
         if cluster.startswith('cluster'):
 
-            with open(os.path.join(path_energies_input,cluster)) as filein:
+            with open(os.path.join(path_energies_input, cluster)) as filein:
 
                 lines = (l for l in filein if residue_name in l)
-                new_path = path_energies_simulation + '/' + cluster.split('.pdb')[0]
+                new_path = path_energies_simulation + \
+                    '/' + cluster.split('.pdb')[0]
                 path_DataLocal = path_energies_simulation + '/DataLocal'
 
-                if  os.path.exists(new_path) == False:
+                if os.path.exists(new_path) == False:
                     os.mkdir(new_path)
 
-                if  os.path.exists(path_DataLocal) == False:
+                if os.path.exists(path_DataLocal) == False:
                     os.mkdir(path_DataLocal)
 
-                copy_tree(os.path.join(path_previous_simulation,'DataLocal'), path_DataLocal)
+                copy_tree(os.path.join(path_previous_simulation,
+                                       'DataLocal'), path_DataLocal)
 
-                with open(os.path.join(new_path,cluster), 'w') as fileout:
+                with open(os.path.join(new_path, cluster), 'w') as fileout:
 
                     fileout.writelines(lines)
 
-        else: continue
-
+        else:
+            continue
 
     # Copying .conf document and extracting information
-    files =  files = os.listdir(path_previous_simulation)
+    files = files = os.listdir(path_previous_simulation)
 
     #
-    print(' -   Extracting information from ' + conf_file_name + '.conf.' )
+    print(' -   Extracting information from ' + conf_file_name + '.conf.')
     #
 
     cont_conf = 0
@@ -217,7 +224,7 @@ def linen_results(input_folder,
 
             cont_conf = 1
 
-            with open (os.path.join(path_previous_simulation,document)) as filein:
+            with open(os.path.join(path_previous_simulation, document)) as filein:
 
                 for line in filein:
 
@@ -238,94 +245,95 @@ def linen_results(input_folder,
 
     if cont_conf == 0:
 
-        print('     -   No .conf file was found.' )
+        print('     -   No .conf file was found.')
         forcefield = 'OPLS2005'
         solvent = 'VDGBNP'
 
     #
-    print('     -   Forcefield used:', forcefield + '.' )
-    print('     -   Solvent model used:', solvent + '.' )
+    print('     -   Forcefield used:', forcefield + '.')
+    print('     -   Solvent model used:', solvent + '.')
     #
 
     # Generating all the necessary control files
     #
-    print(' -   Generating control files for the energy calculation.' )
+    print(' -   Generating control files for the energy calculation.')
     #
 
     for label in labels:
 
         new_path = os.path.join(path_energies_simulation + '/cluster_' + label)
 
-        with open (os.path.join(new_path,'energy' + label + '.conf'), 'w') as fileout:
+        with open(os.path.join(new_path, 'energy' + label + '.conf'), 'w') as fileout:
 
             fileout.writelines(
-            '{\n'
-            '   "licenseDirectoryPath" : "/gpfs/projects/bsc72/PELE++/license",'
-            '\n'
-            '   "Initialization" : {\n'
-            '      "Complex" : {\n'
-            '         "files" : [\n'
-            '            {\n'
-            '               "path": "' + new_path + '/cluster_' + label + '.pdb"\n'
-            '            }\n'
-            '         ]\n'
-            '      },\n'
-            '      "ForceField" : "' + forcefield + '",\n'
-            '      "Solvent" : {\n'
-            '         "ionicStrength" : 0.250,\n'
-            '         "solventType" : "' + solvent + '",\n'
-            '         "useDebyeLength" : true\n'
-            '      }\n'
-            '   },\n'
-            '   "commands" : [\n'
-            '             {\n'
-            '                 "commandType": "minimization",\n'
-            '                 "Minimizer":\n'
-            '                 {\n'
-            '                     "algorithm": "TruncatedNewton",\n'
-            '                     "parameters":\n'
-            '                     {\n'
-            '                         "MinimumRMS": 0.05\n'
-            '                     }\n'
-            '                 }\n'
-            '             },\n'
-            '             {\n'
-            '                 "commandType":"energyComputation"\n'
-            '             }\n'
-            '         ]\n'
-            '}\n'
+                '{\n'
+                '   "licenseDirectoryPath" : "/gpfs/projects/bsc72/PELE++/license",'
+                '\n'
+                '   "Initialization" : {\n'
+                '      "Complex" : {\n'
+                '         "files" : [\n'
+                '            {\n'
+                '               "path": "' + new_path + '/cluster_' + label + '.pdb"\n'
+                '            }\n'
+                '         ]\n'
+                '      },\n'
+                '      "ForceField" : "' + forcefield + '",\n'
+                '      "Solvent" : {\n'
+                '         "ionicStrength" : 0.250,\n'
+                '         "solventType" : "' + solvent + '",\n'
+                '         "useDebyeLength" : true\n'
+                '      }\n'
+                '   },\n'
+                '   "commands" : [\n'
+                '             {\n'
+                '                 "commandType": "minimization",\n'
+                '                 "Minimizer":\n'
+                '                 {\n'
+                '                     "algorithm": "TruncatedNewton",\n'
+                '                     "parameters":\n'
+                '                     {\n'
+                '                         "MinimumRMS": 0.05\n'
+                '                     }\n'
+                '                 }\n'
+                '             },\n'
+                '             {\n'
+                '                 "commandType":"energyComputation"\n'
+                '             }\n'
+                '         ]\n'
+                '}\n'
             )
 
-    with open (os.path.join(path_energies_simulation,'run'), 'w') as fileout:
+    with open(os.path.join(path_energies_simulation, 'run'), 'w') as fileout:
 
         fileout.writelines(
-        '#!/bin/bash\n'
-        '#SBATCH -J PELEne\n'
-        '#SBATCH --output=PELEne.out\n'
-        '#SBATCH --error=PELEne.err\n'
-        '#SBATCH --qos=debug\n'
-        '#SBATCH --time=00:30:00\n'
-        '\n'
-        'module purge\n'
-        'module load intel mkl impi gcc\n'
-        'module load impi\n'
-        'module load boost/1.64.0\n'
-        '\n'
-        'list="' + run_file_labels + '"\n'
-        '\n'
-        'for i in $list\n'
-        'do\n'
-        '\n'
-        '    echo " --------------------------------------------------------------------"\n'
-        '    echo "|                            CLUSTER $i                              |"\n'
-        '    echo " --------------------------------------------------------------------"\n'
-        '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial ' + path_energies_simulation + '/cluster_${i}/energy${i}.conf\n'
-        '    echo " "\n'
-        '    echo "**********************************************************************"\n'
-        '    echo "**********************************************************************"\n'
-        '    echo " "\n'
-        '\n'
-        'done\n'
+            '#!/bin/bash\n'
+            '#SBATCH -J PELEne\n'
+            '#SBATCH --output=PELEne.out\n'
+            '#SBATCH --error=PELEne.err\n'
+            '#SBATCH --qos=debug\n'
+            '#SBATCH --time=00:30:00\n'
+            '\n'
+            'module purge\n'
+            'module load intel mkl impi gcc\n'
+            'module load impi\n'
+            'module load boost/1.64.0\n'
+            '\n'
+            'list="' + run_file_labels + '"\n'
+            '\n'
+            'for i in $list\n'
+            'do\n'
+            '\n'
+            '    echo " --------------------------------------------------------------------"\n'
+            '    echo "|                            CLUSTER $i                              |"\n'
+            '    echo " --------------------------------------------------------------------"\n'
+            '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial ' +
+            path_energies_simulation + '/cluster_${i}/energy${i}.conf\n'
+            '    echo " "\n'
+            '    echo "**********************************************************************"\n'
+            '    echo "**********************************************************************"\n'
+            '    echo " "\n'
+            '\n'
+            'done\n'
         )
 
     #
@@ -345,6 +353,7 @@ def linen_results(input_folder,
     print(' ')
     print('-------------------------------------------------------------------')
     #
+
 
 def linen_analyze():
     """
@@ -369,7 +378,7 @@ def linen_analyze():
     print('*******************************************************************')
     print(' ')
 
-    with open (os.path.join(path,'PELEne.out'),'r') as filein:
+    with open(os.path.join(path, 'PELEne.out'), 'r') as filein:
 
         for line in filein:
 
@@ -381,26 +390,28 @@ def linen_analyze():
 
             if 'ENERGY VACUUM + SGB + CONSTRAINTS + SELF + NON POLAR:' in line:
 
-                line = line.split('ENERGY VACUUM + SGB + CONSTRAINTS + SELF + NON POLAR:')
+                line = line.split(
+                    'ENERGY VACUUM + SGB + CONSTRAINTS + SELF + NON POLAR:')
                 linenergies.append(float(line[1].strip()))
 
-        sorted_clusters = [x for _, x in sorted(zip(linenergies, lineclusters))]
+        sorted_clusters = [x for _, x in sorted(
+            zip(linenergies, lineclusters))]
         sorted_energies = sorted(linenergies)
 
     sorted_energies_corrected = np.array(sorted_energies) - min(linenergies)
 
     with open('energy.csv', 'w') as fileout:
         fileout.writelines(
-        'Cluster,Internal energy,Internal energy change\n' 
+            'Cluster,Internal energy,Internal energy change\n'
         )
 
         for i in range(len(lineclusters)):
 
-            fileout.write(str(sorted_clusters[i]) + ',' 
-            + str(sorted_energies[i]) + ',' 
-            + str(sorted_energies_corrected[i]) + '\n')
+            fileout.write(str(sorted_clusters[i]) + ','
+                          + str(sorted_energies[i]) + ','
+                          + str(sorted_energies_corrected[i]) + '\n')
 
-    #    
+    #
     print(' -   Results have been stored in energy.csv.')
     print(' -   To apply the corrections obtained:')
     print('     :> cd ../.. ')
@@ -412,10 +423,11 @@ def linen_analyze():
     print(' ')
     #
 
+
 def linen_correction(input_folder,
-                     residue_name, 
+                     residue_name,
                      clusters_folder,
-                     report_name, 
+                     report_name,
                      data_filter):
     """
     Function
@@ -440,7 +452,7 @@ def linen_correction(input_folder,
     """
 
     def path_definer(input_folder,
-                     residue_name,clusters_folder):
+                     residue_name, clusters_folder):
         """
         Function
         ----------
@@ -469,45 +481,46 @@ def linen_correction(input_folder,
             PELE energy calculation.
         - path_energies_output : str
             The path to the generated directory that is going to contain the modified reports from the corrections.
-        """        
-        
+        """
+
         path = str(pathlib.Path().absolute())
-        path_previous_simulation = os.path.join(path,input_folder)
-        path_results = os.path.join(path_previous_simulation,clusters_folder)
-        path_output = os.path.join(path_previous_simulation,'output')
+        path_previous_simulation = os.path.join(path, input_folder)
+        path_results = os.path.join(path_previous_simulation, clusters_folder)
+        path_output = os.path.join(path_previous_simulation, 'output')
 
         if os.path.isdir(path_previous_simulation) == False:
-            raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
+            raise Exception('PathError: There is no folder with this name: ' +
+                            path_previous_simulation + '. Please check the path and the folder name.')
 
-        path_energies = os.path.join(path,residue_name + '_linen')
-        path_energies_input = os.path.join(path_energies,'input')
-        path_energies_simulation = os.path.join(path_energies,'simulation')
+        path_energies = os.path.join(path, residue_name + '_linen')
+        path_energies_input = os.path.join(path_energies, 'input')
+        path_energies_simulation = os.path.join(path_energies, 'simulation')
 
-        if  os.path.exists(path_energies) == False:
+        if os.path.exists(path_energies) == False:
             os.mkdir(path_energies)
 
-        if  os.path.exists(path_energies_input) == False:
+        if os.path.exists(path_energies_input) == False:
             os.mkdir(path_energies_input)
 
-        if  os.path.exists(path_energies_simulation) == False:
+        if os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        return  path_previous_simulation, path_results, path_output,\
-        path_energies_input, path_energies_simulation
+        return path_previous_simulation, path_results, path_output,\
+            path_energies_input, path_energies_simulation
 
     # Dictionaries for the clusters
     labelsdict_ltn = {
-      'A': '0','B': '1','C': '2','D': '3','E': '4','F': '5','G': '6','H': '7','I': '8','J': '9',
-      'K': '10','L': '11','M': '12','N': '13','O': '14','P': '15','Q': '16','R': '17','S': '18',
-      'T': '19','U': '20','V': '21','W': '22','X': '23','Y': '24','Z': '25'
+        'A': '0', 'B': '1', 'C': '2', 'D': '3', 'E': '4', 'F': '5', 'G': '6', 'H': '7', 'I': '8', 'J': '9',
+        'K': '10', 'L': '11', 'M': '12', 'N': '13', 'O': '14', 'P': '15', 'Q': '16', 'R': '17', 'S': '18',
+        'T': '19', 'U': '20', 'V': '21', 'W': '22', 'X': '23', 'Y': '24', 'Z': '25'
     }
 
-    labelsdict_ntl = {v: k for k, v in labelsdict_ltn.items()}  
+    labelsdict_ntl = {v: k for k, v in labelsdict_ltn.items()}
 
-    # Paths        
+    # Paths
     path_previous_simulation, path_results, path_output,\
-    path_energies_input, path_energies_simulation\
-    = path_definer(input_folder,residue_name,clusters_folder)
+        path_energies_input, path_energies_simulation\
+        = path_definer(input_folder, residue_name, clusters_folder)
 
     #
     print(' ')
@@ -521,51 +534,55 @@ def linen_correction(input_folder,
     print(' ')
     #
 
-    if os.path.isfile(os.path.join(path_results,'data.csv')):
-        shutil.copy(os.path.join(path_results,'data.csv'), path_energies_input)
-    
+    if os.path.isfile(os.path.join(path_results, 'data.csv')):
+        shutil.copy(os.path.join(path_results, 'data.csv'),
+                    path_energies_input)
+
     else:
-        raise Exception('DataSimulationNotFound: No data.csv file was found in ')
+        raise Exception(
+            'DataSimulationNotFound: No data.csv file was found in ')
 
     if data_filter == 'none' or data_filter == 'None':
 
         #
-        print(' -   Data filter chosen: ' + data_filter + '. Keeping all the data.')
-        print('     -   Copying all the reports.')       
+        print(' -   Data filter chosen: ' +
+              data_filter + '. Keeping all the data.')
+        print('     -   Copying all the reports.')
         #
 
         cont_reports = 0
 
         # Copying reports
         if os.path.isdir(path_output):
-    
+
             files = os.listdir(path_output)
-    
+
             for folder in files:
                 if folder.isnumeric():
-    
-                    full_path = os.path.join(path_output,folder)
-  
+
+                    full_path = os.path.join(path_output, folder)
+
                 files_subdir = os.listdir(full_path)
-    
+
                 for report in files_subdir:
                     if report.startswith(report_name) and report.split(report_name + '_')[1].isnumeric():
-    
-                        shutil.copy(os.path.join(full_path,report), \
-                            os.path.join(full_path,'mod_' + report_name + '_' + report.split(report_name + '_')[1]))
+
+                        shutil.copy(os.path.join(full_path, report),
+                                    os.path.join(full_path, 'mod_' + report_name + '_' + report.split(report_name + '_')[1]))
                         cont_reports += 1
-                    
-                    else: continue
+
+                    else:
+                        continue
 
                 if cont_reports == 0:
 
-                    raise Exception('ReportNameError: No reports beginning with \"' + report_name + '\" were found in '\
-                    + full_path + '.')
-    
+                    raise Exception('ReportNameError: No reports beginning with \"' + report_name + '\" were found in '
+                                    + full_path + '.')
+
     elif data_filter == 'cluster' or data_filter == 'clusters':
 
         #
-        print(' -   Data filter chosen: ' + data_filter+ '.')
+        print(' -   Data filter chosen: ' + data_filter + '.')
         print('     -   Only keeping snapshots belonging to main clusters.')
         #
 
@@ -582,18 +599,18 @@ def linen_correction(input_folder,
     clustersdict = {}
 
     # Opening file with data from PELE energy simulation.
-    with open(os.path.join(path_energies_simulation,'energy.csv')) as filein:
+    with open(os.path.join(path_energies_simulation, 'energy.csv')) as filein:
 
         for line in filein:
 
-            if cont != 0:  
+            if cont != 0:
 
                 line = line.split(',')
                 labels_letter.append(line[0])
                 labels.append(labelsdict_ltn[line[0]])
                 clustersdict[line[0]] = float(line[1])
 
-            cont += 1      
+            cont += 1
 
     # Retrieving simulation information
     cont = 0
@@ -603,29 +620,31 @@ def linen_correction(input_folder,
     report_paths = []
     folders = []
 
-    with open(os.path.join(path_results,'data.csv')) as filein:
+    with open(os.path.join(path_results, 'data.csv')) as filein:
 
         for line in filein:
 
             if cont != 0:
-      
-                line = line.split(',')      
+
+                line = line.split(',')
                 cluster_label = line[-1].split()[0]
 
                 if any(label == cluster_label for label in labels):
 
                     path_string = line[-2].split('trajectory_')[0]
-                    path_string = path_previous_simulation + path_string.split(input_folder)[1]
+                    path_string = path_previous_simulation + \
+                        path_string.split(input_folder)[1]
 
                     whole_path = str(line[-2])
-                    report_num = whole_path.split('/')[-1]  
+                    report_num = whole_path.split('/')[-1]
                     report_num = report_num.split('.pdb')[0].split('_')[1]
 
                     step.append(int(line[0]))
-                    cluster.append(int(line[-1].split('\n')[0])) 
-                    report_paths.append(os.path.join(path_string,\
-                        report_name + '_' + str(report_num))) 
-                    folders.append(path_string[:-1].replace(input_folder,residue_name + '_linen')) 
+                    cluster.append(int(line[-1].split('\n')[0]))
+                    report_paths.append(os.path.join(path_string,
+                                                     report_name + '_' + str(report_num)))
+                    folders.append(
+                        path_string[:-1].replace(input_folder, residue_name + '_linen'))
 
             cont += 1
 
@@ -638,52 +657,53 @@ def linen_correction(input_folder,
 
     for folder in folders:
 
-        if  os.path.exists(folder) == False:
+        if os.path.exists(folder) == False:
             os.mkdir(folder)
 
     #
     print(' -   Implementing correction.')
     #
 
-    with open (os.path.join(path_previous_simulation,'run_analysis'), 'w') as fileout:
+    with open(os.path.join(path_previous_simulation, 'run_analysis'), 'w') as fileout:
 
         fileout.writelines(
-        '#!/bin/bash\n'
-        '#SBATCH --job-name=analysis\n'
-        '#SBATCH --output=analysis.out\n'
-        '#SBATCH --error=analysis.err\n'
-        '#SBATCH --ntasks=48\n'
-        '#SBATCH --qos=debug\n'
-        '#SBATCH --time=00-01:00:00\n'
-        '\n' 
-        'module load ANACONDA/2019.10\n'
-        'module load intel mkl impi gcc # 2> /dev/null\n'
-        'module load impi\n'
-        'module load boost/1.64.0\n'
-        '\n' 
-        'eval "$(conda shell.bash hook)"\n'
-        'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.0\n'
-        '\n' 
-        'python script.py\n'
+            '#!/bin/bash\n'
+            '#SBATCH --job-name=analysis\n'
+            '#SBATCH --output=analysis.out\n'
+            '#SBATCH --error=analysis.err\n'
+            '#SBATCH --ntasks=48\n'
+            '#SBATCH --qos=debug\n'
+            '#SBATCH --time=00-01:00:00\n'
+            '\n'
+            'module load ANACONDA/2019.10\n'
+            'module load intel mkl impi gcc # 2> /dev/null\n'
+            'module load impi\n'
+            'module load boost/1.64.0\n'
+            '\n'
+            'eval "$(conda shell.bash hook)"\n'
+            'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.0\n'
+            '\n'
+            'python script.py\n'
         )
-        
-    with open(os.path.join(path_previous_simulation,'script.py'), 'w') as fileout:
+
+    with open(os.path.join(path_previous_simulation, 'script.py'), 'w') as fileout:
 
         fileout.writelines(
-        'from pele_platform.analysis import Analysis\n'
-        '\n'
-        'analysis = Analysis(resname="' + residue_name +\
-            '", chain="L", simulation_output="output", report="' + 'mod_' + report_name + '", cpus=48)\n'
-        'analysis.generate(path="analysis", clustering_type="meanshift")\n'
+            'from pele_platform.analysis import Analysis\n'
+            '\n'
+            'analysis = Analysis(resname="' + residue_name +
+            '", chain="L", simulation_output="output", report="' +
+            'mod_' + report_name + '", cpus=48)\n'
+            'analysis.generate(path="analysis", clustering_type="meanshift")\n'
         )
-    
-    # Main loop 
+
+    # Main loop
     for key in report_paths_dictionary:
 
-        path_string_out = key.replace(report_name,'mod_' + report_name )
-        
+        path_string_out = key.replace(report_name, 'mod_' + report_name)
+
         steps_in_report = step[:report_paths_dictionary[key]]
-    
+
         cont = 0
 
         with open(path_string_out, 'w') as fileout:
@@ -701,7 +721,7 @@ def linen_correction(input_folder,
                             cluster_number = str(cluster[cont_cluster])
                             cluster_letter = labelsdict_ntl[cluster_number]
                             cluster_energy = clustersdict[cluster_letter]
-                            line[4] =  str(float(line[4]) - cluster_energy)
+                            line[4] = str(float(line[4]) - cluster_energy)
 
                             fileout.write("     ".join(line) + '\n')
 
@@ -719,14 +739,15 @@ def linen_correction(input_folder,
                             fileout.write("     ".join(line) + '\n')
 
                             cont_cluster += 1
-                        
+
                         else:
 
                             if data_filter == 'none' or data_filter == 'None':
 
                                 fileout.write("     ".join(line) + '\n')
 
-                            elif data_filter == 'clusters' or data_filter == 'cluster': continue
+                            elif data_filter == 'clusters' or data_filter == 'cluster':
+                                continue
 
                     else:
 
@@ -747,6 +768,7 @@ def linen_correction(input_folder,
     print(' ')
     #
 
+
 def main(args):
     """
     Function
@@ -761,10 +783,10 @@ def main(args):
 
     if args.action == 'generate':
 
-        linen_results(input_folder = args.input_folder,
-                      residue_name = args.residue_name,
-                      clusters_folder = args.clusters_folder,
-                      conf_file_name = args.conf_file_name)
+        linen_results(input_folder=args.input_folder,
+                      residue_name=args.residue_name,
+                      clusters_folder=args.clusters_folder,
+                      conf_file_name=args.conf_file_name)
 
     elif args.action == 'analyze':
 
@@ -772,15 +794,16 @@ def main(args):
 
     elif args.action == 'correct':
 
-        linen_correction(input_folder = args.input_folder,
-                         residue_name = args.residue_name,
-                         clusters_folder = args.clusters_folder,
-                         report_name = args.report_name,
-                         data_filter = args.data_filter)
+        linen_correction(input_folder=args.input_folder,
+                         residue_name=args.residue_name,
+                         clusters_folder=args.clusters_folder,
+                         report_name=args.report_name,
+                         data_filter=args.data_filter)
 
-    else: 
+    else:
         raise('ActionError: The actions the script can perform are either: generate, analyze or correct.\
         Check the spelling and the capital letters. ')
+
 
 if __name__ == '__main__':
 
