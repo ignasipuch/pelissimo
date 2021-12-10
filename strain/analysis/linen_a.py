@@ -65,7 +65,8 @@ def parse_args(args):
 def linen_results(input_folder,
                   residue_name,
                   clusters_folder,
-                  conf_file_name):
+                  conf_file_name,
+                  data_filter):
     """
     Function
     ----------
@@ -82,6 +83,9 @@ def linen_results(input_folder,
         Name of the directory where the directory clusters is located (results/analysis).
     - conf_file_name: str
         Name of the .conf file used to run pele (not adaptive.conf).
+    - data_filter : str
+        Name of the filtering method you want to apply. Only two methods accepted: 1) clusters or 2) none.
+
     """
 
     def path_definer(input_folder,
@@ -135,135 +139,98 @@ def linen_results(input_folder,
         if os.path.exists(path_energies_simulation) == False:
             os.mkdir(path_energies_simulation)
 
-        return path_previous_simulation, path_results, path_clusters,\
+        return path_previous_simulation, path_clusters,\
             path_energies_input, path_energies_simulation
 
-    # ---
+    def conf_information_extraction(path_previous_simulation,
+                                    conf_file_name):
+        """
+        Function
+        ----------
+        Extracts force field and solvent model from the .conf file.
 
-    path_previous_simulation, path_results, path_clusters,\
-        path_energies_input, path_energies_simulation = \
-        path_definer(input_folder, clusters_folder)
+        Parameters
+        ----------
+        - path_previous_simulation : str
+            Path to the directory where the induced fit simulation is located.
+        - conf_file_name : str
+            Name of the .conf file used in the induced fit simulation.
 
-    print(' ')
-    print('*******************************************************************')
-    print('*                          peleLInEn                              *')
-    print('* --------------------------------------------------------------- *')
-    print('*      Ligand\'s internal energy from induced fit results          *')
-    print('* --------------------------------------------------------------- *')
-    print('*                          Generation                             *')
-    print('*******************************************************************')
-    print(' ')
+        Returns
+        ----------
+        - forcefield : str
+            Force field model used in the induced fit simulation
+        - solvent : str
+            Solvent model used in the induced fit simulation.
+        """
 
-    cluster_files = []
-    labels = []
+        files = files = os.listdir(path_previous_simulation)
 
-    # Storing information and copying files
-    if os.path.isdir(path_clusters):
+        #
+        print(' -   Extracting information from ' + conf_file_name + '.conf.')
+        #
 
-        files = os.listdir(path_clusters)
+        cont_conf = 0
 
         for document in files:
 
-            if 'cluster' in document and '.pdb' in document:
+            if conf_file_name + '.conf' in document:
 
-                cluster_files.append(os.path.join(
-                    path_energies_simulation, document))
-                labels.append((document.split('cluster_'))[1].split('.pdb')[0])
-                shutil.copy(os.path.join(path_clusters, document),
-                            path_energies_input)
+                cont_conf = 1
 
-    # List of clusters' letters for the run_file
-    run_file_labels = ' '.join(labels)
+                with open(os.path.join(path_previous_simulation, document)) as filein:
 
-    #
-    print(' -   Number of clusters obtained in the simulation:', len(labels))
-    #
+                    for line in filein:
 
-    # Removing the protein from the pdbs.
-    clusters = os.listdir(path_energies_input)
+                        if "ForceField" in line:
 
-    for cluster in clusters:
+                            line = line.split(':')
+                            line = line[1].split('     ')
+                            line = line[0].split('"')
+                            forcefield = line[1]
 
-        if cluster.startswith('cluster'):
+                        elif "VDGBNP" in line:
 
-            with open(os.path.join(path_energies_input, cluster)) as filein:
+                            solvent = 'VDGBNP'
 
-                lines = (l for l in filein if residue_name in l)
-                new_path = path_energies_simulation + \
-                    '/' + cluster.split('.pdb')[0]
-                path_DataLocal = path_energies_simulation + '/DataLocal'
+                        elif "OBC" in line:
 
-                if os.path.exists(new_path) == False:
-                    os.mkdir(new_path)
+                            solvent = 'OBC'
 
-                if os.path.exists(path_DataLocal) == False:
-                    os.mkdir(path_DataLocal)
+        if cont_conf == 0:
 
-                copy_tree(os.path.join(path_previous_simulation,
-                                       'DataLocal'), path_DataLocal)
+            print('     -   No .conf file was found.')
+            forcefield = 'OPLS2005'
+            solvent = 'VDGBNP'
 
-                with open(os.path.join(new_path, cluster), 'w') as fileout:
+        #
+        print('     -   Forcefield used:', forcefield + '.')
+        print('     -   Solvent model used:', solvent + '.')
+        #
 
-                    fileout.writelines(lines)
+        return forcefield, solvent
 
-        else:
-            continue
+    def write_files(path,label,
+                    forcefield,
+                    solvent):
+        """
+        Function
+        ----------
+        Writes all the necessary files to run an energy calculation.
 
-    # Copying .conf document and extracting information
-    files = files = os.listdir(path_previous_simulation)
+        Parameters
+        ----------
+        - path : str
+            Path to the directory where the .conf is located
+        - label : str
+            Identifying label of the clustger to be analyzed.
+        - forcefield : str
+            Force field to be used in the upcoming simulation.
+        - solvent : str
+            Solvent model to be used in the upcoming simulation.
+        """
 
-    #
-    print(' -   Extracting information from ' + conf_file_name + '.conf.')
-    #
-
-    cont_conf = 0
-
-    for document in files:
-
-        if conf_file_name + '.conf' in document:
-
-            cont_conf = 1
-
-            with open(os.path.join(path_previous_simulation, document)) as filein:
-
-                for line in filein:
-
-                    if "ForceField" in line:
-
-                        line = line.split(':')
-                        line = line[1].split('     ')
-                        line = line[0].split('"')
-                        forcefield = line[1]
-
-                    elif "VDGBNP" in line:
-
-                        solvent = 'VDGBNP'
-
-                    elif "OBC" in line:
-
-                        solvent = 'OBC'
-
-    if cont_conf == 0:
-
-        print('     -   No .conf file was found.')
-        forcefield = 'OPLS2005'
-        solvent = 'VDGBNP'
-
-    #
-    print('     -   Forcefield used:', forcefield + '.')
-    print('     -   Solvent model used:', solvent + '.')
-    #
-
-    # Generating all the necessary control files
-    #
-    print(' -   Generating control files for the energy calculation.')
-    #
-
-    for label in labels:
-
-        new_path = os.path.join(path_energies_simulation + '/cluster_' + label)
-
-        with open(os.path.join(new_path, 'energy' + label + '.conf'), 'w') as fileout:
+        with open(os.path.join(path, 'energy' + label + '.conf'), 'w') as fileout:
 
             fileout.writelines(
                 '{\n'
@@ -273,7 +240,7 @@ def linen_results(input_folder,
                 '      "Complex" : {\n'
                 '         "files" : [\n'
                 '            {\n'
-                '               "path": "' + new_path + '/cluster_' + label + '.pdb"\n'
+                '               "path": "' + path + '/cluster_' + label + '.pdb"\n'
                 '            }\n'
                 '         ]\n'
                 '      },\n'
@@ -303,56 +270,157 @@ def linen_results(input_folder,
                 '}\n'
             )
 
-    with open(os.path.join(path_energies_simulation, 'run'), 'w') as fileout:
+        with open(os.path.join(path_energies_simulation, 'run'), 'w') as fileout:
 
-        fileout.writelines(
-            '#!/bin/bash\n'
-            '#SBATCH -J PELEne\n'
-            '#SBATCH --output=PELEne.out\n'
-            '#SBATCH --error=PELEne.err\n'
-            '#SBATCH --qos=debug\n'
-            '#SBATCH --time=00:30:00\n'
-            '\n'
-            'module purge\n'
-            'module load intel mkl impi gcc\n'
-            'module load impi\n'
-            'module load boost/1.64.0\n'
-            '\n'
-            'list="' + run_file_labels + '"\n'
-            '\n'
-            'for i in $list\n'
-            'do\n'
-            '\n'
-            '    echo " --------------------------------------------------------------------"\n'
-            '    echo "|                            CLUSTER $i                              |"\n'
-            '    echo " --------------------------------------------------------------------"\n'
-            '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial ' +
-            path_energies_simulation + '/cluster_${i}/energy${i}.conf\n'
-            '    echo " "\n'
-            '    echo "**********************************************************************"\n'
-            '    echo "**********************************************************************"\n'
-            '    echo " "\n'
-            '\n'
-            'done\n'
-        )
+            fileout.writelines(
+                '#!/bin/bash\n'
+                '#SBATCH -J PELEne\n'
+                '#SBATCH --output=PELEne.out\n'
+                '#SBATCH --error=PELEne.err\n'
+                '#SBATCH --qos=debug\n'
+                '#SBATCH --time=00:30:00\n'
+                '\n'
+                'module purge\n'
+                'module load intel mkl impi gcc\n'
+                'module load impi\n'
+                'module load boost/1.64.0\n'
+                '\n'
+                'list="' + run_file_labels + '"\n'
+                '\n'
+                'for i in $list\n'
+                'do\n'
+                '\n'
+                '    echo " --------------------------------------------------------------------"\n'
+                '    echo "|                            CLUSTER $i                              |"\n'
+                '    echo " --------------------------------------------------------------------"\n'
+                '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial ' +
+                path_energies_simulation + '/cluster_${i}/energy${i}.conf\n'
+                '    echo " "\n'
+                '    echo "**********************************************************************"\n'
+                '    echo "**********************************************************************"\n'
+                '    echo " "\n'
+                '\n'
+                'done\n'
+            )
 
-    #
+    def cluster_analysis():
+
+        cluster_files = []
+        labels = []
+    
+        # Storing information and copying files
+        if os.path.isdir(path_clusters):
+        
+            files = os.listdir(path_clusters)
+    
+            for document in files:
+            
+                if 'cluster' in document and '.pdb' in document:
+                
+                    cluster_files.append(os.path.join(
+                        path_energies_simulation, document))
+                    labels.append((document.split('cluster_'))[1].split('.pdb')[0])
+                    shutil.copy(os.path.join(path_clusters, document),
+                                path_energies_input)
+    
+        # List of clusters' letters for the run_file
+        run_file_labels = ' '.join(labels)
+    
+        #
+        print(' -   Number of clusters obtained in the simulation:', len(labels))
+        #
+    
+        # Removing the protein from the pdbs.
+        clusters = os.listdir(path_energies_input)
+    
+        for cluster in clusters:
+        
+            if cluster.startswith('cluster'):
+            
+                with open(os.path.join(path_energies_input, cluster)) as filein:
+                
+                    lines = (l for l in filein if residue_name in l)
+                    new_path = path_energies_simulation + \
+                        '/' + cluster.split('.pdb')[0]
+                    path_DataLocal = path_energies_simulation + '/DataLocal'
+    
+                    if os.path.exists(new_path) == False:
+                        os.mkdir(new_path)
+    
+                    if os.path.exists(path_DataLocal) == False:
+                        os.mkdir(path_DataLocal)
+    
+                    copy_tree(os.path.join(path_previous_simulation,
+                                           'DataLocal'), path_DataLocal)
+    
+                    with open(os.path.join(new_path, cluster), 'w') as fileout:
+                    
+                        fileout.writelines(lines)
+    
+            else:
+                continue
+            
+        forcefield, solvent = \
+            conf_information_extraction(path_previous_simulation,conf_file_name)
+    
+        #
+        print(' -   Generating control files for the energy calculation.')
+        #
+    
+        for label in labels:
+        
+            new_path = os.path.join(path_energies_simulation + '/cluster_' + label)
+            write_files(new_path,label,forcefield,solvent)
+    
+        #
+        print(' ')
+        print('------------------------------ INFO -------------------------------')
+        print(' (1) ')
+        print(' -   To run the energy calculation for all the clusters:')
+        print('     :> cd ' + residue_name + '_linen_a/simulation')
+        print('     :> sbatch run')
+        print(' -   Results are stored in PELEne.out.')
+        print(' (2) ')
+        print(' -   To gather the results in a csv file:')
+        print(' -   Go to ' + residue_name + '_linen/simulation directory.')
+        print('     :> python /path/to/code/linen_res.py -a analyze')
+        print(' ')
+        print(' ->   ->    For help: python path/to/code/linen_a.py -h    <-  <-')
+        print(' ')
+        print('-------------------------------------------------------------------')
+        #
+
+    def all_analysis():
+
+        path_output = os.path.join(path_previous_simulation,'output')
+
+    path_previous_simulation, path_clusters,\
+        path_energies_input, path_energies_simulation = \
+        path_definer(input_folder, clusters_folder)
+
     print(' ')
-    print('------------------------------ INFO -------------------------------')
-    print(' (1) ')
-    print(' -   To run the energy calculation for all the clusters:')
-    print('     :> cd ' + residue_name + '_linen_a/simulation')
-    print('     :> sbatch run')
-    print(' -   Results are stored in PELEne.out.')
-    print(' (2) ')
-    print(' -   To gather the results in a csv file:')
-    print(' -   Go to ' + residue_name + '_linen/simulation directory.')
-    print('     :> python /path/to/code/linen_res.py -a analyze')
+    print('*******************************************************************')
+    print('*                          peleLInEn                              *')
+    print('* --------------------------------------------------------------- *')
+    print('*      Ligand\'s internal energy from induced fit results          *')
+    print('* --------------------------------------------------------------- *')
+    print('*                          Generation                             *')
+    print('*******************************************************************')
     print(' ')
-    print(' ->   ->    For help: python path/to/code/linen_a.py -h    <-  <-')
-    print(' ')
-    print('-------------------------------------------------------------------')
-    #
+
+    if data_filter == 'None' or data_filter == 'none':
+
+        print('*            Analysing all snapshots in the simulation            *')
+        all_analysis()
+
+    elif data_filter == 'clusters' or data_filter == 'cluster':
+
+        print('*               Analysing clusters of the simulation              *')
+        cluster_analysis()
+
+    else:
+        raise Exception('DataFilterError: The data filter method chosen is not valid. \
+        Please choose either: (1) clusters, or (2) none.')
 
 
 def linen_analyze():
@@ -786,7 +854,8 @@ def main(args):
         linen_results(input_folder=args.input_folder,
                       residue_name=args.residue_name,
                       clusters_folder=args.clusters_folder,
-                      conf_file_name=args.conf_file_name)
+                      conf_file_name=args.conf_file_name,
+                      data_filter= args.data_filter)
 
     elif args.action == 'analyze':
 
