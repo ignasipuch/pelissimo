@@ -210,9 +210,11 @@ def linen_results(input_folder,
 
         return forcefield, solvent
 
-    def write_files(path,label,
+    def write_files(path,
+                    label,
                     forcefield,
-                    solvent):
+                    solvent,
+                    run_file_labels):
         """
         Function
         ----------
@@ -370,7 +372,7 @@ def linen_results(input_folder,
         for label in labels:
         
             new_path = os.path.join(path_energies_simulation + '/cluster_' + label)
-            write_files(new_path,label,forcefield,solvent)
+            write_files(new_path,label,forcefield,solvent,run_file_labels)
     
         #
         print(' ')
