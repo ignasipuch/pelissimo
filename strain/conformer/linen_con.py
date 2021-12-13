@@ -180,8 +180,8 @@ def linen_conformer(conformations_number,
 
     for cid in cids:
 
-        ff = AllChem.MMFFGetMoleculeForceField(
-            mh, AllChem.MMFFGetMoleculeProperties(mh), confId=cid)
+        ff = AllChem.MMFFGetMoleculeForceField(mh,
+         AllChem.MMFFGetMoleculeProperties(mh), confId=cid)
         ff.Initialize()
         ff.CalcEnergy()
         results = {}
