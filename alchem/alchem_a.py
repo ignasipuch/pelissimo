@@ -10,11 +10,12 @@ __email__ = "ignasi.puchginer@bsc.es"
 
 import sys
 import os
-import pathlib 
+import pathlib
 import argparse
 import shutil
 from distutils.dir_util import copy_tree
 import numpy as np
+
 
 def parse_args(args):
     """
@@ -35,15 +36,16 @@ def parse_args(args):
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-d", "--directory", type=str, dest = "input_folder",\
-        default = 'LIG_Pele', help="Name of the directory where the simulation\
+    parser.add_argument("-d", "--directory", type=str, dest="input_folder",
+                        default='LIG_Pele', help="Name of the directory where the simulation\
         is located.")
-    parser.add_argument("-rn", "--report_name", type=str, dest = "report_name",\
-        default = 'report', help="Name of the reports to be analyzed.")
+    parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
+                        default='report', help="Name of the reports to be analyzed.")
 
     parsed_args = parser.parse_args(args)
 
     return parsed_args
+
 
 def path_definer(input_folder):
     """
@@ -64,23 +66,26 @@ def path_definer(input_folder):
     - path_reports : str
         The path to the generated directory that will contain the copied reports.
         cluster.
-    """        
-    
+    """
+
     path = str(pathlib.Path().absolute())
-    path_previous_simulation = os.path.join(path,input_folder)
-    path_output = os.path.join(path_previous_simulation,'output')
+    path_previous_simulation = os.path.join(path, input_folder)
+    path_output = os.path.join(path_previous_simulation, 'output')
 
     if os.path.isdir(path_previous_simulation) == False:
-        raise Exception('PathError: There is no folder with this name: ' + path_previous_simulation + '. Please check the path and the folder name.')
+        raise Exception('PathError: There is no folder with this name: ' +
+                        path_previous_simulation + '. Please check the path and the folder name.')
     elif os.path.isdir(path_output) == False:
-        raise Exception('NoOutputError: There is no output folder inside ' + path_previous_simulation + '. Please check the path and the folder name.')
+        raise Exception('NoOutputError: There is no output folder inside ' +
+                        path_previous_simulation + '. Please check the path and the folder name.')
 
-    path_reports = os.path.join(path,'HYB_analysis')
+    path_reports = os.path.join(path, 'HYB_analysis')
 
-    if  os.path.exists(path_reports) == False:
+    if os.path.exists(path_reports) == False:
         os.mkdir(path_reports)
 
     return path_output, path_reports
+
 
 def backtracker(path_output,
                 path_reports,
@@ -100,7 +105,7 @@ def backtracker(path_output,
         The path where the copied reports are goig to be located.
     - report_name : str 
         Name the reports you want to copy have.
-    """   
+    """
 
     def data_sorter(path):
         """
@@ -118,14 +123,15 @@ def backtracker(path_output,
         - matrix_epoch : numpy.array
             Matrix of dimensions: 4 x Number of CPUS, where the four dimensions correspond to the 
             values: epoch, trajectory, snapshot and cpu.
-        """    
+        """
 
         epochs = []
         trajectories = []
         snapshots = []
         cpus = []
 
-        procMapping = open(os.path.join(path,"processorMapping.txt")).read().rstrip().split(':')
+        procMapping = open(os.path.join(
+            path, "processorMapping.txt")).read().rstrip().split(':')
         procMapping = [eval(x) for x in procMapping]
 
         for tuple_number in range(len(procMapping)):
@@ -137,11 +143,12 @@ def backtracker(path_output,
             snapshots.append(snapshot)
             cpus.append(tuple_number + 1)
 
-        matrix_epoch = np.vstack((np.array(epochs), np.array(trajectories), np.array(snapshots), np.array(cpus)))
+        matrix_epoch = np.vstack((np.array(epochs), np.array(
+            trajectories), np.array(snapshots), np.array(cpus)))
 
         return matrix_epoch
-    
-    def tracker(matrix,epoch,trajectory):
+
+    def tracker(matrix, epoch, trajectory):
         """
         Function
         ----------
@@ -166,13 +173,15 @@ def backtracker(path_output,
             Trajectory from which the initial conformation of the current trajectory has begun. 
         """
 
-        previous_epoch, previous_trajectory, _, _ = matrix[epoch-1,:,trajectory-1] 
+        previous_epoch, previous_trajectory, _, _ = matrix[epoch -
+                                                           1, :, trajectory-1]
         # -1 is added due to python's indexing
 
-        return previous_epoch, previous_trajectory       
+        return previous_epoch, previous_trajectory
 
     all_directories_in_output = os.listdir(path_output)
-    unsorted_numeric_directories = [int(i) for i in all_directories_in_output if i.isnumeric()]
+    unsorted_numeric_directories = [
+        int(i) for i in all_directories_in_output if i.isnumeric()]
     sorted_directories = sorted(unsorted_numeric_directories)
     directories = [str(i) for i in sorted_directories]
 
@@ -183,9 +192,9 @@ def backtracker(path_output,
     for directory in directories:
 
         if directory != '0':
-            
-            matrix_epoch = data_sorter(os.path.join(path_output,directory)) 
-            matrix_simulation_list.append(matrix_epoch) 
+
+            matrix_epoch = data_sorter(os.path.join(path_output, directory))
+            matrix_simulation_list.append(matrix_epoch)
 
     matrix_simulation = np.array(matrix_simulation_list)
 
@@ -193,26 +202,27 @@ def backtracker(path_output,
 
     number_of_trajectories = matrix_simulation.shape[2]
 
-    for trajectory in range(1,number_of_trajectories + 1):
+    for trajectory in range(1, number_of_trajectories + 1):
 
-        path_trajectory = os.path.join(path_reports,str(trajectory))
+        path_trajectory = os.path.join(path_reports, str(trajectory))
 
-        if  os.path.exists(path_trajectory) == False:
+        if os.path.exists(path_trajectory) == False:
             os.mkdir(path_trajectory)
 
         epoch = matrix_simulation.shape[0]
 
         # Copying initial report
-        shutil.copy(os.path.join(path_output,str(epoch), report_name + '_' + str(trajectory)), 
-         os.path.join(path_trajectory,str(epoch) + '_' + report_name + '_' + str(trajectory)))
+        shutil.copy(os.path.join(path_output, str(epoch), report_name + '_' + str(trajectory)),
+                    os.path.join(path_trajectory, str(epoch) + '_' + report_name + '_' + str(trajectory)))
 
         while epoch != 0:
 
-            epoch, trajectory = tracker(matrix_simulation,epoch,trajectory)  
+            epoch, trajectory = tracker(matrix_simulation, epoch, trajectory)
 
             # Copying backtracked reports
-            shutil.copy(os.path.join(path_output,str(epoch), report_name + '_' + str(trajectory)),
-             os.path.join(path_trajectory,str(epoch) + '_' + report_name + '_' + str(trajectory)))
+            shutil.copy(os.path.join(path_output, str(epoch), report_name + '_' + str(trajectory)),
+                        os.path.join(path_trajectory, str(epoch) + '_' + report_name + '_' + str(trajectory)))
+
 
 def main(args):
     """
@@ -232,16 +242,10 @@ def main(args):
     # Tracking reports
     backtracker(path_output,
                 path_reports,
-                report_name = args.report_name)
+                report_name=args.report_name)
+
 
 if __name__ == '__main__':
 
     args = parse_args(sys.argv[1:])
     main(args)
-
-
-
-
-
-    
-    
