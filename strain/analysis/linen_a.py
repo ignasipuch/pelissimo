@@ -309,71 +309,74 @@ def linen_results(input_folder,
 
         cluster_files = []
         labels = []
-    
+
         # Storing information and copying files
         if os.path.isdir(path_clusters):
-        
+
             files = os.listdir(path_clusters)
-    
+
             for document in files:
-            
+
                 if 'cluster' in document and '.pdb' in document:
-                
+
                     cluster_files.append(os.path.join(
                         path_energies_simulation, document))
-                    labels.append((document.split('cluster_'))[1].split('.pdb')[0])
+                    labels.append((document.split('cluster_'))
+                                  [1].split('.pdb')[0])
                     shutil.copy(os.path.join(path_clusters, document),
                                 path_energies_input)
-    
+
         # List of clusters' letters for the run_file
         run_file_labels = ' '.join(labels)
-    
+
         #
         print(' -   Number of clusters obtained in the simulation:', len(labels))
         #
-    
+
         # Removing the protein from the pdbs.
         clusters = os.listdir(path_energies_input)
-    
+
         for cluster in clusters:
-        
+
             if cluster.startswith('cluster'):
-            
+
                 with open(os.path.join(path_energies_input, cluster)) as filein:
-                
+
                     lines = (l for l in filein if residue_name in l)
                     new_path = path_energies_simulation + \
                         '/' + cluster.split('.pdb')[0]
                     path_DataLocal = path_energies_simulation + '/DataLocal'
-    
+
                     if os.path.exists(new_path) == False:
                         os.mkdir(new_path)
-    
+
                     if os.path.exists(path_DataLocal) == False:
                         os.mkdir(path_DataLocal)
-    
+
                     copy_tree(os.path.join(path_previous_simulation,
                                            'DataLocal'), path_DataLocal)
-    
+
                     with open(os.path.join(new_path, cluster), 'w') as fileout:
-                    
+
                         fileout.writelines(lines)
-    
+
             else:
                 continue
-            
+
         forcefield, solvent = \
-            conf_information_extraction(path_previous_simulation,conf_file_name)
-    
+            conf_information_extraction(
+                path_previous_simulation, conf_file_name)
+
         #
         print(' -   Generating control files for the energy calculation.')
         #
-    
+
         for label in labels:
-        
-            new_path = os.path.join(path_energies_simulation + '/cluster_' + label)
-            write_files(new_path,label,forcefield,solvent,run_file_labels)
-    
+
+            new_path = os.path.join(
+                path_energies_simulation + '/cluster_' + label)
+            write_files(new_path, label, forcefield, solvent, run_file_labels)
+
         #
         print(' ')
         print('------------------------------ INFO -------------------------------')
@@ -394,7 +397,7 @@ def linen_results(input_folder,
 
     def all_analysis():
 
-        path_output = os.path.join(path_previous_simulation,'output')
+        path_output = os.path.join(path_previous_simulation, 'output')
 
     path_previous_simulation, path_clusters,\
         path_energies_input, path_energies_simulation = \
@@ -857,7 +860,7 @@ def main(args):
                       residue_name=args.residue_name,
                       clusters_folder=args.clusters_folder,
                       conf_file_name=args.conf_file_name,
-                      data_filter= args.data_filter)
+                      data_filter=args.data_filter)
 
     elif args.action == 'analyze':
 
