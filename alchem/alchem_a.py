@@ -13,7 +13,6 @@ import os
 import pathlib 
 import argparse
 import shutil
-import time
 from distutils.dir_util import copy_tree
 import numpy as np
 
@@ -76,7 +75,7 @@ def path_definer(input_folder):
     elif os.path.isdir(path_output) == False:
         raise Exception('NoOutputError: There is no output folder inside ' + path_previous_simulation + '. Please check the path and the folder name.')
 
-    path_reports = os.path.join(path,'/HYB_analysis')
+    path_reports = os.path.join(path,'HYB_analysis')
 
     if  os.path.exists(path_reports) == False:
         os.mkdir(path_reports)
@@ -179,7 +178,7 @@ def backtracker(path_output,
 
     matrix_simulation_list = []
 
-    # Reading data ---
+    # Storing data ---
 
     for directory in directories:
 
@@ -189,8 +188,6 @@ def backtracker(path_output,
             matrix_simulation_list.append(matrix_epoch) 
 
     matrix_simulation = np.array(matrix_simulation_list)
-
-    # ---
 
     # Finding trajectories ---
 
@@ -206,16 +203,16 @@ def backtracker(path_output,
         epoch = matrix_simulation.shape[0]
 
         # Copying initial report
-        shutil.copy(os.path.join(path_output,str(epoch),'report_' + str(trajectory)), path_trajectory)
+        shutil.copy(os.path.join(path_output,str(epoch), report_name + '_' + str(trajectory)), 
+         os.path.join(path_trajectory,str(epoch) + '_' + report_name + '_' + str(trajectory)))
 
         while epoch != 0:
 
             epoch, trajectory = tracker(matrix_simulation,epoch,trajectory)  
 
             # Copying backtracked reports
-            shutil.copy(os.path.join(path_output,str(epoch),'report_' + str(trajectory)), path_trajectory)
-
-        print(' ')
+            shutil.copy(os.path.join(path_output,str(epoch), report_name + '_' + str(trajectory)),
+             os.path.join(path_trajectory,str(epoch) + '_' + report_name + '_' + str(trajectory)))
 
 def main(args):
     """
