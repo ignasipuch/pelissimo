@@ -333,7 +333,7 @@ def linen_prepare(input_folder,
     if solvent_model is None:
         print(
             '                              WARNING:                               \n'
-            '   No solvent model was introduced with the flag -s (i.e. -ff        \n'
+            '   No solvent model was introduced with the flag -sm (i.e. -sm       \n'
             '   OBC). The script automatically sets the solvent model to          \n'
             '   VDGBNP.'
             '\n'
@@ -398,7 +398,7 @@ def main(args):
 
     linen_prepare(input_folder=args.input_folder,
                   residue_name=args.residue_name,
-                  pdb_name=args.pdb_name,
+                  pdb_name=args.input_file,
                   force_field=args.force_field,
                   solvent_model=args.solvent_model)
 
