@@ -37,12 +37,15 @@ def parse_args(args):
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
                         default='output', help="Name of the directory where the files to\
         analyze are located.")
-    parser.add_argument("-fn", "--file_name", type=str, dest="file_name",
+    parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report_', help="Name of the report files.")
     parser.add_argument("-T", "--temperature", type=float, dest="temperature",
                         default=298., help="Temperature of the experiment.")
     parser.add_argument("-pS", "--pele_Steps", type=int, dest="pele_steps",
                         default=20, help="Number of Pele Steps in the simulation.")
+    parser.add_argument("-c", "--column", type=int, dest="column",
+                        default=5, help="Column of the report where the interesting\
+                             metric is located.")
 
     parsed_args = parser.parse_args(args)
 
@@ -50,9 +53,10 @@ def parse_args(args):
 
 
 def statistics(input_folder,
-               file_name,
+               report_name,
                T,
-               pele_steps):
+               pele_steps,
+               column):
     """
     Function
     ----------
@@ -63,15 +67,15 @@ def statistics(input_folder,
     ----------
     - input_folder : str
         The path to the directory where the output of the PELE simulation is located.
-    - file_name : str
-        Name of the rports containing the energetic data of all the simulation.
+    - report_name : str
+        Name of the reports containing the energetic data of all the simulation.
     - T : float
         Temperature to perform the Boltzmann weights with.
     - pele_steps : int
         Number of pele_steps in the simulation.
     """
 
-    def reader(files, folderpath):
+    def reader(files, folderpath, column):
         """
         Function
         ----------
@@ -92,44 +96,85 @@ def statistics(input_folder,
             Steps associated to poses for all the simulation.
         """
 
+        def file_reader(files,
+                        folderpath,
+                        report_name,
+                        column):
+            """
+            Function
+            ----------
+            Reads the data from all the reports in a list.
+
+            Parameters
+            ----------
+            - files : list
+                The path to the directory where the output of the PELE simulation is located.
+            - folderpath : str
+                Path where the different epochs of the simulation are located.
+            - report_name : str
+                Name of the reports to obtain the data from
+            - column : int 
+                Column where the interesting data is located. 
+
+            Returns
+            ----------
+            - be : list
+                Binding energies of all the simulation.
+            - step : list
+                Steps associated to poses for all the simulation.
+            """
+
+            for file in files:
+
+                new_directory = folderpath
+
+                cont = 0
+                file_path = os.path.join(new_directory, file)
+
+                # Checking whether path exists and the file has the report_name selected
+                if os.path.isfile(file_path) and report_name in file:
+
+                    with open(file_path, 'r') as filein:
+
+                        for line in filein:
+                            if cont != 0:
+                                line = line.split('   ')
+                                be.append(float(line[column-1]))
+                                step.append(int(line[1]))
+                            cont += 1
+            return be, step
+
         be = []
         step = []
+        numeric_files = [s for s in files if s.isnumeric()]
 
-        for document in files:
+        if len(numeric_files) != 0:
 
-            # Checking if the folder exist
-            new_directory = os.path.join(folderpath, document)
+            for document in numeric_files:
 
-            if os.path.isdir(new_directory) and document.isnumeric():
+                # Checking if the folder exist
+                new_directory = os.path.join(folderpath, document)
 
-                # Listing files inside
-                files = os.listdir(new_directory)
+                if os.path.isdir(new_directory) and document.isnumeric():
 
-                if file_name in files == False:
-                    raise Exception('FilePathError: There is no file containing ' + file_name + ' in it. \
-                    Please check the path to the files and the files name.')
+                    # Listing files inside
+                    files = os.listdir(new_directory)
 
-                # Iterating over files
-                for file in files:
+                    if report_name in files == False:
+                        raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
+                        Please check the path to the files and the files name.')
 
-                    cont = 0
+                    be, step = file_reader(
+                        files, folderpath, report_name, column)
 
-                    file_path = os.path.join(new_directory, file)
+        else:
 
-                    # Checking whether path exists and the file has the file_name selected
-                    if os.path.isfile(file_path) and file_name in file:
+            if report_name in files == False:
+                raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
+                Please check the path to the files and the files name.')
 
-                        with open(file_path, 'r') as filein:
+            be, step = file_reader(files, folderpath, report_name, column)
 
-                            for line in filein:
-
-                                if cont != 0:
-
-                                    line = line.split('   ')
-                                    be.append(float(line[4]))
-                                    step.append(int(line[1]))
-
-                                cont += 1
         return be, step
 
     def boltzmann_weighted(be, T, steps=[]):
@@ -162,8 +207,9 @@ def statistics(input_folder,
 
         else:
 
-            nominator = np.sum(np.multiply.reduce((be, num_steps, exp_bz)))
-            denominator = num_steps.dot(exp_bz)
+            steps = np.array(steps)
+            nominator = np.sum(np.multiply.reduce((be, steps, exp_bz)))
+            denominator = steps.dot(exp_bz)
             ene_bz = nominator/denominator
 
         return ene_bz
@@ -229,7 +275,7 @@ def statistics(input_folder,
 
     files = os.listdir(folderpath)
 
-    be, step = reader(files, folderpath)
+    be, step = reader(files, folderpath, column)
 
     minimum_energy = min(be)
     be = np.array(be)
@@ -279,9 +325,10 @@ def main(args):
     """
 
     statistics(input_folder=args.input_folder,
-               file_name=args.file_name,
-               T=args.T,
-               pele_steps=args.pele_steps,)
+               report_name=args.report_name,
+               T=args.temperature,
+               pele_steps=args.pele_steps,
+               column=args.column)
 
 
 if __name__ == '__main__':
