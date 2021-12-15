@@ -4,12 +4,9 @@
 import sys
 import os
 import pathlib
-import pandas as pd
-import re
-from collections import Counter
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
+import time
 
 # Constants:
 T = 298.
@@ -324,11 +321,18 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
+    start_time = time.time()
+
     statistics(input_folder=args.input_folder,
                report_name=args.report_name,
                T=args.temperature,
                pele_steps=args.pele_steps,
                column=args.column)
+
+    print('                    --Duration of the execution--                   ')
+    print('                      %s seconds' % (time.time() - start_time))
+    print(' ')
+    print('*******************************************************************')
 
 
 if __name__ == '__main__':
