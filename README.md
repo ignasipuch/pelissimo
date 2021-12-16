@@ -5,7 +5,8 @@
 ### alchem: 
 #### Directory with all the code related to alchemPELE. Contains:
 
- 1. alchem_a.py: Script to retrieve the reports related to an AdaptivePELE trajectory.
+ 1. alchem_a.py: Script to retrieve the reports related to AdaptivePELE's trajectories and perform an integration
+of all of them with the Trapezoidal rule.
 
 ### binding_energy: 
 #### Directory with the code related to calculating the binding energy of a simulation. Contains: 
