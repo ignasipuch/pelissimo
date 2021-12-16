@@ -56,7 +56,8 @@ def parse_args(args):
     return parsed_args
 
 
-def path_definer(input_file, residue_name):
+def path_definer(input_file, 
+                 residue_name):
     """
     Function
     ----------
@@ -113,6 +114,31 @@ def linen_conformer(conformations_number,
                     path_energies_clusters,
                     path_energies_DataLocal):
 
+    """
+    Function
+    ----------
+    Generates n conformations and clusters them. After that pdbs are written.
+
+    Parameters
+    ----------
+    - conformations_number : int
+        Number of conformations to be generated.
+    - conf_file_name : str 
+        Name of the .conf file to extract information.
+    - path : str
+        Absolut path.
+    - path_pdb : str
+        Path to the pdb from which to generate the conformations.
+    - path_energies_input : str
+        Path to the directory where the input files are copied.
+    - path_energies : str
+        Path to the newly generated folder where results are stored.
+    - path_energies_clusters : str
+        Path to the directory where all the clusters are stored.
+    - path_energies_DataLocal : str
+        Path to the DataLocal folder.
+    """
+
     print(' ')
     print('*******************************************************************')
     print('*                    peleLigandConformations                      *')
@@ -120,8 +146,6 @@ def linen_conformer(conformations_number,
     print('*      Ligand\'s internal energy from conformer generation         *')
     print('*******************************************************************')
     print(' ')
-
-    start_time = time.time()
 
     shutil.copy(path_pdb, path_energies_input)
 
@@ -291,13 +315,49 @@ def linen_conformer(conformations_number,
             Chem.rdmolfiles.MolToPDBFile(
                 mh, path_energies_clusters + '/cluster_' + labels[cont] + '.pdb', confId=cid)
 
-    #
-    print(' ')
-    print('                    --Duration of the execution--                   ')
-    print('                      %s seconds' % (time.time() - start_time))
-    print(' ')
-    print('*******************************************************************')
-    #
+
+def cluster_rewrite(path_energies_clusters):
+    """
+    Function
+    ----------
+    Rewrite pdbs in a format that match the DataLocal folder.
+
+    Parameters
+    ----------
+    - path_energies_clusters : str
+        Path to the directory where all the clusters are stored.
+    """
+
+    clusters = os.listdir(path_energies_clusters)
+
+    for cluster in clusters: 
+
+        with open(os.path.join(path_energies_clusters,cluster)) as filein:
+
+            cont = 0
+
+            for line in filein:
+
+                cont += 1
+
+                if cont == 2:
+
+                    line = list(line)
+                    line = line[17:26]
+
+                    residue_chain_number = ''.join(line)
+                    break
+
+        with open(os.path.join(path_energies_clusters,cluster)) as filein:
+
+            contents = filein.read()
+            contents = contents.replace('UNL     1',residue_chain_number)      
+            filein.close()
+
+        with open(os.path.join(path_energies_clusters,cluster), 'wt') as filein: 
+
+            filein.write(contents)
+            filein.close()
 
 
 def main(args):
@@ -312,9 +372,15 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
+    start_time = time.time()
+
+    #Path defining
+    
     path, path_pdb, path_energies_input, path_energies, path_energies_clusters, path_energies_DataLocal =\
         path_definer(input_file=args.input_file,
                      residue_name=args.residue_name)
+
+    # Conformation generation
 
     linen_conformer(conformations_number=args.conformations_number,
                     conf_file_name=args.conf_file_name,
@@ -323,8 +389,19 @@ def main(args):
                     path_energies_input=path_energies_input,
                     path_energies=path_energies,
                     path_energies_clusters=path_energies_clusters,
-                    path_energies_DataLocal=path_energies_DataLocal
-                    )
+                    path_energies_DataLocal=path_energies_DataLocal)
+
+    # File rewriting
+    
+    cluster_rewrite(path_energies_clusters)
+
+    #
+    print(' ')
+    print('                    --Duration of the execution--                   ')
+    print('                      %s seconds' % (time.time() - start_time))
+    print(' ')
+    print('*******************************************************************')
+    #
 
 
 if __name__ == '__main__':
