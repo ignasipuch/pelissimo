@@ -416,11 +416,13 @@ def linen_results(input_folder,
     if data_filter == 'None' or data_filter == 'none':
 
         print('*            Analysing all snapshots in the simulation            *')
+        print(' ')
         all_analysis()
 
     elif data_filter == 'clusters' or data_filter == 'cluster':
 
         print('*               Analysing clusters of the simulation              *')
+        print(' ')
         cluster_analysis()
 
     else:
