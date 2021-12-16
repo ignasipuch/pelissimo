@@ -141,7 +141,7 @@ def linen_conformer(conformations_number,
 
     print(' ')
     print('*******************************************************************')
-    print('*                    peleLigandConformations                      *')
+    print('*                           peleLInEn                              *')
     print('* --------------------------------------------------------------- *')
     print('*      Ligand\'s internal energy from conformer generation         *')
     print('*******************************************************************')
