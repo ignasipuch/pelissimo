@@ -293,7 +293,7 @@ def linen_results(input_folder,
                 'do\n'
                 '\n'
                 '    echo " --------------------------------------------------------------------"\n'
-                '    echo "|                            CLUSTER $i                              |"\n'
+                '    echo "|                         _ CLUSTER _ $i _                           |"\n'
                 '    echo " --------------------------------------------------------------------"\n'
                 '    /gpfs/projects/bsc72/PELE++/mniv/V1.7.1/bin/PELE-1.7.1_serial ' +
                 path_energies_simulation + '/cluster_${i}/energy${i}.conf\n'
@@ -457,9 +457,9 @@ def linen_analyze():
 
             if 'CLUSTER' in line:
 
-                line = line.split('CLUSTER')
-                line = line[1].strip()
-                lineclusters.append(line[0])
+                line = line.split('_')
+                line = line[2].strip()
+                lineclusters.append(line)
 
             if 'ENERGY VACUUM + SGB + CONSTRAINTS + SELF + NON POLAR:' in line:
 
