@@ -251,6 +251,8 @@ def thermodynamic_integration(path_reports, column):
     ----------
     - path_reports : str 
         The path where the copied reports are goig to be located.
+    - column : int
+        Column where the metric to be integrated is located in the report.
     """
 
     all_directories_in_output = os.listdir(path_reports)
