@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 This script is made to analyse the trajectories of an independent
-AdaptivePELE simulation.
+AdaptivePELE simulation and then integrate the results with the 
+Trapezoidal rule.
 """
 
 __author__ = "Ignasi Puch-Giner"
@@ -13,8 +14,8 @@ import os
 import pathlib
 import argparse
 import shutil
-from distutils.dir_util import copy_tree
 import numpy as np
+import time
 
 
 def parse_args(args):
@@ -41,6 +42,9 @@ def parse_args(args):
         is located.")
     parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report', help="Name of the reports to be analyzed.")
+    parser.add_argument("-cl", "--column", type=int, dest="column",
+                        default=4, help="Column in the reports where the data to be integrated\
+        is located.")
 
     parsed_args = parser.parse_args(args)
 
@@ -179,6 +183,14 @@ def backtracker(path_output,
 
         return previous_epoch, previous_trajectory
 
+    print(' ')
+    print('*******************************************************************')
+    print('*                          AlchemPELE                             *')
+    print('* --------------------------------------------------------------- *')
+    print('*                      Simulation analysis                        *')
+    print('*******************************************************************')
+    print(' ')
+
     all_directories_in_output = os.listdir(path_output)
     unsorted_numeric_directories = [
         int(i) for i in all_directories_in_output if i.isnumeric()]
@@ -187,7 +199,9 @@ def backtracker(path_output,
 
     matrix_simulation_list = []
 
-    # Storing data ---
+    #
+    print(' -   Retrieving data from the simulation.')
+    #
 
     for directory in directories:
 
@@ -198,7 +212,9 @@ def backtracker(path_output,
 
     matrix_simulation = np.array(matrix_simulation_list)
 
-    # Finding trajectories ---
+    #
+    print(' -   Copying trajectories in HYB_Analysis...')
+    #
 
     number_of_trajectories = matrix_simulation.shape[2]
 
@@ -213,7 +229,7 @@ def backtracker(path_output,
 
         # Copying initial report
         shutil.copy(os.path.join(path_output, str(epoch), report_name + '_' + str(trajectory)),
-                    os.path.join(path_trajectory, str(epoch) + '_' + report_name + '_' + str(trajectory)))
+                    os.path.join(path_trajectory, str(epoch)))
 
         while epoch != 0:
 
@@ -221,7 +237,73 @@ def backtracker(path_output,
 
             # Copying backtracked reports
             shutil.copy(os.path.join(path_output, str(epoch), report_name + '_' + str(trajectory)),
-                        os.path.join(path_trajectory, str(epoch) + '_' + report_name + '_' + str(trajectory)))
+                        os.path.join(path_trajectory, str(epoch)))
+
+
+def thermodynamic_integration(path_reports, column):
+    """
+    Function
+    ----------
+    It analyzes the reports each trajectory has and performs the trapezoidal integration to obtain 
+    the binding energy change. Delta lamba is fixed and equal to 0.1.
+
+    Parameters
+    ----------
+    - path_reports : str 
+        The path where the copied reports are goig to be located.
+    """
+
+    all_directories_in_output = os.listdir(path_reports)
+    unsorted_numeric_directories = [
+        int(i) for i in all_directories_in_output if i.isnumeric()]
+    sorted_directories = sorted(unsorted_numeric_directories)
+    trajectories = [str(i) for i in sorted_directories]
+
+    binding_energies_integration = []
+
+    #
+    print(' -   Integrating data in the simulation.')
+    #
+
+    for trajectory in trajectories:
+
+        binding_energies_trajectory = []
+
+        path_report_trajectory = os.path.join(path_reports, trajectory)
+        reports = os.listdir(path_report_trajectory)
+
+        for report in range(len(reports)):
+
+            with open(os.path.join(path_report_trajectory, str(report))) as filein:
+
+                last_line = filein.readlines()[-1]
+                be = last_line.split()[column]
+                binding_energies_trajectory.append(float(be))
+
+        initial_be = np.array(binding_energies_trajectory[0:-2])
+        final_be = np.array(binding_energies_trajectory[1:-1])
+
+        binding_energies_integration.append(
+            np.trapz(final_be - initial_be, dx=0.1))
+
+    #
+    print(' -   Writing ene_traj.csv.')
+    print(' -   Average Binding Energy change = ' +
+          str(np.average(binding_energies_integration)) + '.')
+    #
+
+    with open(os.path.join(path_reports, 'ene_traj.csv'), 'w') as fileout:
+        fileout.writelines(
+            'Average binding energy change = ' +
+            str(np.average(binding_energies_integration)) + '\n'
+            '\n'
+            'Trajectory,BindingEnergyChange\n'
+        )
+
+        for i in range(len(binding_energies_integration)):
+
+            fileout.write(str(trajectories[i]) + ','
+                          + str(binding_energies_integration[i]) + '\n')
 
 
 def main(args):
@@ -236,6 +318,8 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
+    start_time = time.time()
+
     # Defining paths
     path_output, path_reports = path_definer(input_folder=args.input_folder)
 
@@ -243,6 +327,17 @@ def main(args):
     backtracker(path_output,
                 path_reports,
                 report_name=args.report_name)
+
+    # Integrating
+    thermodynamic_integration(path_reports, args.column)
+
+    #
+    print(' ')
+    print('                    --Duration of the execution--                   ')
+    print('                      %s seconds' % (time.time() - start_time))
+    print(' ')
+    print('*******************************************************************')
+    #
 
 
 if __name__ == '__main__':
