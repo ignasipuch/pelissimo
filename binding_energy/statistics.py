@@ -126,10 +126,11 @@ def statistics(input_folder,
                 new_directory = folderpath
 
                 cont = 0
-                file_path = os.path.join(new_directory, file)
 
                 # Checking whether path exists and the file has the report_name selected
-                if os.path.isfile(file_path) and report_name in file:
+                if report_name in file:
+
+                    file_path = os.path.join(new_directory, file)
 
                     with open(file_path, 'r') as filein:
 
@@ -162,7 +163,7 @@ def statistics(input_folder,
                         Please check the path to the files and the files name.')
 
                     be, step = file_reader(
-                        files, folderpath, report_name, column)
+                        files, new_directory, report_name, column)
 
         else:
 
