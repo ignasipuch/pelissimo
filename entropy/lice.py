@@ -112,7 +112,7 @@ def lice_results(input_folder,
             raise Exception('PathError: There is no folder with this name: ' +
                             path_pl_simulation + '. Please check the path and the folder name.')
 
-        return path_pl_clusters, path_l_clusters
+        return path_pl_simulation, path_pl_clusters, path_l_clusters
 
     def entropy_calculator(path):
         """
@@ -168,7 +168,8 @@ def lice_results(input_folder,
     print(' ')
     #
 
-    path_pl_clusters,\
+    path_pl_simulation,\
+        path_pl_clusters,\
         path_l_clusters = path_definer(
             input_folder, clusters_folder, residue_name)
 
@@ -182,17 +183,28 @@ def lice_results(input_folder,
 
     S_out = entropy_calculator(path_l_clusters)
     S_in = entropy_calculator(path_pl_clusters)
+    DS = S_in - S_out
+    DG_s = -T*DS
 
     #
     print(' -   Entropy unbound:', S_out, ' kcal/(mol K)')
     print(' -   Entropy bound:', S_in, ' kcal/(mol K)')
-    print(' -   Entropy change:', S_in - S_out, ' kcal/(mol K)')
+    print(' -   Entropy change:', DS, ' kcal/(mol K)')
     print(' ')
     print(' -   Temperature: ', T)
-    print(' -   Entropic contribution to the free energy: ', -
-          T*(S_in - S_out), ' kcal/mol')
+    print(' -   Entropic contribution to the free energy: ',
+          DG_s, ' kcal/mol')
+    print(' ')
+    print(' -   Writing entropy.csv inside ' + input_folder + '.')
     print(' ')
     #
+
+    with open(os.path.join(path_pl_simulation, 'entropy.csv'), 'w') as fileout:
+        fileout.writelines(
+            'S_out,S_in,DS,-TDS\n'
+            '' + str(S_out) + ',' + str(S_in) + ',' +
+            str(DS) + ',' + str(DG_s) + '\n'
+        )
 
 
 def main(args):
