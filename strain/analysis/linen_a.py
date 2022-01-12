@@ -615,7 +615,7 @@ def linen_correction(input_folder,
 
     else:
         raise Exception(
-            'DataSimulationNotFound: No data.csv file was found in ')
+            'DataSimulationNotFound: No data.csv file was found in ' + path_results)
 
     if data_filter == 'none' or data_filter == 'None':
 
