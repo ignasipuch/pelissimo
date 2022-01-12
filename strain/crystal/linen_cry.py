@@ -115,6 +115,52 @@ def linen_prepare(input_folder,
 
         return path, path_previous_simulation, path_energies
 
+    def ff_sm_checker(force_field,solvent_model):
+
+        if force_field is None:
+            print(
+                '                              WARNING:                               \n'
+                '   No force field was introduced with the flag -ff (i.e. -ff         \n'
+                '   OPLS2005).The script automatically sets the forcefield to         \n'
+                '   OPLS2005.'
+                '\n'
+            )
+            force_field = 'OPLS2005'
+    
+        if solvent_model is None:
+            print(
+                '                              WARNING:                               \n'
+                '   No solvent model was introduced with the flag -sm (i.e. -sm       \n'
+                '   OBC). The script automatically sets the solvent model to          \n'
+                '   VDGBNP.'
+                '\n'
+            )
+            solvent_model = 'VDGBNP'
+
+        return force_field, solvent_model
+
+    def directory_preparation(path,
+                              pdb_name,
+                              residue_name,
+                              path_energies,
+                              path_previous_simulation):
+
+        with open(os.path.join(path, pdb_name)) as filein:
+
+            lines = (l for l in filein if residue_name in l)
+            new_path = os.path.join(path_energies, 'ligand.pdb')
+            path_DataLocal = path_energies + '/DataLocal'
+
+            if os.path.exists(path_DataLocal) == False:
+                os.mkdir(path_DataLocal)
+
+            copy_tree(os.path.join(path_previous_simulation,
+                                   'DataLocal'), path_DataLocal)
+
+            with open(new_path, 'w') as fileout:
+
+                fileout.writelines(lines)
+
     def write_files(force_field, solvent_model, path_energies):
         """
         Function
@@ -320,45 +366,17 @@ def linen_prepare(input_folder,
     path, path_previous_simulation, path_energies = \
         path_definer(input_folder, residue_name)
 
-    if force_field is None:
-        print(
-            '                              WARNING:                               \n'
-            '   No force field was introduced with the flag -ff (i.e. -ff         \n'
-            '   OPLS2005).The script automatically sets the forcefield to         \n'
-            '   OPLS2005.'
-            '\n'
-        )
-        force_field = 'OPLS2005'
-
-    if solvent_model is None:
-        print(
-            '                              WARNING:                               \n'
-            '   No solvent model was introduced with the flag -sm (i.e. -sm       \n'
-            '   OBC). The script automatically sets the solvent model to          \n'
-            '   VDGBNP.'
-            '\n'
-        )
-        solvent_model = 'VDGBNP'
+    force_field, solvent_model = ff_sm_checker(force_field,solvent_model)
 
     print(' -   Copying DataLocal and generating ligand.pdb file.')
     print(' -   Writing necessary files to run a PELE simulation and')
     print('     a PELE platform analysis afterwards.')
 
-    with open(os.path.join(path, pdb_name)) as filein:
-
-        lines = (l for l in filein if residue_name in l)
-        new_path = os.path.join(path_energies, 'ligand.pdb')
-        path_DataLocal = path_energies + '/DataLocal'
-
-        if os.path.exists(path_DataLocal) == False:
-            os.mkdir(path_DataLocal)
-
-        copy_tree(os.path.join(path_previous_simulation,
-                               'DataLocal'), path_DataLocal)
-
-        with open(new_path, 'w') as fileout:
-
-            fileout.writelines(lines)
+    directory_preparation(path,
+                          pdb_name,
+                          residue_name,
+                          path_energies,
+                          path_previous_simulation)
 
     write_files(force_field, solvent_model, path_energies)
 
@@ -378,8 +396,6 @@ def linen_prepare(input_folder,
     print(' -   To perform a clusterization with PELE platform:')
     print(' -   Go to ' + residue_name + '_linen_cry directory.')
     print('          :> sbatch run_analysis')
-    print(' ')
-    print(' ->   ->    For help: python path/to/code/linen_cry.py -h    <-  <-')
     print(' ')
     print('-------------------------------------------------------------------')
     #
