@@ -310,7 +310,7 @@ def linen_prepare(input_folder,
     #
     print(' ')
     print('*******************************************************************')
-    print('*                         peleLigandCrystal                       *')
+    print('*                           peleLInEn                              *')
     print('* --------------------------------------------------------------- *')
     print('*      Ligand\'s internal energy from ligand PELE simulation       *')
     print('*******************************************************************')
