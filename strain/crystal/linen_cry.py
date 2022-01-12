@@ -147,7 +147,7 @@ def linen_prepare(input_folder,
                 '\n'
             )
             force_field = 'OPLS2005'
-    
+
         if solvent_model is None:
             print(
                 '                              WARNING:                               \n'
@@ -409,7 +409,7 @@ def linen_prepare(input_folder,
     path, path_previous_simulation, path_energies = \
         path_definer(input_folder, residue_name)
 
-    force_field, solvent_model = ff_sm_checker(force_field,solvent_model)
+    force_field, solvent_model = ff_sm_checker(force_field, solvent_model)
 
     print(' -   Copying DataLocal and generating ligand.pdb file.')
     print(' -   Writing necessary files to run a PELE simulation and')
