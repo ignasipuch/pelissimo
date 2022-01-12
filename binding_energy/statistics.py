@@ -127,8 +127,8 @@ def statistics(input_folder,
 
                 cont = 0
 
-                # Checking whether path exists and the file has the report_name selected
-                if report_name in file:
+                # Checking whether path exists and the file begins with the report_name selected
+                if file.startswith(report_name):
 
                     file_path = os.path.join(new_directory, file)
 
@@ -282,7 +282,7 @@ def statistics(input_folder,
     ene_bz = boltzmann_weighted(be, T)
     ene_bz4 = boltzmann_weighted(be4, T)
     ene_step_bz = boltzmann_weighted(be, T, step)
-    ene_step, num_steps = step_weighted(be, step, pele_steps)
+    ene_step, _ = step_weighted(be, step, pele_steps)
 
     #
     print(' ')
@@ -290,14 +290,12 @@ def statistics(input_folder,
     print('*                        ENERGIES                            *')
     print('**************************************************************')
     print(' ')
-    print('--------------------------------------------------------------')
     print('- Minimum Binding Energy:', minimum_energy)
     print('- Average Binding Energy:', np.average(be))
     print('- Boltzmann weighted Energy:', ene_bz)
     print('- Step weighted Energy:', ene_step)
     print('- Step-Boltzmann weighted Energy:', ene_step_bz)
     print('- Boltzmann weighted corrected Energy:', ene_bz4)
-    print('-------------------------------------------------------------- ')
     print(' ')
     #
 
