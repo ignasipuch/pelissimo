@@ -52,4 +52,7 @@ of an induced fit simulation and an isolated ligand simulation.
  
    **5.3.a. linen_cry.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
 
+### 6. structural:
+#### Directory with the code related to the rmsd calculation of the protein-ligand induced fit simulation.. Contains:
 
+ **6.1. rmsd.py**: Script that prepares all to run an rmsd calculation. 
