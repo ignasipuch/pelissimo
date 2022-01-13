@@ -190,13 +190,26 @@ def linen_prepare(input_folder,
 
             lines = (l for l in filein if residue_name in l)
             new_path = os.path.join(path_energies, 'ligand.pdb')
-            path_DataLocal = path_energies + '/DataLocal'
+            path_DataLocal = os.path.join(path_energies, 'DataLocal')
 
             if os.path.exists(path_DataLocal) == False:
                 os.mkdir(path_DataLocal)
 
-            copy_tree(os.path.join(path_previous_simulation,
-                                   'DataLocal'), path_DataLocal)
+            path_previous_DataLocal = os.path.join(path_previous_simulation,
+                                                   'DataLocal')
+
+            if os.path.exists(path_previous_DataLocal) == False:
+
+                print('\n'
+                      '                              WARNING:                               \n'
+                      '   No DataLocal directory has been found at ' + input_folder + '.    \n'
+                      '   The DataLocal folder should be copied at ../' +
+                      residue_name + '_linen_cry/' + '\n'
+                      )
+
+            else:
+
+                copy_tree(path_previous_DataLocal, path_DataLocal)
 
             with open(new_path, 'w') as fileout:
 
@@ -411,9 +424,9 @@ def linen_prepare(input_folder,
 
     force_field, solvent_model = ff_sm_checker(force_field, solvent_model)
 
-    print(' -   Copying DataLocal and generating ligand.pdb file.')
     print(' -   Writing necessary files to run a PELE simulation and')
     print('     a PELE platform analysis afterwards.')
+    print(' -   Copying DataLocal and generating ligand.pdb file.')
 
     directory_preparation(path,
                           pdb_name,
@@ -436,7 +449,7 @@ def linen_prepare(input_folder,
     print(' -   Results are stored in /output.')
     print(' ')
     print(' (2) ')
-    print(' -   To perform a clusterization with PELE platform:')
+    print(' -   To perform a clustering with PELE platform:')
     print(' -   Go to ' + residue_name + '_linen_cry directory.')
     print('          :> sbatch run_analysis')
     print(' ')
