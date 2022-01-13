@@ -362,15 +362,16 @@ def linen_prepare(input_folder,
                 '#SBATCH -J PELEne\n'
                 '#SBATCH --output=PELEne.out\n'
                 '#SBATCH --error=PELEne.err\n'
+                '#SBATCH --ntasks=48\n'
                 '#SBATCH --qos=debug\n'
-                '#SBATCH --time=00:30:00\n'
+                '#SBATCH --time=00:10:00\n'
                 '\n'
                 'module purge\n'
                 'module load intel mkl impi gcc\n'
                 'module load impi\n'
                 'module load boost/1.64.0\n'
                 '\n'
-                'mpirun -np 48 /gpfs/projects/bsc72/PELE++/mniv/V1.7.2-b4/bin/PELE-1.7_mpi --control-file ' +
+                'mpirun -np 48 /gpfs/projects/bsc72/PELE++/mniv/V1.7.2-b2/bin/PELE-1.7.2_mpi --control-file ' +
                 path_energies + '/pele.conf --license-directory /gpfs/projects/bsc72/PELE++/license\n'
             )
 
