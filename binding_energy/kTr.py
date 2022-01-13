@@ -22,6 +22,7 @@ DG = {'1CB0': -7.6,
       '6QGE': -7.8,
       '6QGF': -8.3}
 
+
 def parse_args(args):
     """
     Function
@@ -52,6 +53,7 @@ def parse_args(args):
     parsed_args = parser.parse_args(args)
 
     return parsed_args
+
 
 def statistics(input_folder,
                report_name,
@@ -203,7 +205,7 @@ def statistics(input_folder,
 
         return ene_bz
 
-    def dict_to_list(dict_bz,dict_dG):
+    def dict_to_list(dict_bz, dict_dG):
         """
         Function
         ----------
@@ -224,7 +226,7 @@ def statistics(input_folder,
         - dG_bz : list
             List with ordered results of Boltzmann weighted energies
         """
-        
+
         dG_exp = []
         dG_bz = []
 
@@ -233,9 +235,9 @@ def statistics(input_folder,
             dG_exp.append(dict_dG[key])
             dG_bz.append(dict_bz[key])
 
-        return dG_exp,dG_bz
+        return dG_exp, dG_bz
 
-    def correlation(dG_exp,dG_bz):
+    def correlation(dG_exp, dG_bz):
         """
         Function
         ----------
@@ -255,17 +257,17 @@ def statistics(input_folder,
             Correlation between experimental and calculated data.
         """
 
-        def func(x,a,b):
+        def func(x, a, b):
             """
             Function
             ----------
             Function used for the linear regression.
             """
             return a*x + b
-      
-        popt, _ = curve_fit(func,dG_exp,dG_bz)
 
-        residuals = np.array(dG_bz) - func(np.array(dG_exp),*popt)
+        popt, _ = curve_fit(func, dG_exp, dG_bz)
+
+        residuals = np.array(dG_bz) - func(np.array(dG_exp), *popt)
         ss_res = np.sum(residuals**2)
         ss_tot = np.sum((np.array(dG_bz)-np.mean(np.array(dG_exp)))**2)
         r = 1. - (ss_res / ss_tot)
@@ -290,25 +292,27 @@ def statistics(input_folder,
         files = os.listdir(folderpath)
 
         be, _ = reader(files, folderpath, column)
-        be = np.array(be,dtype=np.float128)
+        be = np.array(be, dtype=np.float128)
         ene_bz = boltzmann_weighted(be, T)
 
         dict[system] = ene_bz
-    
-    dG_exp, dG_bz = dict_to_list(dict,DG)
-    r = correlation(dG_exp,dG_bz)
+
+    dG_exp, dG_bz = dict_to_list(dict, DG)
+    r = correlation(dG_exp, dG_bz)
 
     return r
 
-def plotter(kT,r):
+
+def plotter(kT, r):
 
     plt.title('kT vs r')
     plt.xlabel('kT (kcal/mol)')
     plt.ylabel('r')
     plt.xscale('log')
-    plt.axvline(x = R*298., color = 'g')
-    plt.plot(kT,r)
+    plt.axvline(x=R*298., color='g')
+    plt.plot(kT, r)
     plt.savefig(str(pathlib.Path().absolute())+'/energyplot.png')
+
 
 def main(args):
     """
@@ -324,9 +328,9 @@ def main(args):
 
     start_time = time.time()
 
-    T1 = np.linspace(10e-2,1,20,endpoint=False)
-    T2 = np.linspace(1,100,40)
-    T_list = list(np.concatenate((T1,T2))/R)
+    T1 = np.linspace(10e-2, 1, 20, endpoint=False)
+    T2 = np.linspace(1, 100, 40)
+    T_list = list(np.concatenate((T1, T2))/R)
 
     kT = []
     r = []
@@ -334,27 +338,28 @@ def main(args):
     for T in T_list:
 
         r_val = statistics(input_folder=args.input_folder,
-                   report_name=args.report_name,
-                   T=T,
-                   column=args.column)
+                           report_name=args.report_name,
+                           T=T,
+                           column=args.column)
 
         kT.append(R*T)
         r.append(r_val)
 
         print(' ')
         print('kT:', R*T)
-        print('r:',r_val)
+        print('r:', r_val)
         print(' ')
         print(str((100.*T_list.index(T) + 1)/60) + ' %')
         print('---------------------------------------------')
 
-    plotter(kT,r)
+    plotter(kT, r)
 
     print(' ')
     print('                    --Duration of the execution--                   ')
     print('                      %s seconds' % (time.time() - start_time))
     print(' ')
     print('*******************************************************************')
+
 
 if __name__ == '__main__':
 
