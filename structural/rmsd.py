@@ -98,13 +98,12 @@ def rmsd_preparation(input_folder,
         path = str(pathlib.Path().absolute())
 
         path_pl_simulation = os.path.join(path, input_folder)
-        path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
 
         if os.path.isdir(path_pl_simulation) == False:
             raise Exception('PathError: There is no folder with this name: ' +
                             path_pl_simulation + '. Please check the path and the folder name.')
 
-        return path_pl_simulation
+        return path, path_pl_simulation
 
     def iteration_checker(input_folder,
                           iterations,
@@ -161,7 +160,7 @@ def rmsd_preparation(input_folder,
 
                     if "iterations" in line:
 
-                        iterations_string = line.split(' ')[2]
+                        iterations_string = line.split()[2]
                         iterations = int(iterations_string.split(',')[0])
 
             return iterations
@@ -243,7 +242,9 @@ def rmsd_preparation(input_folder,
 
         return iterations
 
-    def pdb_checker(pdb_rmsd):
+    def pdb_manager(pdb_rmsd,
+                    path,
+                    path_pl_simulation):
         """
         Function
         ----------
@@ -269,13 +270,15 @@ def rmsd_preparation(input_folder,
             print('     -   PDB structure obtained from input/ligand.pdb')
             #
 
-            pdb_rmsd = 'input/ligand'
+            pdb_rmsd = 'input/ligand.pdb'
         
         else:
 
             #
-            print(' -   PDB structure: ', str(pdb_rmsd))
+            print(' -   PDB structure:', str(pdb_rmsd))
             #
+
+        shutil.copy(os.path.join(path,pdb_rmsd), path_pl_simulation)
 
         return pdb_rmsd
 
@@ -310,7 +313,7 @@ def rmsd_preparation(input_folder,
                     'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
                     '\n'
                     'python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output -pdbr ' +
-                    pdb_rmsd + '.pdb -np 48 -rp report_ --resname ' + residue_name + '\n'
+                    pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
                 )
 
         else:
@@ -334,9 +337,9 @@ def rmsd_preparation(input_folder,
                     'eval \"$(conda shell.bash hook)\"\n'
                     'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
                     '\n'
-                    'for i in {0..' + str(iterations) + '}\n'
+                    'for i in {0..' + str(iterations - 1) + '}\n'
                     '   do python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output/$i -pdbr ' +
-                    pdb_rmsd + '.pdb -np 48 -rp report_ --resname ' + residue_name + '\n'
+                    pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
                     'done\n'
                 )
 
@@ -348,13 +351,15 @@ def rmsd_preparation(input_folder,
     print(' ')
     #
 
-    path_pl_simulation = path_definer(input_folder, residue_name)
+    path, path_pl_simulation = path_definer(input_folder, residue_name)
 
     iterations = iteration_checker(input_folder,
                                    iterations,
                                    path_pl_simulation)
 
-    pdb_rmsd = pdb_checker(pdb_rmsd)
+    pdb_rmsd = pdb_manager(pdb_rmsd,
+                           path,
+                           path_pl_simulation)
 
     write_files(residue_name,
                 iterations,
