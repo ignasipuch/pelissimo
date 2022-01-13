@@ -13,9 +13,11 @@ import argparse
 import numpy as np
 import time
 
+# ----------------------------------------------------------------------- #
 # Constants:
 T = 298.
 R = 1.985e-3
+# ----------------------------------------------------------------------- #
 
 
 def parse_args(args):
@@ -44,7 +46,7 @@ def parse_args(args):
     parser.add_argument("-T", "--temperature", type=float, dest="temperature",
                         default=298., help="Temperature of the experiment.")
     parser.add_argument("-pS", "--pele_Steps", type=int, dest="pele_steps",
-                        default=20, help="Number of Pele Steps in the simulation.")
+                        default=25, help="Number of Pele Steps in the simulation.")
     parser.add_argument("-c", "--column", type=int, dest="column",
                         default=5, help="Column of the report where the interesting\
                              metric is located.")
