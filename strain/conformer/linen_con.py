@@ -15,7 +15,6 @@ import argparse
 import shutil
 import time
 from distutils.dir_util import copy_tree
-import numpy as np
 
 from rdkit import Chem
 from rdkit.Chem import AllChem
