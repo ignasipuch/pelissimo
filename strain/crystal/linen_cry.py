@@ -12,10 +12,7 @@ import sys
 import os
 import pathlib
 import argparse
-import shutil
 from distutils.dir_util import copy_tree
-import numpy as np
-from collections import Counter
 
 
 def parse_args(args):
@@ -371,9 +368,9 @@ def linen_prepare(input_folder,
                 'module purge\n'
                 'module load intel mkl impi gcc\n'
                 'module load impi\n'
-                'module load python/2.7.13 boost/1.64.0_py2\n'
+                'module load boost/1.64.0\n'
                 '\n'
-                'mpirun -np 48 /gpfs/projects/bsc72/PELE++/mniv/V1.7.2-b2/bin/PELE-1.7.2_mpi --control-file ' +
+                'mpirun -np 48 /gpfs/projects/bsc72/PELE++/mniv/V1.7.2-b4/bin/PELE-1.7_mpi --control-file ' +
                 path_energies + '/pele.conf --license-directory /gpfs/projects/bsc72/PELE++/license\n'
             )
 
@@ -394,7 +391,7 @@ def linen_prepare(input_folder,
                 'module load boost/1.64.0\n'
                 '\n'
                 'eval "$(conda shell.bash hook)"\n'
-                'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.0\n'
+                'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
                 '\n'
                 'python script.py\n'
             )
