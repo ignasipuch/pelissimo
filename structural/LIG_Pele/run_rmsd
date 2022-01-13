@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH -J PELEne
+#SBATCH --output=PELEne.out
+#SBATCH --error=PELEne.err
+#SBATCH --qos=debug
+#SBATCH --time=00:30:00
+
+module purge
+module load ANACONDA/2019.10
+module load intel mkl impi gcc
+module load impi
+module load boost/1.64.0
+
+eval "$(conda shell.bash hook)"
+conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2
+
+for i in {0..1}
+   do python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output/$i -pdbr MTAP_1CB0.pdb.pdb -np 48 -rp report_ --resname LIG
+done
