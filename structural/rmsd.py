@@ -71,8 +71,7 @@ def rmsd_preparation(input_folder,
         Name of the pdb structure to calculate rmsd.
     """
 
-    def path_definer(input_folder,
-                     residue_name):
+    def path_definer(input_folder):
         """
         Function
         ----------
@@ -209,6 +208,10 @@ def rmsd_preparation(input_folder,
                 iterations = conf_extraction(
                     path_pl_simulation, 'adaptive.conf')
 
+                #    
+                print('     -   Number of iterations found: ' + str(iterations))
+                #
+
             else:
 
                 #
@@ -235,8 +238,8 @@ def rmsd_preparation(input_folder,
                           '   \n'
                           '   Please, modify the newly generated run_rmsd in order to match     \n'
                           '   your simulation or rerun this script with the flag -i.\n'
-                          )
-                    #
+                          )  
+                    #              
 
                     iterations = 0
 
@@ -297,9 +300,10 @@ def rmsd_preparation(input_folder,
 
                 fileout.writelines(
                     '#!/bin/bash\n'
-                    '#SBATCH -J PELEne\n'
-                    '#SBATCH --output=PELEne.out\n'
-                    '#SBATCH --error=PELEne.err\n'
+                    '#SBATCH -J rmsd\n'
+                    '#SBATCH --output=rmsd.out\n'
+                    '#SBATCH --error=rmsd.err\n'
+                    '#SBATCH --ntasks=48\n'
                     '#SBATCH --qos=debug\n'
                     '#SBATCH --time=00:30:00\n'
                     '\n'
@@ -322,9 +326,10 @@ def rmsd_preparation(input_folder,
 
                 fileout.writelines(
                     '#!/bin/bash\n'
-                    '#SBATCH -J PELEne\n'
-                    '#SBATCH --output=PELEne.out\n'
-                    '#SBATCH --error=PELEne.err\n'
+                    '#SBATCH -J rmsd\n'
+                    '#SBATCH --output=rmsd.out\n'
+                    '#SBATCH --error=rmsd.err\n'
+                    '#SBATCH --ntasks=48\n'
                     '#SBATCH --qos=debug\n'
                     '#SBATCH --time=00:30:00\n'
                     '\n'
@@ -351,7 +356,7 @@ def rmsd_preparation(input_folder,
     print(' ')
     #
 
-    path, path_pl_simulation = path_definer(input_folder, residue_name)
+    path, path_pl_simulation = path_definer(input_folder)
 
     iterations = iteration_checker(input_folder,
                                    iterations,
@@ -377,7 +382,6 @@ def rmsd_preparation(input_folder,
     print(' -   The reports with rmsd calculation will be named rmsd_report.')
     print(' ')
     print('-------------------------------------------------------------------')
-    #
 
 
 def main(args):
