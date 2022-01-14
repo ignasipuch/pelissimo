@@ -146,23 +146,23 @@ def corrector(input_folder,
 
         if os.path.isfile(os.path.join(path_l_simulation, 'energy.csv')) == True:
 
-            print(' -   Strain correction implemented.')
+            print(' -   Strain correction found.')
             correction_number += 1
 
         else:
 
-            print(' -   Strain correction couldn\'t be implemented.'
+            print(' -   Strain correction couldn\'t be found.'
                   '     File containing energy information (energy.csv) has not been found in '
                   '    ' + path_l_simulation + '.')
 
         if os.path.isfile(os.path.join(path_pl_simulation, 'entropy.csv')) == True:
 
-            print(' -   Enropy correction implemented')
+            print(' -   Enropy correction found.')
             correction_number += 2
 
         else:
 
-            print(' -   Entropy correction couldn\'t be implemented.\n'
+            print(' -   Entropy correction couldn\'t be found.\n'
                   '     File containing entropy information (entropy.csv)\n'
                   '     has not been found in\n\n' + path_pl_simulation + '.')
 
@@ -253,7 +253,7 @@ def corrector(input_folder,
         ----------
         - column_binding_energy : int
             Column of the report where the binding energy metric is located.
-        - column_binding_energy : int
+        - column_internal_energy : int
             Column of the report where the internal energy metric is located.
         - path_pl_output : str
             The path to the protein-ligand simulation output.
@@ -390,7 +390,8 @@ def corrector(input_folder,
                   ligand_min_energy,
                   entropy_change)
 
-    def analysis_files_writer(path_pl_simulation):
+    def analysis_files_writer(column_binding_energy,
+                              path_pl_simulation):
         """
         Function
         ----------
@@ -398,6 +399,8 @@ def corrector(input_folder,
 
         Parameters
         ----------
+        - column_binding_energy : int
+            Column of the report where the binding energy metric is located.
         - path_pl_simulation: str
             The path to the protein-ligand simulation.
         """
@@ -430,7 +433,7 @@ def corrector(input_folder,
                 'from pele_platform.analysis import Analysis\n'
                 '\n'
                 'analysis = Analysis(resname="' + residue_name +
-                '", chain="L", simulation_output="output", report="' +
+                '", chain="L", simulation_output="output", be_column = ' + str(column_binding_energy) + ', report="' +
                 'mod_' + report_name + '", cpus=48)\n'
                 'analysis.generate(path="analysis", clustering_type="meanshift")\n'
             )
@@ -483,17 +486,23 @@ def corrector(input_folder,
           '     mod_' + report_name + ' files.')
     #
 
-    analysis_files_writer(path_pl_simulation)
+    analysis_files_writer(column_binding_energy,
+                          path_pl_simulation)
 
     #
-    print(' ')
     print(' -   run_analysis and script.py files have been generated.')
+    print(' ')
+    print('------------------------------ INFO -------------------------------')
+    print(' ')
     print(' -   To perform a new analysis:')
     print('     :> cd ' + input_folder)
     print('     :> sbatch run_analysis')
     print(' -   The new plots and files will be in /analysis.')
     print(' ')
+    print('-------------------------------------------------------------------')
+    print(' ')
     #
+
 
 
 def main(args):
