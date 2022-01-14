@@ -81,8 +81,8 @@ def statistics(input_folder,
         Column where the interesting data is located.
     """
 
-    def reader(files, 
-               folderpath, 
+    def reader(files,
+               folderpath,
                report_name,
                column):
         """
@@ -100,7 +100,7 @@ def statistics(input_folder,
             Name of the reports to obtain the data from
         - column : int 
             Column where the interesting data is located.
-    
+
 
         Returns
         ----------
@@ -151,11 +151,11 @@ def statistics(input_folder,
                     with open(file_path, 'r') as filein:
 
                         for line in filein:
-                        
+
                             line = line.split('    ')
 
                             if cont != 0:
-                                
+
                                 be.append(float(line[column-1]))
                                 step.append(int(line[1]))
 
@@ -165,7 +165,6 @@ def statistics(input_folder,
 
         def column_retriever(file,
                              column):
-
             """
             Function
             ----------
@@ -187,16 +186,17 @@ def statistics(input_folder,
             cont = 0
 
             with open(file, 'r') as filein:
-                
+
                 for line in filein:
-                
+
                     if cont == 0:
-                    
-                        line = line.split('    ')                         
+
+                        line = line.split('    ')
                         column = line.index('BindingEnergy') + 1
 
                         #
-                        print(' -   No column introduced, picking BindingEnergy column:', column - 1) 
+                        print(
+                            ' -   No column introduced, picking BindingEnergy column:', column - 1)
                         #
 
                     cont += 1
@@ -210,8 +210,9 @@ def statistics(input_folder,
         if len(numeric_files) != 0:
 
             if column == None:
-                
-                column_file = os.path.join(folderpath,numeric_files[0], report_name + '1')
+
+                column_file = os.path.join(
+                    folderpath, numeric_files[0], report_name + '1')
                 column = column_retriever(column_file,
                                           column)
 
@@ -229,10 +230,9 @@ def statistics(input_folder,
                         raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                         Please check the path to the files and the files name.')
 
-
                     be, step = file_reader(files,
-                                           new_directory, 
-                                           report_name, 
+                                           new_directory,
+                                           report_name,
                                            column)
 
         else:
@@ -242,20 +242,20 @@ def statistics(input_folder,
                 Please check the path to the files and the files name.')
 
             if column == None:
-                
+
                 column_file = os.path.join(folderpath, report_name + '1')
                 column = column_retriever(column_file,
                                           column)
 
-            be, step = file_reader(files, 
-                                   folderpath, 
-                                   report_name, 
+            be, step = file_reader(files,
+                                   folderpath,
+                                   report_name,
                                    column)
 
         return be, step
 
-    def boltzmann_weighted(be, 
-                           T, 
+    def boltzmann_weighted(be,
+                           T,
                            steps=[]):
         """
         Function
@@ -323,7 +323,7 @@ def statistics(input_folder,
                         peleSteps_string = line.split()[2]
                         pele_steps = int(peleSteps_string.split(',')[0])
 
-        else: 
+        else:
 
             peleconf_path = os.path.join(path, 'pele.conf')
 
@@ -341,7 +341,7 @@ def statistics(input_folder,
 
                             pele_steps = int(line.split()[-1])
 
-            else: 
+            else:
 
                 #
                 print('     -   No .conf was found.')
@@ -351,8 +351,8 @@ def statistics(input_folder,
 
         return pele_steps
 
-    def step_weighted(be, 
-                      step, 
+    def step_weighted(be,
+                      step,
                       pele_steps):
         """
         Function
@@ -412,14 +412,14 @@ def statistics(input_folder,
     print('**************************************************************')
     print(' ')
     #
-    
+
     path = str(pathlib.Path().absolute())
     folderpath = os.path.join(path, input_folder)
 
     files = os.listdir(folderpath)
 
-    be, step = reader(files, 
-                      folderpath, 
+    be, step = reader(files,
+                      folderpath,
                       report_name,
                       column)
 
@@ -436,23 +436,23 @@ def statistics(input_folder,
         #
         print(' -   No information about pele_steps was given.')
         #
-        
+
         pele_steps = pelesteps_retriever()
 
-        if pele_steps == None: 
-            
-            ene_step = 0.  
+        if pele_steps == None:
 
-        else: 
+            ene_step = 0.
 
-            ene_step, _ = step_weighted(be, step, pele_steps)   
+        else:
+
+            ene_step, _ = step_weighted(be, step, pele_steps)
 
         #
         print(' -   Pele steps:', pele_steps)
-        #   
+        #
 
-    else: 
-  
+    else:
+
         ene_step, _ = step_weighted(be, step, pele_steps)
 
     #
