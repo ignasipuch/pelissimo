@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 This script is designed to prepare an rmsd simulation with Frag code 
-and the pele platfomr.
+and the pele platform.
 """
 
 __author__ = "Ignasi Puch-Giner"
