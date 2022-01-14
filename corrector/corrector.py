@@ -565,8 +565,6 @@ def corrector(input_folder,
     print(' ')
     print('-------------------------------------------------------------------')
     print(' ')
-    #
-
 
 
 def main(args):
