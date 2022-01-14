@@ -7,16 +7,11 @@ __author__ = "Ignasi Puch-Giner"
 __maintainer__ = "Ignasi Puch-Giner"
 __email__ = "ignasi.puchginer@bsc.es"
 
-from genericpath import isfile
 import sys
 import os
 import pathlib
 import argparse
 import shutil
-from distutils.dir_util import copy_tree
-import numpy as np
-from collections import Counter
-
 
 def parse_args(args):
     """
@@ -46,10 +41,10 @@ def parse_args(args):
     parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report', help="Name of the report files used for the simulation.")
     parser.add_argument("-cbe", "--column_binding_energy", type=int, dest="column_binding_energy",
-                        default=5, help="Column of the report where the binding energy\
+                        default=None, help="Column of the report where the binding energy\
                              metric is located.")
     parser.add_argument("-cie", "--column_internal_energy", type=int, dest="column_internal_energy",
-                        default=6, help="Column of the report where the internal energy of the ligand\
+                        default=None, help="Column of the report where the internal energy of the ligand\
                              metric is located.")
 
     parsed_args = parser.parse_args(args)
@@ -237,6 +232,50 @@ def corrector(input_folder,
                 cont += 1
 
         return entropy_change
+       
+    def column_retriever(file,
+                         column_binding_energy,
+                         column_internal_energy):
+        """
+        Function
+        ----------
+        Retrieves the position of the binding energy.
+
+        Parameters
+        ----------
+        - file : list
+            The path to the one report.
+        - column : int 
+            Value give to the --column flag. 
+
+        Returns
+        ----------
+        - column : int 
+            Column where the interesting data is located. 
+        """
+
+        cont = 0
+
+        with open(file, 'r') as filein:
+
+            for line in filein:
+
+                if cont == 0:
+
+                    line = line.split('    ')
+                    column_binding_energy = line.index('BindingEnergy') + 1
+                    column_internal_energy = line.index('InternalEnergy') + 1
+
+                    #
+                    print(
+                        ' -   Column for the binding energy:', column_binding_energy - 1)
+                    print(
+                        ' -   Column for the internal energy:', column_internal_energy - 1)
+                    #
+
+                cont += 1
+
+        return column_binding_energy, column_internal_energy
 
     def correction_implementer(column_binding_energy,
                                column_internal_energy,
@@ -448,12 +487,13 @@ def corrector(input_folder,
     print(' ')
     #
 
-    # Storing paths into variables and checking if there are corrections to be made.
     path_pl_simulation, path_pl_output, path_l_simulation = path_definer(
         input_folder, residue_name)
+
     correction_number = corrections_detector(
         path_pl_simulation, path_l_simulation)
 
+    # Corrections values ---
     if correction_number == 1:
 
         ligand_min_energy = ligand_min(path_l_simulation)
@@ -468,6 +508,30 @@ def corrector(input_folder,
 
         ligand_min_energy = ligand_min(path_l_simulation)
         entropy_change = entropy_correction(path_pl_simulation)
+
+    # Corrections column location ---
+    file = os.path.join(path_pl_simulation,'output','0',report_name + '_1')
+
+    if column_internal_energy == None and column_binding_energy == None:
+
+        column_binding_energy, column_internal_energy = \
+        column_retriever(file,
+                         column_binding_energy,
+                         column_internal_energy)
+
+    elif column_binding_energy == None:
+        
+        column_binding_energy, _ = \
+        column_retriever(file,
+                         column_binding_energy,
+                         column_internal_energy)
+
+    elif column_internal_energy == None:
+
+        _, column_internal_energy = \
+        column_retriever(file,
+                         column_binding_energy,
+                         column_internal_energy)
 
     #
     print(' ')
