@@ -147,8 +147,9 @@ def corrector(input_folder,
         else:
 
             print(' -   Strain correction couldn\'t be found.'
-                  '     File containing energy information (energy.csv) has not been found in '
-                  '    ' + path_l_simulation + '.')
+                  '     File containing energy information (energy.csv)\n'
+                  '     has not been found in\n\n'
+                  '    ' + path_l_simulation + '.\n')
 
         if os.path.isfile(os.path.join(path_pl_simulation, 'entropy.csv')) == True:
 
@@ -159,7 +160,7 @@ def corrector(input_folder,
 
             print(' -   Entropy correction couldn\'t be found.\n'
                   '     File containing entropy information (entropy.csv)\n'
-                  '     has not been found in\n\n' + path_pl_simulation + '.')
+                  '     has not been found in\n\n' + path_pl_simulation + '.\n')
 
         if correction_number == 0:
 
