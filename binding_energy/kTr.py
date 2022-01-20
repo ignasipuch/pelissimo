@@ -7,8 +7,9 @@ import pathlib
 import argparse
 import numpy as np
 import time
-from scipy.optimize import curve_fit
+from scipy import stats
 import matplotlib.pyplot as plt
+from scipy.special import expit
 
 # Constant
 R = 1.985e-3
@@ -257,20 +258,7 @@ def statistics(input_folder,
             Correlation between experimental and calculated data.
         """
 
-        def func(x, a, b):
-            """
-            Function
-            ----------
-            Function used for the linear regression.
-            """
-            return a*x + b
-
-        popt, _ = curve_fit(func, dG_exp, dG_bz)
-
-        residuals = np.array(dG_bz) - func(np.array(dG_exp), *popt)
-        ss_res = np.sum(residuals**2)
-        ss_tot = np.sum((np.array(dG_bz)-np.mean(np.array(dG_exp)))**2)
-        r = 1. - (ss_res / ss_tot)
+        _, _, r, _, _ = stats.linregress(dG_exp, dG_bz)
 
         return r
 
@@ -295,9 +283,14 @@ def statistics(input_folder,
         be = np.array(be, dtype=np.float128)
         ene_bz = boltzmann_weighted(be, T)
 
-        dict[system] = ene_bz
+        dict[system] = float(ene_bz)
 
-    dG_exp, dG_bz = dict_to_list(dict, DG)
+    #
+    print(dict)
+    print(DG)
+    #
+
+    dG_exp, dG_bz = dict_to_list(dict,DG)
     r = correlation(dG_exp, dG_bz)
 
     return r
@@ -329,7 +322,7 @@ def main(args):
     start_time = time.time()
 
     T1 = np.linspace(10e-2, 1, 20, endpoint=False)
-    T2 = np.linspace(1, 100, 40)
+    T2 = np.linspace(1, 100, 100)
     T_list = list(np.concatenate((T1, T2))/R)
 
     kT = []
@@ -348,6 +341,7 @@ def main(args):
         print(' ')
         print('kT:', R*T)
         print('r:', r_val)
+        print('R:', r_val**2)
         print(' ')
         print(str((100.*T_list.index(T) + 1)/60) + ' %')
         print('---------------------------------------------')
