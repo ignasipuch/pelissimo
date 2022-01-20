@@ -343,6 +343,8 @@ def statistics(input_folder,
 
             else:
 
+                pele_steps = None
+
                 #
                 print('     -   No .conf was found.')
                 print('     -   The step weighted scoring function will not \n'
