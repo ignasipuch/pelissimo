@@ -178,7 +178,7 @@ def rmsd_preparation(input_folder,
 
             if len(directories) == 0:
 
-                iterations = 1
+                iterations = 0
 
             else:
 
@@ -214,7 +214,7 @@ def rmsd_preparation(input_folder,
                     iterations = output_extraction(path_pl_simulation)
 
                     #
-                    print('         -   Number of folders found: ' + str(iterations + 1))
+                    print('         -   Number of iterations found: ' + str(iterations + 1))
                     #
 
                 else:
