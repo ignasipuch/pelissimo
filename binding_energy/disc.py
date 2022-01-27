@@ -752,7 +752,7 @@ def statistics(input_folder,
         plotter(step_dict, bz_dict, min_dict, path, input_folder)
 
         #
-        print(' -   Images have been stored in working directory.')
+        print(' -   Images have been stored in /evolution directory.')
         #
 
     else:
