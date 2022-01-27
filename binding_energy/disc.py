@@ -53,7 +53,7 @@ def parse_args(args):
                         default=None, help="Column of the report where the interesting\
                              metric is located.")
     parser.add_argument("-a", "--action", type=str, dest="action",
-                    default='all', help="Function the user wants the script to do: all or evolution.")    
+                        default='all', help="Function the user wants the script to do: all or evolution.")
 
     parsed_args = parser.parse_args(args)
 
@@ -488,7 +488,7 @@ def statistics(input_folder,
 
                 if file.startswith(report_name):
 
-                    with open(os.path.join(folderpath,file)) as filein:
+                    with open(os.path.join(folderpath, file)) as filein:
 
                         for line in filein:
 
@@ -498,15 +498,15 @@ def statistics(input_folder,
 
                                 if step == int(line[2]):
 
-                                    step_data.append(float(line[column - 1])) 
+                                    step_data.append(float(line[column - 1]))
 
-                            cont +=1
-                        
+                            cont += 1
+
                         else:
 
                             continue
 
-            step += 1                  
+            step += 1
 
             return step_data, step
 
@@ -521,7 +521,7 @@ def statistics(input_folder,
             #
             print(' -   Calculating...')
             #
-            
+
             for document in numeric_files:
 
                 step = 0
@@ -539,7 +539,7 @@ def statistics(input_folder,
 
                     while step < pele_steps:
 
-                        if step > 1 and bz_energy_list[-1] == bz_energy_list[-2]: 
+                        if step > 1 and bz_energy_list[-1] == bz_energy_list[-2]:
 
                             break
 
@@ -552,7 +552,7 @@ def statistics(input_folder,
                                                            step_data)
 
                         ene_bz = boltzmann_weighted(np.array(step_data), T)
-                        minimum_energy = min(np.array(step_data))   
+                        minimum_energy = min(np.array(step_data))
 
                         bz_energy_list.append(ene_bz)
                         minimum_energy_list.append(minimum_energy)
@@ -576,9 +576,10 @@ def statistics(input_folder,
 
             while step < pele_steps:
 
-                if step > 1 and bz_energy_list[-1] == bz_energy_list[-2]: 
+                if step > 1 and bz_energy_list[-1] == bz_energy_list[-2]:
 
-                    print(' -   Maximum number of acepted steps in any report:', step - 1)
+                    print(
+                        ' -   Maximum number of acepted steps in any report:', step - 1)
 
                     break
 
@@ -599,7 +600,7 @@ def statistics(input_folder,
             step_dict[0] = step_list
             bz_dict[0] = bz_energy_list
             min_dict[0] = minimum_energy_list
-                
+
         return bz_dict, min_dict, step_dict
 
     def plotter(step_dict,
@@ -607,13 +608,12 @@ def statistics(input_folder,
                 min_dict,
                 path,
                 input_folder):
-
         """
         Function
         ----------
         Orders dictionaries by epochs and plots the data calculated to save the results
         in a newu directory /evolution.
-        
+
         Parameters
         ----------
         - bz_dict : dict
@@ -630,16 +630,9 @@ def statistics(input_folder,
         - input_folder : str
             Name of the output directory from which we have obtained the data 
             of the dictionaries.
-
-        Returns
-        ----------
-        - step : int
-            Accepted step next iteration is going to retrieve data from.
-        - step_data : list
-            List with all the accumulated data of previous steps.
         """
 
-        path_plots = os.path.join(path,'evolution')
+        path_plots = os.path.join(path, 'evolution')
 
         if os.path.exists(path_plots) == False:
             os.mkdir(path_plots)
@@ -653,13 +646,15 @@ def statistics(input_folder,
 
         for key in step_dict:
 
-            ax1.plot(step_dict[key],bz_dict[key], label = key)
-            ax1.legend(loc = 'best', fontsize=5)
-            ax2.plot(step_dict[key],min_dict[key], label = key)
-            ax2.legend(loc = 'best', fontsize=5)
-            
-        fig1.savefig(os.path.join(path_plots, input_folder + '_bz_evolution.png'))
-        fig2.savefig(os.path.join(path_plots, input_folder + '_min_evolution.png'))
+            ax1.plot(step_dict[key], bz_dict[key], label=key)
+            ax1.legend(loc='best', fontsize=5)
+            ax2.plot(step_dict[key], min_dict[key], label=key)
+            ax2.legend(loc='best', fontsize=5)
+
+        fig1.savefig(os.path.join(
+            path_plots, input_folder + '_bz_evolution.png'))
+        fig2.savefig(os.path.join(
+            path_plots, input_folder + '_min_evolution.png'))
 
     #
     print(' ')
@@ -732,7 +727,7 @@ def statistics(input_folder,
                 ',' + str(ene_step) + ',' + str(ene_step_bz) +
                 ',' + str(ene_bz4) + '\n'
             )
-    
+
     elif action == 'evolution':
 
         if pele_steps == None:
@@ -754,15 +749,16 @@ def statistics(input_folder,
                                                             column,
                                                             folderpath)
 
-        plotter(step_dict,bz_dict,min_dict,path,input_folder)
+        plotter(step_dict, bz_dict, min_dict, path, input_folder)
 
         #
         print(' -   Images have been stored in working directory.')
         #
 
-    else: 
+    else:
 
-        raise Exception('ActionError: The action you chose is not either all of evolution.')
+        raise Exception(
+            'ActionError: The action you chose is not either all of evolution.')
 
 
 def main(args):
