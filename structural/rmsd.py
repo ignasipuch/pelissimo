@@ -172,6 +172,9 @@ def rmsd_preparation(input_folder,
                 Number of iterations of the induced fit simulation.
             """
 
+            if os.path.exists(os.path.join(path, 'output')) == False:
+                print('         -   No output folder was found.')
+
             all_directories = os.listdir(os.path.join(path, 'output'))
             directories = [
                 directory for directory in all_directories if directory.isnumeric()]
