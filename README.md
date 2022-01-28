@@ -11,7 +11,8 @@ of all of them with the Trapezoidal rule.
 > ### 2. binding_energy: 
 > #### Directory with the code related to calculating the binding energy of a simulation. Contains: 
 >
-> - **2.1. statistics.py**: Script to read all the energetic information of a simulation and calculating different scoring functions.
+> - **2.1. disc.py**: Script to: (1) Read all the information about a metric in a simulation and calculating different scoring functions.
+> (2) Make plots of the evolution of the Boltzmann weighted average or minimum of a certain metric throughout a simulation.
 >
 > - **2.2. kTr.py**: Script to test whether PELE introduces bias to the energies calculated in the simulations. 
 
@@ -19,7 +20,7 @@ of all of them with the Trapezoidal rule.
 > #### Directory containing the code involved in the correction of the energies of a simulation.
 >
 > - **3.1. correction.py**: Script that retrieves entropy and strain corrections and implements them in the reports of the 
->induced fit simulation.
+> induced fit simulation.
 
 > ### 4. entropy:
 > #### Directory with the code related to the Ligand Conformational Entropy (LiCE) calculation
