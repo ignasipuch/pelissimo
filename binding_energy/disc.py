@@ -641,6 +641,8 @@ def statistics(input_folder,
         bz_dict = dict(sorted(bz_dict.items()))
         min_dict = dict(sorted(min_dict.items()))
 
+        plt.figure(figsize=(7,3.5))
+
         fig1, ax1 = plt.subplots()
         fig2, ax2 = plt.subplots()
 
@@ -650,6 +652,13 @@ def statistics(input_folder,
             ax1.legend(loc='best', fontsize=5)
             ax2.plot(step_dict[key], min_dict[key], label=key)
             ax2.legend(loc='best', fontsize=5)
+
+        if len(step_dict[key]) > 100:
+
+            left, bottom, width, height = [0.65, 0.3, 0.2, 0.2]
+            ax1_1 = fig1.add_axes([left, bottom, width, height])
+            ax1_1.plot(step_dict[key], bz_dict[key], label=key)
+            ax1_1.set_xlim([0,20])
 
         fig1.savefig(os.path.join(
             path_plots, input_folder + '_bz_evolution.png'))
