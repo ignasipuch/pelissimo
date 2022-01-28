@@ -36,7 +36,7 @@ of all of them with the Trapezoidal rule.
 > #### Directory with the files necessary to perform a full simulation of the protocol.
 
 > ### 6. strain: 
-> #### Directory with the code related to the calculation of the Ligand Internal Energy LInEn with different approaches (ConACry). Contains:
+> #### Directory with the code related to the calculation of the Ligand Internal Energy LInEn. Contains:
 > 
 > - **6.1. linen_cry.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
 
