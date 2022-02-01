@@ -13,6 +13,8 @@ import pathlib
 import argparse
 import numpy as np
 
+from rdkit import Chem
+from rdkit.Chem import rdMolTransforms
 
 def parse_args(args):
     """
@@ -58,20 +60,65 @@ def main_function(input_folder,
     def template_info_retriever(path_template,
                                 residue_name):
 
-        dihedral_angles_dict = {}
+        rotatable_bonds_dict = {}
 
         with open(os.path.join(path_template,residue_name + '.rot.assign')) as filein:
+
+            cont = 1
 
             for line in filein:
 
                 line = line.split()
 
                 if line[0].startswith('sidelib'):
+                    
+                    rotatable_bonds_dict[cont] = tuple([line[2].split('_')[1],line[3].split('_')[1]])
+                    cont += 1
 
-                    angle = int(line[1].split('E')[-1])
-                    dihedral_angles_dict[tuple(line[2:-1])] = angle
+        return rotatable_bonds_dict
 
-        return dihedral_angles_dict
+    def atoms_to_track(residue_name,
+                       rotatable_bonds_dict):
+
+        path = str(pathlib.Path().absolute())
+        path_input = os.path.join(path,'input')
+        path_ligand = os.path.join(path_input,'ligand.pdb')
+
+        atoms = []
+
+        with open(path_ligand) as filein:
+
+            for line in filein:
+
+                if residue_name in line:
+
+                    atom = line.split()[2]                    
+                    atoms.append(atom)
+
+        m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
+        heavy_atoms = [k for k in atoms if 'H' not in k]
+
+        neighbours_dict = {}
+        dihedral_bond_dict = {}
+
+        for atom in range(len(heavy_atoms)):
+
+            neighbours_dict[heavy_atoms[atom]] = [atoms[x.GetIdx()] for x in m.GetAtomWithIdx(atom).GetNeighbors()]
+
+        for key in rotatable_bonds_dict:
+
+            all_neighbours_atom_1 = neighbours_dict[rotatable_bonds_dict[key][0]]
+            all_neighbours_atom_2 = neighbours_dict[rotatable_bonds_dict[key][1]]
+
+            neighbours_atom_1 = [x for x in all_neighbours_atom_1 if rotatable_bonds_dict[key][1] not in x]
+            neighbours_atom_2 = [x for x in all_neighbours_atom_2 if rotatable_bonds_dict[key][0] not in x]
+
+            dihedral_bond_dict[key] = neighbours_atom_1[0],\
+                                      rotatable_bonds_dict[key][0],\
+                                      rotatable_bonds_dict[key][1],\
+                                      neighbours_atom_2[0]
+
+        return dihedral_bond_dict
 
     def trajectory_positions(path_output):
         
@@ -138,19 +185,17 @@ def main_function(input_folder,
         
         return simulation_dict
 
-    def dihedral_angle(dihedral_angles_dict,
-                       simulation_dict):
-
-        
-
-
-
-
-        
     path_template, path_output = path_definer(input_folder)
-    dihedral_angles_dict = template_info_retriever(path_template,
+    rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
+    dihedral_bond_dict = atoms_to_track(residue_name,
+                                        rotatable_bonds_dict)
     simulation_dict = trajectory_positions(path_output)
+
+    print('dihedral angles dict')
+    print(rotatable_bonds_dict)
+    print('dihedral bonds')
+    print(dihedral_bond_dict)
 
 def main(args):
     """
