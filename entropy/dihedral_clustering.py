@@ -11,10 +11,13 @@ import sys
 import os
 import pathlib
 import argparse
+from termios import NL1
 import numpy as np
+from itertools import groupby, chain
 
 from rdkit import Chem
 from rdkit.Chem import rdMolTransforms
+from rdkit.Chem import AllChem
 
 def parse_args(args):
     """
@@ -96,6 +99,9 @@ def main_function(input_folder,
                     atoms.append(atom)
 
         m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
+#        conf = AllChem.EmbedMolecule(m)
+#        conf = m.GetConformer(0)
+
         heavy_atoms = [k for k in atoms if 'H' not in k]
 
         neighbours_dict = {}
@@ -103,7 +109,14 @@ def main_function(input_folder,
 
         for atom in range(len(heavy_atoms)):
 
+            #print(atom,heavy_atoms[atom])
+
             neighbours_dict[heavy_atoms[atom]] = [atoms[x.GetIdx()] for x in m.GetAtomWithIdx(atom).GetNeighbors()]
+
+        #print(rdMolTransforms.GetDihedralDeg(conf, 10,15,16,17))
+        #print(rdMolTransforms.GetDihedralDeg(conf, 7,10,14,15))
+
+        atom_list = []
 
         for key in rotatable_bonds_dict:
 
@@ -117,48 +130,99 @@ def main_function(input_folder,
                                       rotatable_bonds_dict[key][0],\
                                       rotatable_bonds_dict[key][1],\
                                       neighbours_atom_2[0]
+            
+            atom_list.append(neighbours_atom_1[0])
+            atom_list.append(rotatable_bonds_dict[key][0])
+            atom_list.append(rotatable_bonds_dict[key][1])
+            atom_list.append(neighbours_atom_2[0])
 
-        return dihedral_bond_dict
+        atom_list = sorted(set(atom_list))
 
-    def trajectory_positions(path_output):
+        return dihedral_bond_dict, atom_list
+
+    def trajectory_positions(path_output,
+                             atom_list,
+                             dihedral_bond_dict):
         
         def trajectory_positions_retriever(path,
-                                           file_list):
+                                           file_list,
+                                           atom_list,
+                                           dihedral_bond_dict):
 
-            trajectory_dict = {}
-            epoch_dict = {}
+            def dihedral_angle_calculator(dihedral_bond_dict,
+                                          atoms_positions_dict):
 
+                dihedral_angle_dict = {}
+
+                for key in dihedral_bond_dict:
+
+                    atom_name_a = dihedral_bond_dict[key][0]
+                    atom_name_b = dihedral_bond_dict[key][1]
+                    atom_name_c = dihedral_bond_dict[key][2]
+                    atom_name_d = dihedral_bond_dict[key][3]
+
+                    coordinates_atom_a = np.array(atoms_positions_dict[atom_name_a])
+                    coordinates_atom_b = np.array(atoms_positions_dict[atom_name_b])
+                    coordinates_atom_c = np.array(atoms_positions_dict[atom_name_c])
+                    coordinates_atom_d = np.array(atoms_positions_dict[atom_name_d])
+
+                    b1 = coordinates_atom_b - coordinates_atom_a
+                    b2 = coordinates_atom_c - coordinates_atom_b; b2_u = b2/np.linalg.norm(b2)
+                    b3 = coordinates_atom_d - coordinates_atom_c
+
+                    n1 = np.cross(b1,b2)/np.linalg.norm(np.cross(b1,b2))
+                    n2 = np.cross(b2,b3)/np.linalg.norm(np.cross(b2,b3))
+                    m1 = np.cross(n1,b2_u)
+
+                    y = np.dot(m1,n2) 
+                    x = np.dot(n1,n2)
+                    
+                    dihedral_angle = np.arctan2(y,x)
+                    dihedral_angle_dict[key] = dihedral_angle
+                
+                return dihedral_angle_dict
+
+            dihedral_angles_epoch = {}
             file_list = [k for k in file_list if 'trajectory' in k]
 
             for file in file_list:
 
                 if 'trajectory' in file:
 
+                    dihedral_angles_trajectory = {}
                     trajectory_number = file.split('_')[-1].split('.pdb')[0]
-                    atom_position = {}
 
-                    with open(os.path.join(path,file)) as filein:
+                    filein = open(os.path.join(path,file), "r")
+                    content = filein.read()
+                    models_list = content.split('MODEL')
+                    models_list = models_list[1:len(models_list)]
 
-                        for line in filein:
+                    model_cont = 0
 
-                            if 'MODEL' in line:
+                    for model in models_list:
+
+                        atoms_positions_dict = {}
+
+                        model_lines = model.splitlines(True)
+                        ligand_lines = [line for line in model_lines if 'LIG' in line] 
+
+                        for line in ligand_lines:
+
+                            if any(ext in line for ext in atom_list):
 
                                 line = line.split()
-                                model = line[-1]
+                                atoms_positions_dict[line[2]] = [float(line[5]),
+                                                                 float(line[6]),
+                                                                 float(line[7])]
 
-                            elif residue_name in line:
+                        dihedral_angles_trajectory[model_cont] = dihedral_angle_calculator(dihedral_bond_dict,
+                                                                    atoms_positions_dict)
+                        
+                        model_cont += 1
 
-                                line = line.split()
-                                atom_position[line[2]] = tuple([line[5],line[6],line[7]])
-
-                            elif 'ENDMDL' in line:
-
-                                trajectory_dict[model] = atom_position
-                    
-                    epoch_dict[trajectory_number] =  trajectory_dict
-
-                
-            return epoch_dict
+                dihedral_angles_epoch[trajectory_number] = dihedral_angles_trajectory
+        
+            return dihedral_angles_epoch
         
         files = os.listdir(path_output)
         numeric_files = [s for s in files if s.isnumeric()]
@@ -176,26 +240,29 @@ def main_function(input_folder,
                     files = os.listdir(new_directory)       
 
                     simulation_dict[document] = trajectory_positions_retriever(new_directory,
-                                                                          files)
+                                                                               files,
+                                                                               atom_list,
+                                                                               dihedral_bond_dict)
 
         else:
 
             simulation_dict = trajectory_positions_retriever(path_output,
-                                                        files)
+                                                        files,
+                                                        atom_list,
+                                                        dihedral_bond_dict)
         
         return simulation_dict
 
     path_template, path_output = path_definer(input_folder)
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
-    dihedral_bond_dict = atoms_to_track(residue_name,
-                                        rotatable_bonds_dict)
-    simulation_dict = trajectory_positions(path_output)
+    dihedral_bond_dict, atom_list = atoms_to_track(residue_name,
+                                                   rotatable_bonds_dict)
+    simulation_dict = trajectory_positions(path_output,
+                                           atom_list,
+                                           dihedral_bond_dict)
 
-    print('dihedral angles dict')
-    print(rotatable_bonds_dict)
-    print('dihedral bonds')
-    print(dihedral_bond_dict)
+    print(simulation_dict)
 
 def main(args):
     """
