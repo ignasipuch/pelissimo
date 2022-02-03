@@ -12,6 +12,7 @@ import os
 import pathlib
 import argparse
 import numpy as np
+import pandas as pd
 
 from rdkit import Chem
 
@@ -46,8 +47,8 @@ def parse_args(args):
     return parsed_args
 
 
-def main_function(input_folder,
-                  residue_name):
+def dihedral_angles_retriever_main(input_folder,
+                                   residue_name):
     """
     Function
     ----------
@@ -63,7 +64,10 @@ def main_function(input_folder,
 
     Returns
     ----------
-
+    - dihedral_bond_df : pd.DataFrame
+        Data frame with rotatable bonds, atoms conforming it and the index assigned.
+    - simulation_df : pd.DataFrame
+        Data frame with all the rotatable bonds' dihedral angle values of all the simulation with corresponding model, trajectory and epoch.
     """
 
     def path_definer(input_folder):
@@ -202,7 +206,13 @@ def main_function(input_folder,
 
         atom_list = sorted(set(atom_list))
 
-        return dihedral_bond_dict, atom_list
+        dihedral_bond_df = pd.DataFrame.from_dict(dihedral_bond_dict)
+        dihedral_bond_df = dihedral_bond_df.T
+        dihedral_bond_df.columns = ['A', 'B', 'C', 'D']
+        index = dihedral_bond_df.index
+        index.name = "Rot. bond index"
+
+        return dihedral_bond_dict, atom_list, dihedral_bond_df
 
     def trajectory_positions(path_output,
                              atom_list,
@@ -224,7 +234,9 @@ def main_function(input_folder,
 
         Returns
         ----------
-
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of the 
+            all the simulation with corresponding model, trajectory and epoch.
         """
 
         def trajectory_positions_retriever(path,
@@ -380,19 +392,27 @@ def main_function(input_folder,
                                                                 atom_list,
                                                                 dihedral_bond_dict)
 
-        return simulation_dict
+        simulation_df = pd.DataFrame([(epoch, trajectory, model, rot_bond, value)
+                                      for epoch, traj_mod_rot_val in simulation_dict.items()
+                                      for trajectory, mod_rot_val in traj_mod_rot_val.items()
+                                      for model, rot_val in mod_rot_val.items()
+                                      for rot_bond, value in rot_val.items()])
+
+        simulation_df.columns = ['epoch', 'trajectory',
+                                 'model', 'rotable bond', 'value']
+
+        return simulation_df
 
     path_template, path_output = path_definer(input_folder)
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
-    dihedral_bond_dict, atom_list = atoms_to_track(residue_name,
-                                                   rotatable_bonds_dict)
-    simulation_dict = trajectory_positions(path_output,
-                                           atom_list,
-                                           dihedral_bond_dict)
+    dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(residue_name,
+                                                                     rotatable_bonds_dict)
+    simulation_df = trajectory_positions(path_output,
+                                         atom_list,
+                                         dihedral_bond_dict)
 
-    print(simulation_dict[0][1][1])
-    print(dihedral_bond_dict)
+    return dihedral_bond_df, simulation_df
 
 
 def main(args):
@@ -407,8 +427,8 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
-    main_function(input_folder=args.input_folder,
-                  residue_name=args.residue_name)
+    dihedral_angles_retriever_main(input_folder=args.input_folder,
+                                   residue_name=args.residue_name)
 
 
 if __name__ == '__main__':
