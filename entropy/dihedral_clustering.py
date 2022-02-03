@@ -11,13 +11,9 @@ import sys
 import os
 import pathlib
 import argparse
-from termios import NL1
 import numpy as np
-from itertools import groupby, chain
 
 from rdkit import Chem
-from rdkit.Chem import rdMolTransforms
-from rdkit.Chem import AllChem
 
 def parse_args(args):
     """
@@ -99,24 +95,16 @@ def main_function(input_folder,
                     atoms.append(atom)
 
         m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
-#        conf = AllChem.EmbedMolecule(m)
-#        conf = m.GetConformer(0)
 
         heavy_atoms = [k for k in atoms if 'H' not in k]
 
         neighbours_dict = {}
         dihedral_bond_dict = {}
+        atom_list = []
 
         for atom in range(len(heavy_atoms)):
 
-            #print(atom,heavy_atoms[atom])
-
             neighbours_dict[heavy_atoms[atom]] = [atoms[x.GetIdx()] for x in m.GetAtomWithIdx(atom).GetNeighbors()]
-
-        #print(rdMolTransforms.GetDihedralDeg(conf, 10,15,16,17))
-        #print(rdMolTransforms.GetDihedralDeg(conf, 7,10,14,15))
-
-        atom_list = []
 
         for key in rotatable_bonds_dict:
 
@@ -177,7 +165,7 @@ def main_function(input_folder,
                     y = np.dot(m1,n2) 
                     x = np.dot(n1,n2)
                     
-                    dihedral_angle = np.arctan2(y,x)
+                    dihedral_angle = -np.arctan2(y,x)*(180./np.pi)
                     dihedral_angle_dict[key] = dihedral_angle
                 
                 return dihedral_angle_dict
@@ -220,16 +208,16 @@ def main_function(input_folder,
                         
                         model_cont += 1
 
-                dihedral_angles_epoch[trajectory_number] = dihedral_angles_trajectory
+                dihedral_angles_epoch[int(trajectory_number)] = dihedral_angles_trajectory
         
             return dihedral_angles_epoch
         
         files = os.listdir(path_output)
         numeric_files = [s for s in files if s.isnumeric()]
 
-        if len(numeric_files) != 0:
+        simulation_dict = {}
 
-            simulation_dict = {}
+        if len(numeric_files) != 0:
 
             for document in numeric_files:
 
@@ -239,17 +227,17 @@ def main_function(input_folder,
 
                     files = os.listdir(new_directory)       
 
-                    simulation_dict[document] = trajectory_positions_retriever(new_directory,
+                    simulation_dict[int(document)] = trajectory_positions_retriever(new_directory,
                                                                                files,
                                                                                atom_list,
                                                                                dihedral_bond_dict)
 
         else:
 
-            simulation_dict = trajectory_positions_retriever(path_output,
-                                                        files,
-                                                        atom_list,
-                                                        dihedral_bond_dict)
+            simulation_dict[0] = trajectory_positions_retriever(path_output,
+                                                                files,
+                                                                atom_list,
+                                                                dihedral_bond_dict)
         
         return simulation_dict
 
@@ -262,7 +250,8 @@ def main_function(input_folder,
                                            atom_list,
                                            dihedral_bond_dict)
 
-    print(simulation_dict)
+    print(simulation_dict[0][1][1])
+    print(dihedral_bond_dict)
 
 def main(args):
     """
