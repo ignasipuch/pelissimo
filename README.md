@@ -27,10 +27,13 @@ of all of them with the Trapezoidal rule.
 >
 > - **4.1 lice.py**: Script that calculates the entropy change upon binding. Requires pele platform analysis
 > of an induced fit simulation and an isolated ligand simulation.
+> 
+> - **4.2. dihedral_clustering.py**: Script that calculates dihedral angles for all the rotatable bonds in all the conformations reached 
+> by the ligand in a simulation. This information will be used to cluster conformations. 
 >
-> - **4.2. LIG_PELE**: Directory tree with needed files to test the script.
+> - **4.3. LIG_PELE**: Directory tree with needed files to test the script.
 >
-> - **4.3. LIG_linen_cry**: Directory tree with needed files to test the script.
+> - **4.4. LIG_linen_cry**: Directory tree with needed files to test the script.
 
 > ### 5. initial_files:
 > #### Directory with the files necessary to perform a full simulation of the protocol.
