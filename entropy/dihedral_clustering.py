@@ -11,9 +11,9 @@ import sys
 import os
 import pathlib
 import argparse
+
 import numpy as np
 import pandas as pd
-
 from rdkit import Chem
 
 
