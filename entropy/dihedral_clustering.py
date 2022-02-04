@@ -7,6 +7,7 @@ __author__ = "Ignasi Puch-Giner"
 __maintainer__ = "Ignasi Puch-Giner"
 __email__ = "ignasi.puchginer@bsc.es"
 
+from decimal import MAX_EMAX
 import sys
 import os
 import pathlib
@@ -242,7 +243,8 @@ def dihedral_angles_retriever_main(input_folder,
         def trajectory_positions_retriever(path,
                                            file_list,
                                            atom_list,
-                                           dihedral_bond_dict):
+                                           dihedral_bond_dict,
+                                           epoch):
             """
             Function
             ----------
@@ -335,7 +337,7 @@ def dihedral_angles_retriever_main(input_folder,
                     models_list = content.split('MODEL')
                     models_list = models_list[1:len(models_list)]
 
-                    model_cont = 0
+                    model_cont = 1
 
                     for model in models_list:
 
@@ -355,7 +357,7 @@ def dihedral_angles_retriever_main(input_folder,
                                                                      line[6]),
                                                                  float(line[7])]
 
-                        dihedral_angles_trajectory[model_cont] = dihedral_angle_calculator(dihedral_bond_dict,
+                        dihedral_angles_trajectory[(epoch,trajectory_number,model_cont)] = dihedral_angle_calculator(dihedral_bond_dict,
                                                                                            atoms_positions_dict)
 
                         model_cont += 1
@@ -372,25 +374,28 @@ def dihedral_angles_retriever_main(input_folder,
 
         if len(numeric_files) != 0:
 
-            for document in numeric_files:
+            for epoch in numeric_files:
 
-                new_directory = os.path.join(path_output, document)
+                new_directory = os.path.join(path_output, epoch)
 
-                if os.path.isdir(new_directory) and document.isnumeric():
+                if os.path.isdir(new_directory) and epoch.isnumeric():
 
                     files = os.listdir(new_directory)
 
-                    simulation_dict[int(document)] = trajectory_positions_retriever(new_directory,
+                    simulation_dict[int(epoch)] = trajectory_positions_retriever(new_directory,
                                                                                     files,
                                                                                     atom_list,
-                                                                                    dihedral_bond_dict)
+                                                                                    dihedral_bond_dict,
+                                                                                    epoch)
 
         else:
-
+        
+            epoch = 0
             simulation_dict[0] = trajectory_positions_retriever(path_output,
                                                                 files,
                                                                 atom_list,
-                                                                dihedral_bond_dict)
+                                                                dihedral_bond_dict,
+                                                                epoch)
 
         simulation_df = pd.DataFrame([(epoch, trajectory, model, rot_bond, value)
                                       for epoch, traj_mod_rot_val in simulation_dict.items()
@@ -401,7 +406,12 @@ def dihedral_angles_retriever_main(input_folder,
         simulation_df.columns = ['epoch', 'trajectory',
                                  'model', 'rotable bond', 'value']
 
-        return simulation_df
+        data_cluster = simulation_df[['model','rotable bond','value']]
+        data_cluster = data_cluster.pivot(index='model',
+                                            columns='rotable bond',
+                                            values='value')
+
+        return data_cluster
 
     path_template, path_output = path_definer(input_folder)
     rotatable_bonds_dict = template_info_retriever(path_template,
@@ -414,7 +424,20 @@ def dihedral_angles_retriever_main(input_folder,
 
     return dihedral_bond_df, simulation_df
 
+def clustering(simulation_df):
 
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = MinMaxScaler()
+    scaler.fit(simulation_df[[1,2,3,4,5,6,7,8,9,10,11,12]])
+    simulation_df[[1,2,3,4,5,6,7,8,9,10,11,12]] = scaler.transform(simulation_df[[1,2,3,4,5,6,7,8,9,10,11,12]])
+
+    km = KMeans(n_clusters=4)
+    y_predicted = km.fit_predict(simulation_df)
+    simulation_df['cluster'] = y_predicted
+    print(simulation_df)
+  
 def main(args):
     """
     Function
@@ -427,8 +450,10 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
-    dihedral_angles_retriever_main(input_folder=args.input_folder,
+    dihedral_bond_df, simulation_df = dihedral_angles_retriever_main(input_folder=args.input_folder,
                                    residue_name=args.residue_name)
+
+    clustering(simulation_df)
 
 
 if __name__ == '__main__':
