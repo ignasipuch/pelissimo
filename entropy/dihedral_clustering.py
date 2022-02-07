@@ -161,7 +161,10 @@ def dihedral_angles_retriever_main(input_folder,
         path_input = os.path.join(path, 'input')
         path_ligand = os.path.join(path_input, 'ligand.pdb')
 
-        atoms = []
+        atoms = {}
+        H_neighbours = {}
+        atoms_list = []
+        atom_cont = 1
 
         with open(path_ligand) as filein:
 
@@ -170,11 +173,22 @@ def dihedral_angles_retriever_main(input_folder,
                 if residue_name in line:
 
                     atom = line.split()[2]
-                    atoms.append(atom)
+                    atoms[atom_cont] = atom
+                    atoms_list.append(atom)
+                    atom_cont += 1
+                
+                if 'CONECT' in line:
+
+                    line = line.split()[1:]
+                    neighbours_connect = [atoms[int(k)] for k in line]
+
+                    for item in neighbours_connect:
+                        if 'H' in item and len(neighbours_connect) == 2:
+                            H_neighbours[neighbours_connect[abs(neighbours_connect.index(item)-1)]] = item
 
         m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
 
-        heavy_atoms = [k for k in atoms if 'H' not in k]
+        heavy_atoms = [k for k in atoms_list if 'H' not in k]
 
         neighbours_dict = {}
         dihedral_bond_dict = {}
@@ -183,7 +197,7 @@ def dihedral_angles_retriever_main(input_folder,
         for atom in range(len(heavy_atoms)):
 
             neighbours_dict[heavy_atoms[atom]] = [
-                atoms[x.GetIdx()] for x in m.GetAtomWithIdx(atom).GetNeighbors()]
+                atoms_list[x.GetIdx()] for x in m.GetAtomWithIdx(atom).GetNeighbors()]
 
         for key in rotatable_bonds_dict:
 
@@ -194,6 +208,11 @@ def dihedral_angles_retriever_main(input_folder,
                 x for x in all_neighbours_atom_1 if rotatable_bonds_dict[key][1] not in x]
             neighbours_atom_2 = [
                 x for x in all_neighbours_atom_2 if rotatable_bonds_dict[key][0] not in x]
+
+            if len(neighbours_atom_1) == 0:
+                neighbours_atom_1 = [H_neighbours[rotatable_bonds_dict[key][0]]]
+            if len(neighbours_atom_2) == 0:
+                neighbours_atom_2 = [H_neighbours[rotatable_bonds_dict[key][1]]]
 
             dihedral_bond_dict[key] = neighbours_atom_1[0],\
                 rotatable_bonds_dict[key][0],\
@@ -407,7 +426,6 @@ def dihedral_angles_retriever_main(input_folder,
         simulation_df.columns = ['epoch', 'trajectory',
                                  'model', 'rotable bond', 'value']
 
-        #data_cluster = simulation_df[['model','rotable bond','value']]
         data_cluster = simulation_df.pivot(index=['epoch', 'trajectory', 'model'],
                                            columns='rotable bond',
                                            values='value')
@@ -461,10 +479,12 @@ def clustering(simulation_df,
     simulation_df[0:len(dihedral_bond_df)] = scaler.transform(
         simulation_df[0:len(dihedral_bond_df)])
 
-    km = KMeans(n_clusters=4)
+    km = KMeans(init='k-means++', n_clusters=4, max_iter=10000)
     y_predicted = km.fit_predict(simulation_df)
     simulation_df_copy['cluster'] = y_predicted
+    
     simulation_df_copy.to_csv('data.csv')
+    dihedral_bond_df.to_csv('dihedrals.csv')
 
 
 def main(args):
@@ -478,7 +498,7 @@ def main(args):
     - args : argparse.Namespace
         It contains the command-line arguments that are supplied by the user
     """
-
+    #
     print(' ')
     print('*******************************************************************')
     print('*                     peleDihedralClustering                      *')
