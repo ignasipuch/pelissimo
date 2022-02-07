@@ -67,7 +67,8 @@ def dihedral_angles_retriever_main(input_folder,
     - dihedral_bond_df : pd.DataFrame
         Data frame with rotatable bonds, atoms conforming it and the index assigned.
     - simulation_df : pd.DataFrame
-        Data frame with all the rotatable bonds' dihedral angle values of all the simulation with corresponding model, trajectory and epoch.
+        Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+        with corresponding model, trajectory and epoch.
     """
 
     def path_definer(input_folder):
@@ -414,10 +415,20 @@ def dihedral_angles_retriever_main(input_folder,
         return data_cluster
 
     path_template, path_output = path_definer(input_folder)
+
+    #
+    print('     -   Retrieving information about rotatable bonds.')
+    #
+
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
     dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(residue_name,
                                                                      rotatable_bonds_dict)
+
+    #
+    print('     -   Calculating dihedral angles of all the conformations...')
+    #
+
     simulation_df = trajectory_positions(path_output,
                                          atom_list,
                                          dihedral_bond_dict)
@@ -427,6 +438,19 @@ def dihedral_angles_retriever_main(input_folder,
 
 def clustering(simulation_df,
                dihedral_bond_df):
+    """
+    Function
+    ----------
+    Cluster the results obtained and stored in a data frame.
+
+    Parameters
+    ----------
+   - dihedral_bond_df : pd.DataFrame
+        Data frame with rotatable bonds, atoms conforming it and the index assigned.
+    - simulation_df : pd.DataFrame
+        Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+        with corresponding model, trajectory and epoch.
+    """
 
     from sklearn.cluster import KMeans
     from sklearn.preprocessing import MinMaxScaler
@@ -455,11 +479,27 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
+    print(' ')
+    print('*******************************************************************')
+    print('*                     peleDihedralClustering                      *')
+    print('*******************************************************************')
+    print(' ')
+    print(' -   Gathering information')
+    #
+
     dihedral_bond_df, simulation_df = dihedral_angles_retriever_main(input_folder=args.input_folder,
                                                                      residue_name=args.residue_name)
 
+    #
+    print(' -   Clustering...')
+    #
+
     clustering(simulation_df,
                dihedral_bond_df)
+
+    #
+    print(' -   Results written in data.csv')
+    print(' ')
 
 
 if __name__ == '__main__':
