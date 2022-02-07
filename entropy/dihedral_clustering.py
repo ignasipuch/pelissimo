@@ -7,7 +7,6 @@ __author__ = "Ignasi Puch-Giner"
 __maintainer__ = "Ignasi Puch-Giner"
 __email__ = "ignasi.puchginer@bsc.es"
 
-from decimal import MAX_EMAX
 import sys
 import os
 import pathlib
@@ -357,8 +356,9 @@ def dihedral_angles_retriever_main(input_folder,
                                                                      line[6]),
                                                                  float(line[7])]
 
-                        dihedral_angles_trajectory[(epoch,trajectory_number,model_cont)] = dihedral_angle_calculator(dihedral_bond_dict,
-                                                                                           atoms_positions_dict)
+                        dihedral_angles_trajectory[model_cont] =\
+                            dihedral_angle_calculator(
+                                dihedral_bond_dict, atoms_positions_dict)
 
                         model_cont += 1
 
@@ -383,13 +383,13 @@ def dihedral_angles_retriever_main(input_folder,
                     files = os.listdir(new_directory)
 
                     simulation_dict[int(epoch)] = trajectory_positions_retriever(new_directory,
-                                                                                    files,
-                                                                                    atom_list,
-                                                                                    dihedral_bond_dict,
-                                                                                    epoch)
+                                                                                 files,
+                                                                                 atom_list,
+                                                                                 dihedral_bond_dict,
+                                                                                 epoch)
 
         else:
-        
+
             epoch = 0
             simulation_dict[0] = trajectory_positions_retriever(path_output,
                                                                 files,
@@ -406,10 +406,10 @@ def dihedral_angles_retriever_main(input_folder,
         simulation_df.columns = ['epoch', 'trajectory',
                                  'model', 'rotable bond', 'value']
 
-        data_cluster = simulation_df[['model','rotable bond','value']]
-        data_cluster = data_cluster.pivot(index='model',
-                                            columns='rotable bond',
-                                            values='value')
+        #data_cluster = simulation_df[['model','rotable bond','value']]
+        data_cluster = simulation_df.pivot(index=['epoch', 'trajectory', 'model'],
+                                           columns='rotable bond',
+                                           values='value')
 
         return data_cluster
 
@@ -424,20 +424,25 @@ def dihedral_angles_retriever_main(input_folder,
 
     return dihedral_bond_df, simulation_df
 
-def clustering(simulation_df):
+
+def clustering(simulation_df,
+               dihedral_bond_df):
 
     from sklearn.cluster import KMeans
     from sklearn.preprocessing import MinMaxScaler
 
     scaler = MinMaxScaler()
-    scaler.fit(simulation_df[[1,2,3,4,5,6,7,8,9,10,11,12]])
-    simulation_df[[1,2,3,4,5,6,7,8,9,10,11,12]] = scaler.transform(simulation_df[[1,2,3,4,5,6,7,8,9,10,11,12]])
+    simulation_df_copy = simulation_df.copy()
+    scaler.fit_transform(simulation_df[0:len(dihedral_bond_df)])
+    simulation_df[0:len(dihedral_bond_df)] = scaler.transform(
+        simulation_df[0:len(dihedral_bond_df)])
 
     km = KMeans(n_clusters=4)
     y_predicted = km.fit_predict(simulation_df)
-    simulation_df['cluster'] = y_predicted
-    print(simulation_df)
-  
+    simulation_df_copy['cluster'] = y_predicted
+    simulation_df_copy.to_csv('data.csv')
+
+
 def main(args):
     """
     Function
@@ -451,9 +456,10 @@ def main(args):
     """
 
     dihedral_bond_df, simulation_df = dihedral_angles_retriever_main(input_folder=args.input_folder,
-                                   residue_name=args.residue_name)
+                                                                     residue_name=args.residue_name)
 
-    clustering(simulation_df)
+    clustering(simulation_df,
+               dihedral_bond_df)
 
 
 if __name__ == '__main__':
