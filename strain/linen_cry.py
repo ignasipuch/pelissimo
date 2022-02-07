@@ -12,6 +12,7 @@ import sys
 import os
 import pathlib
 import argparse
+import shutil
 from distutils.dir_util import copy_tree
 
 
@@ -183,34 +184,29 @@ def linen_prepare(input_folder,
             from.
         """
 
-        with open(os.path.join(path, pdb_name)) as filein:
+        new_path = os.path.join(path_energies, 'ligand.pdb')
+        shutil.copy(os.path.join(path, pdb_name), new_path)
+ 
+        path_DataLocal = os.path.join(path_energies, 'DataLocal')
 
-            lines = (l for l in filein if residue_name in l)
-            new_path = os.path.join(path_energies, 'ligand.pdb')
-            path_DataLocal = os.path.join(path_energies, 'DataLocal')
+        if os.path.exists(path_DataLocal) == False:
+            os.mkdir(path_DataLocal)
 
-            if os.path.exists(path_DataLocal) == False:
-                os.mkdir(path_DataLocal)
+        path_previous_DataLocal = os.path.join(path_previous_simulation,
+                                               'DataLocal')
+        
+        if os.path.exists(path_previous_DataLocal) == False:
 
-            path_previous_DataLocal = os.path.join(path_previous_simulation,
-                                                   'DataLocal')
+            print('\n'
+                  '                              WARNING:                               \n'
+                  '   No DataLocal directory has been found at ' + input_folder + '.    \n'
+                  '   The DataLocal folder should be copied at ../' +
+                  residue_name + '_linen_cry/' + '\n'
+                  )
+        else:
 
-            if os.path.exists(path_previous_DataLocal) == False:
+            copy_tree(path_previous_DataLocal, path_DataLocal)
 
-                print('\n'
-                      '                              WARNING:                               \n'
-                      '   No DataLocal directory has been found at ' + input_folder + '.    \n'
-                      '   The DataLocal folder should be copied at ../' +
-                      residue_name + '_linen_cry/' + '\n'
-                      )
-
-            else:
-
-                copy_tree(path_previous_DataLocal, path_DataLocal)
-
-            with open(new_path, 'w') as fileout:
-
-                fileout.writelines(lines)
 
     def write_files(force_field,
                     solvent_model,
