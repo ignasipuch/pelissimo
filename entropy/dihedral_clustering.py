@@ -41,6 +41,8 @@ def parse_args(args):
         is located.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
+    parser.add_argument("-f", "--file", type=str, dest="input_file",
+                        default=None, help="Name of the file corresponding to the isolated ligand with connectivity.")
 
     parsed_args = parser.parse_args(args)
 
@@ -48,7 +50,8 @@ def parse_args(args):
 
 
 def dihedral_angles_retriever_main(input_folder,
-                                   residue_name):
+                                   residue_name,
+                                   input_file):
     """
     Function
     ----------
@@ -69,6 +72,8 @@ def dihedral_angles_retriever_main(input_folder,
     - simulation_df : pd.DataFrame
         Data frame with all the rotatable bonds' dihedral angle values of all the simulation
         with corresponding model, trajectory and epoch.
+    - path_results : str 
+        Path to the directory where the results will be stored.
     """
 
     def path_definer(input_folder):
@@ -93,8 +98,12 @@ def dihedral_angles_retriever_main(input_folder,
         path = str(pathlib.Path().absolute())
         path_template = os.path.join(path, 'DataLocal', 'LigandRotamerLibs')
         path_output = os.path.join(path, input_folder)
+        path_results = os.path.join(path, 'dihedrals')
 
-        return path_template, path_output
+        if os.path.exists(path_results) == False:
+            os.mkdir(path_results)
+
+        return path_template, path_output, path_results
 
     def template_info_retriever(path_template,
                                 residue_name):
@@ -135,7 +144,8 @@ def dihedral_angles_retriever_main(input_folder,
         return rotatable_bonds_dict
 
     def atoms_to_track(residue_name,
-                       rotatable_bonds_dict):
+                       rotatable_bonds_dict,
+                       input_file):
         """
         Function
         ----------
@@ -158,8 +168,11 @@ def dihedral_angles_retriever_main(input_folder,
         """
 
         path = str(pathlib.Path().absolute())
-        path_input = os.path.join(path, 'input')
-        path_ligand = os.path.join(path_input, 'ligand.pdb')
+
+        if input_file is None:
+            raise Exception('InputLigandStructure: Input ligand is missing and it is necessary.')
+
+        path_ligand = os.path.join(path, input_file)
 
         atoms = {}
         H_neighbours = {}
@@ -176,7 +189,7 @@ def dihedral_angles_retriever_main(input_folder,
                     atoms[atom_cont] = atom
                     atoms_list.append(atom)
                     atom_cont += 1
-                
+
                 if 'CONECT' in line:
 
                     line = line.split()[1:]
@@ -184,7 +197,12 @@ def dihedral_angles_retriever_main(input_folder,
 
                     for item in neighbours_connect:
                         if 'H' in item and len(neighbours_connect) == 2:
-                            H_neighbours[neighbours_connect[abs(neighbours_connect.index(item)-1)]] = item
+                            H_neighbours[neighbours_connect[abs(
+                                neighbours_connect.index(item)-1)]] = item
+
+                if 'ANISOU' in line:
+
+                    raise Exception('LigandFileError: ANISOU lines detected in the pdb. This lines must be erased.')
 
         m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
 
@@ -210,9 +228,22 @@ def dihedral_angles_retriever_main(input_folder,
                 x for x in all_neighbours_atom_2 if rotatable_bonds_dict[key][0] not in x]
 
             if len(neighbours_atom_1) == 0:
-                neighbours_atom_1 = [H_neighbours[rotatable_bonds_dict[key][0]]]
+
+                if not H_neighbours:
+                    raise Exception(
+                        'DihedralBondError: Information about the connectivity of the PDB will be required due to lack of heavy atoms to calculate certain dihedral bond angles.')
+
+                neighbours_atom_1 = [
+                    H_neighbours[rotatable_bonds_dict[key][0]]]
+
             if len(neighbours_atom_2) == 0:
-                neighbours_atom_2 = [H_neighbours[rotatable_bonds_dict[key][1]]]
+
+                if not H_neighbours:
+                    raise Exception(
+                        'DihedralBondError: Information about the connectivity of the PDB will be required due to lack of heavy atoms to calculate certain dihedral bond angles.')
+
+                neighbours_atom_2 = [
+                    H_neighbours[rotatable_bonds_dict[key][1]]]
 
             dihedral_bond_dict[key] = neighbours_atom_1[0],\
                 rotatable_bonds_dict[key][0],\
@@ -432,7 +463,7 @@ def dihedral_angles_retriever_main(input_folder,
 
         return data_cluster
 
-    path_template, path_output = path_definer(input_folder)
+    path_template, path_output, path_results = path_definer(input_folder)
 
     #
     print('     -   Retrieving information about rotatable bonds.')
@@ -440,8 +471,10 @@ def dihedral_angles_retriever_main(input_folder,
 
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
+
     dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(residue_name,
-                                                                     rotatable_bonds_dict)
+                                                                     rotatable_bonds_dict,
+                                                                     input_file)
 
     #
     print('     -   Calculating dihedral angles of all the conformations...')
@@ -451,11 +484,12 @@ def dihedral_angles_retriever_main(input_folder,
                                          atom_list,
                                          dihedral_bond_dict)
 
-    return dihedral_bond_df, simulation_df
+    return dihedral_bond_df, simulation_df, path_results
 
 
 def clustering(simulation_df,
-               dihedral_bond_df):
+               dihedral_bond_df,
+               path_results):
     """
     Function
     ----------
@@ -482,9 +516,9 @@ def clustering(simulation_df,
     km = KMeans(init='k-means++', n_clusters=4, max_iter=10000)
     y_predicted = km.fit_predict(simulation_df)
     simulation_df_copy['cluster'] = y_predicted
-    
-    simulation_df_copy.to_csv('data.csv')
-    dihedral_bond_df.to_csv('dihedrals.csv')
+
+    simulation_df_copy.to_csv(os.path.join(path_results, 'data.csv'))
+    dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
 
 
 def main(args):
@@ -507,18 +541,20 @@ def main(args):
     print(' -   Gathering information')
     #
 
-    dihedral_bond_df, simulation_df = dihedral_angles_retriever_main(input_folder=args.input_folder,
-                                                                     residue_name=args.residue_name)
+    dihedral_bond_df, simulation_df, path_results = dihedral_angles_retriever_main(input_folder=args.input_folder,
+                                                                                   residue_name=args.residue_name,
+                                                                                   input_file=args.input_file)
 
     #
     print(' -   Clustering...')
     #
 
     clustering(simulation_df,
-               dihedral_bond_df)
+               dihedral_bond_df,
+               path_results)
 
     #
-    print(' -   Results written in data.csv')
+    print(' -   Results written in /dihedrals')
     print(' ')
 
 
