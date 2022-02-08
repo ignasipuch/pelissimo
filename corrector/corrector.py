@@ -206,7 +206,7 @@ def corrector(input_folder,
 
                     # This could change depending on the user.
                     line = line.split(',')
-                    ligand_min_energy = float(line[2])
+                    ligand_min_energy = float(line[0])
 
                 cont += 1
 
