@@ -12,6 +12,8 @@ import os
 import pathlib
 import argparse
 import shutil
+import numpy as np
+import matplotlib.pyplot as plt
 
 def parse_args(args):
     """
@@ -100,12 +102,15 @@ def corrector(input_folder,
             The path to the protein-ligand simulation output.
         - path_l_simulation : str
             The path to the ligand simulation.
+        - path_pl_results : str
+            The path to the folder where results will be stored.
         """
 
         path = str(pathlib.Path().absolute())
 
         path_pl_simulation = os.path.join(path, input_folder)
         path_pl_output = os.path.join(path_pl_simulation, 'output')
+        path_pl_results = os.path.join(path_pl_simulation, 'strain')
 
         path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
 
@@ -113,7 +118,10 @@ def corrector(input_folder,
             raise Exception('PathError: There is no folder with this path: ' +
                             path_pl_simulation + '. Please check the path and the folder name.')
 
-        return path_pl_simulation, path_pl_output, path_l_simulation
+        if os.path.isdir(path_pl_results) == False:
+            os.mkdir(path_pl_results)
+
+        return path_pl_simulation, path_pl_output, path_l_simulation, path_pl_results
 
     def corrections_detector(path_pl_simulation,
                              path_l_simulation):
@@ -390,7 +398,14 @@ def corrector(input_folder,
                 Ligand's minimum energy of the scoring function chosen.
             - entropy_change : float
                 Entropy change calculated from the protein-ligand and the ligand simulations.
+
+            Returns
+            ----------
+            - strain_energy_list : list
+                List with all the strain energies calculated in a simulation.
             """
+
+            strain_energy_list = []
 
             for report_path in report_paths:
 
@@ -414,6 +429,7 @@ def corrector(input_folder,
                                 line = line.split()
                                 strain_energy = float(
                                     line[column_internal_energy-1]) - ligand_min_energy
+                                strain_energy_list.append(strain_energy)
                                 line[column_binding_energy-1] = \
                                     str(float(
                                         line[column_binding_energy-1]) + strain_energy + entropy_change)
@@ -421,16 +437,20 @@ def corrector(input_folder,
 
                             cont += 1
 
+            return strain_energy_list
+
         # Copying  reports
         report_paths = copier(path_pl_output, report_name)
 
-        # Correcting copied reports
-        corrector(column_binding_energy,
-                  column_internal_energy,
-                  report_paths,
-                  report_name,
-                  ligand_min_energy,
-                  entropy_change)
+        # Correcting copied reports and storing information
+        strain_energy_list = corrector(column_binding_energy,
+                                       column_internal_energy,
+                                       report_paths,
+                                       report_name,
+                                       ligand_min_energy,
+                                       entropy_change)
+        
+        return strain_energy_list
 
     def analysis_files_writer(column_binding_energy,
                               path_pl_simulation):
@@ -480,6 +500,44 @@ def corrector(input_folder,
                 'analysis.generate(path="analysis", clustering_type="meanshift")\n'
             )
 
+    def results_writer(strain_energy_list,
+                       path):
+        """
+        Function
+        ----------
+        Writes and plots result files of strain values.
+
+        Parameters
+        ----------
+        - strain_energy_list : list
+            List with all the strain values calculated from the entire simulation.
+        - path : str
+            The path to the protein-ligand strain results folder.
+        """
+        strain_energy_vector = np.array(strain_energy_list)
+        bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='auto')
+        density, _ = np.histogram(strain_energy_vector, bins=bin_edges)
+
+        hist_ene = 0.5*(bin_edges[np.argmax(density)] + bin_edges[np.argmax(density) + 1])
+
+        # Plot
+        plt.title('Strain distribution')
+        plt.hist(strain_energy_vector, bins=bin_edges, density=True)
+        plt.xlabel('Strain (kcal/mol)')
+        plt.ylabel('Density')
+        plt.savefig(os.path.join(path,'density_strain.png'), format='png')
+        #
+
+        minimum_ene = min(strain_energy_vector)
+        average_ene = np.average(strain_energy_vector)
+        max_ene = max(strain_energy_vector)
+
+        with open(os.path.join(path,'strain.csv'), 'w') as fileout:
+            fileout.writelines(
+                'Minimum,Histogram max,Average,Maximum\n'
+                '' + str(minimum_ene) + ',' + str(hist_ene) +  ',' + str(average_ene) + ',' + str(max_ene) +'\n'
+            )
+
     #
     print(' ')
     print('*******************************************************************')
@@ -490,8 +548,10 @@ def corrector(input_folder,
     print(' ')
     #
 
-    path_pl_simulation, path_pl_output, path_l_simulation = path_definer(
-        input_folder, residue_name)
+    path_pl_simulation,\
+    path_pl_output,\
+    path_l_simulation,\
+    path_pl_results = path_definer(input_folder, residue_name)
 
     correction_number = corrections_detector(
         path_pl_simulation, path_l_simulation)
@@ -539,18 +599,27 @@ def corrector(input_folder,
     #
     print(' ')
     print(' -   Implementing corrections...')
+    print(' ')
     #
 
-    correction_implementer(column_binding_energy,
-                           column_internal_energy,
-                           path_pl_output,
-                           report_name,
-                           ligand_min_energy,
-                           entropy_change)
+    strain_energy_list = correction_implementer(column_binding_energy,
+                                                column_internal_energy,
+                                                path_pl_output,
+                                                report_name,
+                                                ligand_min_energy,
+                                                entropy_change)
+    
 
     #
     print(' -   Job finished succesfully. Energies corrected will be found in \n'
           '     mod_' + report_name + ' files.')
+    #
+
+    results_writer(strain_energy_list,
+                   path_pl_results)
+
+    #
+    print(' -   Report about strain values can be found in ' + input_folder + '/strain')
     #
 
     analysis_files_writer(column_binding_energy,
