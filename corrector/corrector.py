@@ -426,14 +426,43 @@ def corrector(input_folder,
 
                             else:
 
-                                line = line.split()
-                                strain_energy = float(
-                                    line[column_internal_energy-1]) - ligand_min_energy
-                                strain_energy_list.append(strain_energy)
-                                line[column_binding_energy-1] = \
-                                    str(float(
-                                        line[column_binding_energy-1]) + strain_energy + entropy_change)
-                                fileout.write("     ".join(line) + '\n')
+                                if '/0/' + report_name in report_path:
+
+                                    if cont == 1:
+
+                                        line = line.split()
+                                        strain_energy = float(
+                                            line[column_internal_energy-1]) - ligand_min_energy
+                                        line[column_binding_energy-1] = \
+                                            str(float(
+                                                line[column_binding_energy-1]) + strain_energy + entropy_change)
+                                        fileout.write("     ".join(line) + '\n')
+
+                                    else:
+
+                                        line = line.split()
+                                        strain_energy = float(
+                                            line[column_internal_energy-1]) - ligand_min_energy
+
+                                        strain_energy_list.append(strain_energy)
+
+                                        line[column_binding_energy-1] = \
+                                            str(float(
+                                                line[column_binding_energy-1]) + strain_energy + entropy_change)
+                                        fileout.write("     ".join(line) + '\n')
+
+                                else: 
+
+                                    line = line.split()
+                                    strain_energy = float(
+                                        line[column_internal_energy-1]) - ligand_min_energy
+
+                                    strain_energy_list.append(strain_energy)
+
+                                    line[column_binding_energy-1] = \
+                                        str(float(
+                                            line[column_binding_energy-1]) + strain_energy + entropy_change)
+                                    fileout.write("     ".join(line) + '\n')
 
                             cont += 1
 
@@ -514,20 +543,27 @@ def corrector(input_folder,
         - path : str
             The path to the protein-ligand strain results folder.
         """
+
+        strain_energy_list = [item for item in strain_energy_list if item < 200]
         strain_energy_vector = np.array(strain_energy_list)
+        minimum_ene = min(strain_energy_vector)
+
+        if minimum_ene < 0.:
+
+            strain_energy_vector = strain_energy_vector - minimum_ene
+
+            #
+            print('\n'
+                '                              WARNING:                               \n'
+                '   Lower ligand energies were found in the induced fit simulations.  \n'
+                '   Better sampling of the ligand is required.          \n'
+            )
+            #           
+       
         bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='auto')
         density, _ = np.histogram(strain_energy_vector, bins=bin_edges)
 
         hist_ene = 0.5*(bin_edges[np.argmax(density)] + bin_edges[np.argmax(density) + 1])
-
-        # Plot
-        plt.title('Strain distribution')
-        plt.hist(strain_energy_vector, bins=bin_edges, density=True)
-        plt.xlabel('Strain (kcal/mol)')
-        plt.ylabel('Density')
-        plt.savefig(os.path.join(path,'density_strain.png'), format='png')
-        #
-
         minimum_ene = min(strain_energy_vector)
         average_ene = np.average(strain_energy_vector)
         max_ene = max(strain_energy_vector)
@@ -537,6 +573,15 @@ def corrector(input_folder,
                 'Minimum,Histogram max,Average,Maximum\n'
                 '' + str(minimum_ene) + ',' + str(hist_ene) +  ',' + str(average_ene) + ',' + str(max_ene) +'\n'
             )
+
+        # Plot
+        plt.title('Strain distribution')
+        plt.hist(strain_energy_vector, bins=bin_edges, density=True)
+        plt.xlabel('Strain (kcal/mol)')
+        plt.ylabel('Density')
+        plt.savefig(os.path.join(path,'density_strain.png'), format='png')
+        #
+
 
     #
     print(' ')
