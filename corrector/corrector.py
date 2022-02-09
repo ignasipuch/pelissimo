@@ -580,8 +580,6 @@ def corrector(input_folder,
         plt.xlabel('Strain (kcal/mol)')
         plt.ylabel('Density')
         plt.savefig(os.path.join(path,'density_strain.png'), format='png')
-        #
-
 
     #
     print(' ')
