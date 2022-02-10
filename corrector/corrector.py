@@ -530,7 +530,9 @@ def corrector(input_folder,
             )
 
     def results_writer(strain_energy_list,
-                       path):
+                       path,
+                       report_name,
+                       ligand_min_energy):
         """
         Function
         ----------
@@ -556,6 +558,9 @@ def corrector(input_folder,
             print('\n'
                 '                              WARNING:                               \n'
                 '   Lower ligand energies were found in the induced fit simulations.  \n'
+                '   The results in mod_' + report_name + ' have been corrected with   \n'
+                '   Ligand minimum = ' + "{:3.3f}".format(ligand_min_energy) + ' > ' + 
+                "{:3.3f}".format(minimum_ene + ligand_min_energy) + ' = Induced fit minimum.\n'
                 '   Better sampling of the ligand is required.          \n'
             )
             #           
@@ -659,7 +664,9 @@ def corrector(input_folder,
     #
 
     results_writer(strain_energy_list,
-                   path_pl_results)
+                   path_pl_results,
+                   report_name,
+                   ligand_min_energy)
 
     #
     print(' -   Report about strain values can be found in ' + input_folder + '/strain')
