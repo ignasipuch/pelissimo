@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 from rdkit import Chem
 import matplotlib.pyplot as plt
+import time
 
 
 def parse_args(args):
@@ -407,10 +408,12 @@ def dihedral_angles_retriever_main(input_folder,
                             if any(ext in line for ext in atom_list):
 
                                 line = line.split()
-                                atoms_positions_dict[line[2]] = [float(line[5]),
-                                                                 float(
-                                                                     line[6]),
-                                                                 float(line[7])]
+
+                                if len(line[4]) == 5:
+                                    atoms_positions_dict[line[2]] = [float(line[5]),float(line[6]),float(line[7])]
+
+                                else:
+                                    atoms_positions_dict[line[2]] = [float(line[6]),float(line[7]),float(line[8])]
 
                         dihedral_angles_trajectory[model_cont] =\
                             dihedral_angle_calculator(
@@ -539,15 +542,17 @@ def clustering(n_cluster,
 
         from sklearn.preprocessing import MinMaxScaler
 
+        column_list = list(np.arange(1,len(dihedral_bond_df) + 1))
         scaler = MinMaxScaler()
-        scaler.fit_transform(simulation_df[0:len(dihedral_bond_df)])
-        simulation_df[0:len(dihedral_bond_df)] = scaler.transform(
-        simulation_df[0:len(dihedral_bond_df)])
+        scaler.fit_transform(simulation_df[column_list])
+        simulation_df[column_list] = scaler.transform(
+        simulation_df[column_list])
 
         return simulation_df
 
     def elbow_method(path_results,
-                     simulation_df):
+                     simulation_df,
+                     dihedral_bond_df):
 
         """
         Function
@@ -603,7 +608,8 @@ def clustering(n_cluster,
 
             ax1.set_title('WCSS')
             ax1.plot(n_clusters,wcss)
-            ax1.scatter(n_cluster,wcss[n_cluster - 1], color='red')
+            ax1.scatter(n_cluster,wcss[n_cluster - 2], color='red', marker='x', label = 'elbow')
+            ax1.legend(loc='best')
             ax1.set_xlabel('Number of clusters')
             ax1.set_ylabel('WCSS')
             fig1.savefig(os.path.join(path_results, 'wcss.png'))
@@ -624,11 +630,12 @@ def clustering(n_cluster,
         
         wcss = []
         n_clusters = []
+        column_list = list(np.arange(1,len(dihedral_bond_df) + 1))
 
-        for n_cluster in range(1,15):
+        for n_cluster in range(2,11):
 
             km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
-            km.fit(simulation_df)
+            km.fit(simulation_df[column_list])
 
             wcss.append(km.inertia_)
             n_clusters.append(n_cluster)
@@ -637,11 +644,18 @@ def clustering(n_cluster,
         second_derivative = np.gradient(derivative,1)[1:-1]
 
         maxs_location = list(argrelextrema(second_derivative, np.greater)[0])
-        second_derivative_max = max([second_derivative[max_id] for max_id in maxs_location])
+        
+        try:
+            
+            second_derivative_max = max([second_derivative[max_id] for max_id in maxs_location])
+            max_location_array = np.where(second_derivative == second_derivative_max)[0] + 2
+            max_location = max_location_array[0]
 
-        max_location_array = np.where(second_derivative == second_derivative_max)[0] + 2
-        max_location = max_location_array[0]
+        except ValueError:
 
+            max_location_array = np.where(second_derivative == max(second_derivative))[0] + 2
+            max_location = max_location_array[0]
+        
         n_cluster = n_clusters[max_location]
     
         plotter(path_results,
@@ -663,12 +677,13 @@ def clustering(n_cluster,
     if n_cluster == None:
 
         #
-        print('     -   No information abot the number of clusters was given.')
+        print('     -   No information about the number of clusters was given.')
         print('     -   Determining the optimal number of clusters.')
         #
 
         n_cluster = elbow_method(path_results,
-                                 simulation_df)
+                                 simulation_df,
+                                 dihedral_bond_df)
 
         #
         print('     -   Optimal number of clusters =', n_cluster)
