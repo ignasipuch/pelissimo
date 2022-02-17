@@ -14,6 +14,9 @@ import argparse
 import shutil
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+from collections import OrderedDict
+
 
 def parse_args(args):
     """
@@ -161,7 +164,7 @@ def corrector(input_folder,
 
         if os.path.isfile(os.path.join(path_pl_simulation, 'entropy.csv')) == True:
 
-            print(' -   Enropy correction found.')
+            print(' -   Entropy correction found.')
             correction_number += 2
 
         else:
@@ -243,7 +246,7 @@ def corrector(input_folder,
                 cont += 1
 
         return entropy_change
-       
+
     def column_retriever(file,
                          column_binding_energy,
                          column_internal_energy):
@@ -274,6 +277,7 @@ def corrector(input_folder,
                 if cont == 0:
 
                     line = line.split('    ')
+                    column_current_energy = line.index('currentEnergy') + 1
                     column_binding_energy = line.index('BindingEnergy') + 1
                     column_internal_energy = line.index('InternalEnergy') + 1
 
@@ -286,9 +290,10 @@ def corrector(input_folder,
 
                 cont += 1
 
-        return column_binding_energy, column_internal_energy
+        return column_current_energy, column_binding_energy, column_internal_energy
 
-    def correction_implementer(column_binding_energy,
+    def correction_implementer(column_current_energy,
+                               column_binding_energy,
                                column_internal_energy,
                                path_pl_output,
                                report_name,
@@ -405,9 +410,16 @@ def corrector(input_folder,
                 List with all the strain energies calculated in a simulation.
             """
 
-            strain_energy_list = []
+            epochs = []
+            trajectories = []
+            models = []
+            currentEnergies = []
+            strainEnergies = []
 
             for report_path in report_paths:
+
+                epoch = report_path.split('/')[-2]
+                trajectory = report_path.split('/')[-1].split('_')[-1]
 
                 path_modified_report = report_path.replace(
                     report_name, 'mod_' + report_name)
@@ -436,50 +448,79 @@ def corrector(input_folder,
                                         line[column_binding_energy-1] = \
                                             str(float(
                                                 line[column_binding_energy-1]) + strain_energy + entropy_change)
-                                        fileout.write("     ".join(line) + '\n')
+                                        fileout.write(
+                                            "     ".join(line) + '\n')
 
                                     else:
 
                                         line = line.split()
+
+                                        currentEnergy = line[column_current_energy-1]
+                                        model = line[2]
                                         strain_energy = float(
                                             line[column_internal_energy-1]) - ligand_min_energy
-
-                                        strain_energy_list.append(strain_energy)
 
                                         line[column_binding_energy-1] = \
                                             str(float(
                                                 line[column_binding_energy-1]) + strain_energy + entropy_change)
-                                        fileout.write("     ".join(line) + '\n')
+                                        fileout.write(
+                                            "     ".join(line) + '\n')
 
-                                else: 
+                                        epochs.append(int(epoch))
+                                        trajectories.append(int(trajectory))
+                                        models.append(int(model))
+                                        currentEnergies.append(
+                                            float(currentEnergy))
+                                        strainEnergies.append(
+                                            float(strain_energy))
+
+                                else:
 
                                     line = line.split()
+
+                                    currentEnergy = line[column_current_energy-1]
+                                    model = line[2]
                                     strain_energy = float(
                                         line[column_internal_energy-1]) - ligand_min_energy
-
-                                    strain_energy_list.append(strain_energy)
 
                                     line[column_binding_energy-1] = \
                                         str(float(
                                             line[column_binding_energy-1]) + strain_energy + entropy_change)
                                     fileout.write("     ".join(line) + '\n')
 
+                                    epochs.append(int(epoch))
+                                    trajectories.append(int(trajectory))
+                                    models.append(int(model))
+                                    currentEnergies.append(
+                                        float(currentEnergy))
+                                    strainEnergies.append(float(strain_energy))
+
                             cont += 1
 
-            return strain_energy_list
+            simulation_df = pd.DataFrame(OrderedDict([('epoch', epochs),
+                                                      ('trajectory', trajectories),
+                                                      ('model', models),
+                                                      ('currentEnergy',
+                                                       currentEnergies),
+                                                      ('strainEnergy', strainEnergies)]))
+
+            simulation_df = simulation_df.sort_values(
+                ['epoch', 'trajectory', 'model', 'currentEnergy', 'strainEnergy'], ascending=True).reset_index(drop=True)
+
+            return strain_energy_list, simulation_df
 
         # Copying  reports
         report_paths = copier(path_pl_output, report_name)
 
         # Correcting copied reports and storing information
-        strain_energy_list = corrector(column_binding_energy,
-                                       column_internal_energy,
-                                       report_paths,
-                                       report_name,
-                                       ligand_min_energy,
-                                       entropy_change)
-        
-        return strain_energy_list
+        strain_energy_list, simulation_df = corrector(column_binding_energy,
+                                                      column_internal_energy,
+                                                      report_paths,
+                                                      report_name,
+                                                      ligand_min_energy,
+                                                      entropy_change)
+
+        return strain_energy_list, simulation_df
 
     def analysis_files_writer(column_binding_energy,
                               path_pl_simulation):
@@ -546,7 +587,8 @@ def corrector(input_folder,
             The path to the protein-ligand strain results folder.
         """
 
-        strain_energy_list = [item for item in strain_energy_list if item < 200]
+        strain_energy_list = [
+            item for item in strain_energy_list if item < 200]
         strain_energy_vector = np.array(strain_energy_list)
         minimum_ene = min(strain_energy_vector)
 
@@ -556,27 +598,30 @@ def corrector(input_folder,
 
             #
             print('\n'
-                '                              WARNING:                               \n'
-                '   Lower ligand energies were found in the induced fit simulations.  \n'
-                '   The results in mod_' + report_name + ' have been corrected with   \n'
-                '   Ligand minimum = ' + "{:3.3f}".format(ligand_min_energy) + ' > ' + 
-                "{:3.3f}".format(minimum_ene + ligand_min_energy) + ' = Induced fit minimum.\n'
-                '   Better sampling of the ligand is required.          \n'
-            )
-            #           
-       
+                  '                              WARNING:                               \n'
+                  '   Lower ligand energies were found in the induced fit simulations.  \n'
+                  '   The results in mod_' + report_name + ' have been corrected with   \n'
+                  '   Ligand minimum = ' + "{:3.3f}".format(ligand_min_energy) + ' > ' +
+                  "{:3.3f}".format(minimum_ene + ligand_min_energy) +
+                  ' = Induced fit minimum.\n'
+                  '   Better sampling of the ligand is required.          \n'
+                  )
+            #
+
         bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='fd')
         density, _ = np.histogram(strain_energy_vector, bins=bin_edges)
 
-        hist_ene = 0.5*(bin_edges[np.argmax(density)] + bin_edges[np.argmax(density) + 1])
+        hist_ene = 0.5*(bin_edges[np.argmax(density)] +
+                        bin_edges[np.argmax(density) + 1])
         minimum_ene = min(strain_energy_vector)
         average_ene = np.average(strain_energy_vector)
         max_ene = max(strain_energy_vector)
 
-        with open(os.path.join(path,'strain.csv'), 'w') as fileout:
+        with open(os.path.join(path, 'strain.csv'), 'w') as fileout:
             fileout.writelines(
                 'Minimum,Histogram max,Average,Maximum\n'
-                '' + str(minimum_ene) + ',' + str(hist_ene) +  ',' + str(average_ene) + ',' + str(max_ene) +'\n'
+                '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
+                str(average_ene) + ',' + str(max_ene) + '\n'
             )
 
         # Plot
@@ -584,7 +629,7 @@ def corrector(input_folder,
         plt.hist(strain_energy_vector, bins=bin_edges, density=True)
         plt.xlabel('Strain (kcal/mol)')
         plt.ylabel('Density')
-        plt.savefig(os.path.join(path,'density_strain.png'), format='png')
+        plt.savefig(os.path.join(path, 'density_strain.png'), format='png')
 
     #
     print(' ')
@@ -597,9 +642,9 @@ def corrector(input_folder,
     #
 
     path_pl_simulation,\
-    path_pl_output,\
-    path_l_simulation,\
-    path_pl_results = path_definer(input_folder, residue_name)
+        path_pl_output,\
+        path_l_simulation,\
+        path_pl_results = path_definer(input_folder, residue_name)
 
     correction_number = corrections_detector(
         path_pl_simulation, path_l_simulation)
@@ -621,28 +666,28 @@ def corrector(input_folder,
         entropy_change = entropy_correction(path_pl_simulation)
 
     # Corrections column location ---
-    file = os.path.join(path_pl_simulation,'output','0',report_name + '_1')
+    file = os.path.join(path_pl_simulation, 'output', '0', report_name + '_1')
 
     if column_internal_energy == None and column_binding_energy == None:
 
-        column_binding_energy, column_internal_energy = \
-        column_retriever(file,
-                         column_binding_energy,
-                         column_internal_energy)
-
-    elif column_binding_energy == None:
-        
-        column_binding_energy, _ = \
-        column_retriever(file,
-                         column_binding_energy,
-                         column_internal_energy)
+        column_current_energy, column_binding_energy, column_internal_energy = \
+            column_retriever(file,
+                             column_binding_energy,
+                             column_internal_energy)
 
     elif column_internal_energy == None:
 
-        _, column_internal_energy = \
-        column_retriever(file,
-                         column_binding_energy,
-                         column_internal_energy)
+        column_current_energy, column_binding_energy, _ = \
+            column_retriever(file,
+                             column_binding_energy,
+                             column_internal_energy)
+
+    elif column_current_energy == None:
+
+        column_current_energy, _, column_internal_energy = \
+            column_retriever(file,
+                             column_binding_energy,
+                             column_internal_energy)
 
     #
     print(' ')
@@ -650,13 +695,13 @@ def corrector(input_folder,
     print(' ')
     #
 
-    strain_energy_list = correction_implementer(column_binding_energy,
-                                                column_internal_energy,
-                                                path_pl_output,
-                                                report_name,
-                                                ligand_min_energy,
-                                                entropy_change)
-    
+    strain_energy_list, simulation_df = correction_implementer(column_current_energy,
+                                                              column_binding_energy,
+                                                              column_internal_energy,
+                                                              path_pl_output,
+                                                              report_name,
+                                                              ligand_min_energy,
+                                                              entropy_change)
 
     #
     print(' -   Job finished succesfully. Energies corrected will be found in \n'
@@ -669,7 +714,8 @@ def corrector(input_folder,
                    ligand_min_energy)
 
     #
-    print(' -   Report about strain values can be found in ' + input_folder + '/strain')
+    print(' -   Report about strain values can be found in ' +
+          input_folder + '/strain')
     #
 
     analysis_files_writer(column_binding_energy,
