@@ -23,6 +23,7 @@ T = 298.
 R = 1.985e-3
 # ----------------------------------------------------------------------- #
 
+
 def parse_args(args):
     """
     Function
@@ -50,7 +51,7 @@ def parse_args(args):
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
     parser.add_argument("-cm", "--clustering_method", type=str, dest="clustering_method",
-                    default='bin', help="Method to cluster data: bin or kmeans.")
+                        default='bin', help="Method to cluster data: bin or kmeans.")
     parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
                         default=None, help="Number of clusters to cluster the data.")
 
@@ -640,7 +641,8 @@ def clustering(n_cluster,
                 ax3.plot(n_clusters[2:-2], second_derivative)
                 ax3.set_xlabel('Number of clusters')
                 ax3.set_ylabel('WCSS 2nd derivative')
-                fig3.savefig(os.path.join(path_results, 'wcss_2derivative.png'))
+                fig3.savefig(os.path.join(
+                    path_results, 'wcss_2derivative.png'))
 
             from scipy.signal import argrelextrema
 
@@ -650,7 +652,8 @@ def clustering(n_cluster,
 
             for n_cluster in range(2, 17):
 
-                km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
+                km = KMeans(init='k-means++',
+                            n_clusters=n_cluster, max_iter=10000)
                 km.fit(simulation_df[column_list])
 
                 wcss.append(km.inertia_)
@@ -659,7 +662,8 @@ def clustering(n_cluster,
             derivative = list(np.gradient(wcss, 1))[1:-1]
             second_derivative = np.gradient(derivative, 1)[1:-1]
 
-            maxs_location = list(argrelextrema(second_derivative, np.greater)[0])
+            maxs_location = list(argrelextrema(
+                second_derivative, np.greater)[0])
 
             try:
 
@@ -730,31 +734,40 @@ def clustering(n_cluster,
 
         for key in simulation_df:
 
-            bin_edges = np.histogram_bin_edges(simulation_df[key].to_numpy(), bins='fd')
-            density, _ = np.histogram(simulation_df[key].to_numpy(), bins=bin_edges, density=True)
+            bin_edges = np.histogram_bin_edges(
+                simulation_df[key].to_numpy(), bins='fd')
+            density, _ = np.histogram(
+                simulation_df[key].to_numpy(), bins=bin_edges, density=True)
             dense_bins = density[density != 0]
 
-            entropy_contribution.append(np.sum(np.array([p*np.log(p) for p in dense_bins])))
+            entropy_contribution.append(
+                np.sum(np.array([p*np.log(p) for p in dense_bins])))
 
             # Plot
             plt.title('Dihedral ' + str(key) + ' distribution')
-            plt.hist(simulation_df[key].to_numpy(), bins=bin_edges, density=True)
+            plt.hist(simulation_df[key].to_numpy(),
+                     bins=bin_edges, density=True)
             plt.xlabel('Dihedral angle (º)')
             plt.ylabel('Density')
-            plt.xlim(-180,180)
-            plt.xticks(list(np.arange(-180,190,30)))
-            plt.savefig(os.path.join(path_results,'dihedral_' + str(key) + '_strain.png'), format='png')
+            plt.xlim(-180, 180)
+            plt.xticks(list(np.arange(-180, 190, 30)))
+            plt.savefig(os.path.join(path_results, 'dihedral_' +
+                                     str(key) + '_strain.png'), format='png')
             plt.close()
 
         entropy_contributions = np.array(entropy_contribution)
         S = -(R/simulation_df.shape[1])*np.sum(entropy_contributions)
 
-        entropy_percentages = 100.*np.array(entropy_contribution)/np.sum(entropy_contributions)
+        entropy_percentages = 100. * \
+            np.array(entropy_contribution)/np.sum(entropy_contributions)
         entropy_df = pd.DataFrame(entropy_percentages)
-        entropy_df = entropy_df.round(decimals = 2).T
-        entropy_df.columns = ['Dihedral_' + str(value) + '_%' for value in list(np.arange(1,simulation_df.shape[1] + 1))]
-        entropy_df.insert(loc=0,column='S (kcal/mol K)',value="{:3.6f}".format(S))
-        entropy_df.to_csv(os.path.join(path_results, 'entropy.csv'), index=False)
+        entropy_df = entropy_df.round(decimals=2).T
+        entropy_df.columns = [
+            'Dihedral_' + str(value) + '_%' for value in list(np.arange(1, simulation_df.shape[1] + 1))]
+        entropy_df.insert(loc=0, column='S (kcal/mol K)',
+                          value="{:3.6f}".format(S))
+        entropy_df.to_csv(os.path.join(
+            path_results, 'entropy.csv'), index=False)
 
         print(' -   Entropic information written in /dihedrals/entropy.csv ')
 
