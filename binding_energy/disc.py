@@ -649,6 +649,9 @@ def statistics(input_folder,
         for key in step_dict:
 
             ax1.plot(step_dict[key], bz_dict[key], label=key)
+            ax1.set_xlabel('Number of PELEsteps')
+            ax1.set_xlabel('Boltzmann weighted metric')
+            ax1.set_title('Simultion evolution')
             ax1.legend(loc='best', fontsize=5)
             ax2.plot(step_dict[key], min_dict[key], label=key)
             ax2.legend(loc='best', fontsize=5)
