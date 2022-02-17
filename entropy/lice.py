@@ -43,8 +43,6 @@ def parse_args(args):
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
                         default='LIG_Pele', help="Name of the directory where the simulation\
         is located.")
-    parser.add_argument("-cl", "--clusters_folder", type=str, dest="clusters_folder",
-                        default='results', help="Name of the directory containing the folder: clusters.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
 
@@ -54,7 +52,6 @@ def parse_args(args):
 
 
 def lice_results(input_folder,
-                 clusters_folder,
                  residue_name):
     """
     Function
@@ -65,13 +62,12 @@ def lice_results(input_folder,
     ----------
     - input_folder : str
         The path to the directory created by the induced fit simulation.
-    - clusters_folder : str
-        Name of the directory where the directory clusters is located (results/analysis).
+    - residue_name : str
+        Residue name of the ligand in the pdb of each cluster.
 
     """
 
     def path_definer(input_folder,
-                     clusters_folder,
                      residue_name):
         """
         Function
@@ -82,8 +78,6 @@ def lice_results(input_folder,
         ----------
         - input_folder : str
             The path to the directory created by the induced fit simulation.
-        - clusters_folder : str
-            Name of the directory where the directory clusters is located (results/analysis).
         - residue_name : str
             Residue name of the ligand in the pdb of each cluster.
 
@@ -102,11 +96,11 @@ def lice_results(input_folder,
 
         path_pl_simulation = os.path.join(path, input_folder)
         path_pl_clusters = os.path.join(
-            path_pl_simulation, clusters_folder, 'clusters')
+            path_pl_simulation, 'dihedrals')
 
         path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
         path_l_clusters = os.path.join(
-            path_l_simulation, clusters_folder, 'clusters')
+            path_l_simulation, 'dihedrals')
 
         if os.path.isdir(path_pl_simulation) == False:
             raise Exception('PathError: There is no folder with this name: ' +
@@ -133,28 +127,17 @@ def lice_results(input_folder,
         """
 
         cont = 0
-        S_sum = 0.
-        population = []
-        cluster = []
 
-        with open(os.path.join(path, 'info.csv')) as filein:
+        with open(os.path.join(path, 'entropy.csv')) as filein:
 
             for line in filein:
 
                 if cont != 0:
 
                     line = line.split(',')
-                    cluster.append(int(line[0]))
-                    population.append(float(line[1]))
+                    S = float(line[0])
 
                 cont += 1
-
-            num_clusters = max(cluster)
-
-            for i in range(num_clusters):
-                S_sum += population[i]*np.log(population[i])
-
-            S = -R*S_sum
 
         return S
 
@@ -171,7 +154,7 @@ def lice_results(input_folder,
     path_pl_simulation,\
         path_pl_clusters,\
         path_l_clusters = path_definer(
-            input_folder, clusters_folder, residue_name)
+            input_folder, residue_name)
 
     if os.path.isdir(path_pl_clusters) == False:
         raise Exception('ClusterFolderNotFound: ' +
@@ -183,6 +166,10 @@ def lice_results(input_folder,
 
     S_out = entropy_calculator(path_l_clusters)
     S_in = entropy_calculator(path_pl_clusters)
+
+    print(S_out)
+    print(S_in)
+
     DS = S_in - S_out
     DG_s = -T*DS
 
@@ -220,7 +207,6 @@ def main(args):
     """
 
     lice_results(input_folder=args.input_folder,
-                 clusters_folder=args.clusters_folder,
                  residue_name=args.residue_name)
 
 
