@@ -17,6 +17,11 @@ import pandas as pd
 from rdkit import Chem
 import matplotlib.pyplot as plt
 
+# ----------------------------------------------------------------------- #
+# Constants:
+T = 298.
+R = 1.985e-3
+# ----------------------------------------------------------------------- #
 
 def parse_args(args):
     """
@@ -44,6 +49,8 @@ def parse_args(args):
         is located.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
+    parser.add_argument("-cm", "--clustering_method", type=str, dest="clustering_method",
+                    default='bin', help="Method to cluster data: bin or kmeans.")
     parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
                         default=None, help="Number of clusters to cluster the data.")
 
@@ -499,6 +506,7 @@ def dihedral_angles_retriever_main(input_folder,
 
 
 def clustering(n_cluster,
+               clustering_method,
                simulation_df,
                dihedral_bond_df,
                path_results):
@@ -521,195 +529,249 @@ def clustering(n_cluster,
 
     """
 
-    def scaler(simulation_df,
-               dihedral_bond_df):
-        """
-        Function
-        ----------
-        Scale the data from the data frame.
+    def kmeans(simulation_df,
+               dihedral_bond_df,
+               path_results,
+               n_cluster):
 
-        Parameters
-        ----------
-        - simulation_df : pd.DataFrame
-            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
-            with corresponding model, trajectory and epoch.
-        - dihedral_bond_df : pd.DataFrame
-            Data frame with rotatable bonds, atoms conforming it and the index assigned.
-
-        Returns
-        ----------
-        - simulation_df : pd.DataFrame
-            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
-            scaled from 0 to 1.
-        """
-
-        from sklearn.preprocessing import MinMaxScaler
-
-        column_list = list(np.arange(1, len(dihedral_bond_df) + 1))
-        scaler = MinMaxScaler()
-        scaler.fit_transform(simulation_df[column_list])
-        simulation_df[column_list] = scaler.transform(
-            simulation_df[column_list])
-
-        return simulation_df
-
-    def elbow_method(path_results,
-                     simulation_df,
-                     dihedral_bond_df):
-        """
-        Function
-        ----------
-        Perform the elbow method to determine the optimal number of clusters to cluster the 
-        data.
-
-        Parameters
-        ----------
-        - path_results : str 
-            Path to the directory where the results will be stored.
-        - simulation_df : pd.DataFrame
-            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
-            with corresponding model, trajectory and epoch.
-
-        Returns
-        ----------
-        - n_cluster : int
-            Optimal number of clusters to cluster the data.
-        """
-
-        def plotter(path_results,
-                    wcss,
-                    derivative,
-                    second_derivative,
-                    n_clusters,
-                    n_cluster):
+        def scaler(simulation_df,
+                   dihedral_bond_df):
             """
             Function
             ----------
-            Plost the data obtained from the elbow method.
+            Scale the data from the data frame.
+
+            Parameters
+            ----------
+            - simulation_df : pd.DataFrame
+                Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+                with corresponding model, trajectory and epoch.
+            - dihedral_bond_df : pd.DataFrame
+                Data frame with rotatable bonds, atoms conforming it and the index assigned.
+
+            Returns
+            ----------
+            - simulation_df : pd.DataFrame
+                Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+                scaled from 0 to 1.
+            """
+
+            from sklearn.preprocessing import MinMaxScaler
+
+            column_list = list(np.arange(1, len(dihedral_bond_df) + 1))
+            scaler = MinMaxScaler()
+            scaler.fit_transform(simulation_df[column_list])
+            simulation_df[column_list] = scaler.transform(
+                simulation_df[column_list])
+
+            return simulation_df
+
+        def elbow_method(path_results,
+                         simulation_df,
+                         dihedral_bond_df):
+            """
+            Function
+            ----------
+            Perform the elbow method to determine the optimal number of clusters to cluster the 
+            data.
 
             Parameters
             ----------
             - path_results : str 
                 Path to the directory where the results will be stored.
-            - wcss : list
-                List of Within-Cluster Sum of Square values for all the different cluster numbers
-                tried. 
-            - derivative : list
-                Numerical derivative of the WCSS values.
-            - second_derivative : list
-                Numerical second derivative of the WCSS values.
-            - n_clusters : list
-                List with all the number of clusters tried for the elbow method.
-            - _n_cluster : int
+            - simulation_df : pd.DataFrame
+                Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+                with corresponding model, trajectory and epoch.
+
+            Returns
+            ----------
+            - n_cluster : int
                 Optimal number of clusters to cluster the data.
             """
 
-            fig1, ax1 = plt.subplots()
-            fig2, ax2 = plt.subplots()
-            fig3, ax3 = plt.subplots()
+            def plotter(path_results,
+                        wcss,
+                        derivative,
+                        second_derivative,
+                        n_clusters,
+                        n_cluster):
+                """
+                Function
+                ----------
+                Plost the data obtained from the elbow method.
 
-            ax1.set_title('WCSS')
-            ax1.plot(n_clusters, wcss)
-            ax1.scatter(n_cluster, wcss[n_cluster - 2],
-                        color='red', marker='x', label='elbow')
-            ax1.legend(loc='best')
-            ax1.set_xlabel('Number of clusters')
-            ax1.set_ylabel('WCSS')
-            fig1.savefig(os.path.join(path_results, 'wcss.png'))
+                Parameters
+                ----------
+                - path_results : str 
+                    Path to the directory where the results will be stored.
+                - wcss : list
+                    List of Within-Cluster Sum of Square values for all the different cluster numbers
+                    tried. 
+                - derivative : list
+                    Numerical derivative of the WCSS values.
+                - second_derivative : list
+                    Numerical second derivative of the WCSS values.
+                - n_clusters : list
+                    List with all the number of clusters tried for the elbow method.
+                - _n_cluster : int
+                    Optimal number of clusters to cluster the data.
+                """
 
-            ax2.set_title('WCSS derivative')
-            ax2.plot(n_clusters[1:-1], derivative)
-            ax2.set_xlabel('Number of clusters')
-            ax2.set_ylabel('WCSS derivative')
-            fig2.savefig(os.path.join(path_results, 'wcss_derivative.png'))
+                fig1, ax1 = plt.subplots()
+                fig2, ax2 = plt.subplots()
+                fig3, ax3 = plt.subplots()
 
-            ax3.set_title('WCSS 2nd derivative')
-            ax3.plot(n_clusters[2:-2], second_derivative)
-            ax3.set_xlabel('Number of clusters')
-            ax3.set_ylabel('WCSS 2nd derivative')
-            fig3.savefig(os.path.join(path_results, 'wcss_2derivative.png'))
+                ax1.set_title('WCSS')
+                ax1.plot(n_clusters, wcss)
+                ax1.scatter(n_cluster, wcss[n_cluster - 2],
+                            color='red', marker='x', label='elbow')
+                ax1.legend(loc='best')
+                ax1.set_xlabel('Number of clusters')
+                ax1.set_ylabel('WCSS')
+                fig1.savefig(os.path.join(path_results, 'wcss.png'))
 
-        from scipy.signal import argrelextrema
+                ax2.set_title('WCSS derivative')
+                ax2.plot(n_clusters[1:-1], derivative)
+                ax2.set_xlabel('Number of clusters')
+                ax2.set_ylabel('WCSS derivative')
+                fig2.savefig(os.path.join(path_results, 'wcss_derivative.png'))
 
-        wcss = []
-        n_clusters = []
-        column_list = list(np.arange(1, len(dihedral_bond_df) + 1))
+                ax3.set_title('WCSS 2nd derivative')
+                ax3.plot(n_clusters[2:-2], second_derivative)
+                ax3.set_xlabel('Number of clusters')
+                ax3.set_ylabel('WCSS 2nd derivative')
+                fig3.savefig(os.path.join(path_results, 'wcss_2derivative.png'))
 
-        for n_cluster in range(2, 17):
+            from scipy.signal import argrelextrema
 
-            km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
-            km.fit(simulation_df[column_list])
+            wcss = []
+            n_clusters = []
+            column_list = list(np.arange(1, len(dihedral_bond_df) + 1))
 
-            wcss.append(km.inertia_)
-            n_clusters.append(n_cluster)
+            for n_cluster in range(2, 17):
 
-        derivative = list(np.gradient(wcss, 1))[1:-1]
-        second_derivative = np.gradient(derivative, 1)[1:-1]
+                km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
+                km.fit(simulation_df[column_list])
 
-        maxs_location = list(argrelextrema(second_derivative, np.greater)[0])
+                wcss.append(km.inertia_)
+                n_clusters.append(n_cluster)
 
-        try:
+            derivative = list(np.gradient(wcss, 1))[1:-1]
+            second_derivative = np.gradient(derivative, 1)[1:-1]
 
-            second_derivative_max = max(
-                [second_derivative[max_id] for max_id in maxs_location])
-            max_location_array = np.where(
-                second_derivative == second_derivative_max)[0] + 2
-            max_location = max_location_array[0]
+            maxs_location = list(argrelextrema(second_derivative, np.greater)[0])
 
-        except ValueError:
+            try:
 
-            max_location_array = np.where(
-                second_derivative == max(second_derivative))[0] + 2
-            max_location = max_location_array[0]
+                second_derivative_max = max(
+                    [second_derivative[max_id] for max_id in maxs_location])
+                max_location_array = np.where(
+                    second_derivative == second_derivative_max)[0] + 2
+                max_location = max_location_array[0]
 
-        n_cluster = n_clusters[max_location]
+            except ValueError:
 
-        plotter(path_results,
-                wcss,
-                derivative,
-                second_derivative,
-                n_clusters,
-                n_cluster)
+                max_location_array = np.where(
+                    second_derivative == max(second_derivative))[0] + 2
+                max_location = max_location_array[0]
 
-        return n_cluster
+            n_cluster = n_clusters[max_location]
 
-    from sklearn.cluster import KMeans
+            plotter(path_results,
+                    wcss,
+                    derivative,
+                    second_derivative,
+                    n_clusters,
+                    n_cluster)
 
-    simulation_df_copy = simulation_df.copy()
+            return n_cluster
 
-    simulation_df = scaler(simulation_df,
-                           dihedral_bond_df)
+        from sklearn.cluster import KMeans
 
-    if n_cluster == None:
+        simulation_df_copy = simulation_df.copy()
+
+        simulation_df = scaler(simulation_df,
+                               dihedral_bond_df)
+
+        if n_cluster == None:
+
+            #
+            print('     -   No information about the number of clusters was given.')
+            print('     -   Determining the optimal number of clusters.')
+            #
+
+            n_cluster = elbow_method(path_results,
+                                     simulation_df,
+                                     dihedral_bond_df)
+
+            #
+            print('     -   Optimal number of clusters =', n_cluster)
+            print('     -   Plots have been generated succesfully.')
+
+        else:
+
+            #
+            print('     -   Number of clusters =', n_cluster)
 
         #
-        print('     -   No information about the number of clusters was given.')
-        print('     -   Determining the optimal number of clusters.')
+        print('     -   Clustering...')
         #
 
-        n_cluster = elbow_method(path_results,
-                                 simulation_df,
-                                 dihedral_bond_df)
+        km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
+        y_predicted = km.fit_predict(simulation_df)
+        simulation_df_copy['cluster'] = y_predicted
+        simulation_df_copy.to_csv(os.path.join(path_results, 'data.csv'))
+        dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
 
-        #
-        print('     -   Optimal number of clusters =', n_cluster)
-        print('     -   Plots have been generated succesfully.')
+    def binning(simulation_df,
+                path_results):
 
-    else:
+        entropy_contribution = []
 
-        #
-        print('     -   Number of clusters =', n_cluster)
+        for key in simulation_df:
 
-    #
-    print('     -   Clustering...')
-    #
+            bin_edges = np.histogram_bin_edges(simulation_df[key].to_numpy(), bins='fd')
+            density, _ = np.histogram(simulation_df[key].to_numpy(), bins=bin_edges, density=True)
+            dense_bins = density[density != 0]
 
-    km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
-    y_predicted = km.fit_predict(simulation_df)
-    simulation_df_copy['cluster'] = y_predicted
+            entropy_contribution.append(np.sum(np.array([p*np.log(p) for p in dense_bins])))
 
-    simulation_df_copy.to_csv(os.path.join(path_results, 'data.csv'))
-    dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
+            # Plot
+            plt.title('Dihedral ' + str(key) + ' distribution')
+            plt.hist(simulation_df[key].to_numpy(), bins=bin_edges, density=True)
+            plt.xlabel('Dihedral angle (º)')
+            plt.ylabel('Density')
+            plt.xlim(-180,180)
+            plt.xticks(list(np.arange(-180,190,30)))
+            plt.savefig(os.path.join(path_results,'dihedral_' + str(key) + '_strain.png'), format='png')
+            plt.close()
+
+        entropy_contributions = np.array(entropy_contribution)
+        S = -(R/simulation_df.shape[1])*np.sum(entropy_contributions)
+
+        entropy_percentages = 100.*np.array(entropy_contribution)/np.sum(entropy_contributions)
+        entropy_df = pd.DataFrame(entropy_percentages)
+        entropy_df = entropy_df.round(decimals = 2).T
+        entropy_df.columns = ['Dihedral_' + str(value) + '_%' for value in list(np.arange(1,simulation_df.shape[1] + 1))]
+        entropy_df.insert(loc=0,column='S (kcal/mol K)',value="{:3.6f}".format(S))
+        entropy_df.to_csv(os.path.join(path_results, 'entropy.csv'), index=False)
+
+        print(' -   Entropic information written in /dihedrals/entropy.csv ')
+
+    if clustering_method == 'kmeans':
+
+        kmeans(simulation_df,
+               dihedral_bond_df,
+               path_results,
+               n_cluster)
+
+    elif clustering_method == 'bin':
+
+        binning(simulation_df,
+                path_results)
+
+        simulation_df.to_csv(os.path.join(path_results, 'data.csv'))
+        dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
 
 
 def main(args):
@@ -742,6 +804,7 @@ def main(args):
     #
 
     clustering(args.n_clusters,
+               args.clustering_method,
                simulation_df,
                dihedral_bond_df,
                path_results)
