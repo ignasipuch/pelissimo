@@ -162,7 +162,7 @@ def dihedral_angles_retriever_main(input_folder,
         """
         Function
         ----------
-        Selects the atoms that are going to be checked to calculate dihedrals involving
+        Selects the atoms that are going to be tracked to calculate dihedrals involving
         the rotatable bonds. 
 
         Parameters
@@ -178,6 +178,8 @@ def dihedral_angles_retriever_main(input_folder,
             Dictionary with the atoms involved in the calculation of the dihedrals.
         - atom_list : list
             List with all the atoms without repetition that have to be tracked.
+        - dihedral_bond_df : pd.DataFrame
+            Data frame with the rotatable bonds' information.
         """
 
         path = str(pathlib.Path().absolute())
@@ -308,8 +310,7 @@ def dihedral_angles_retriever_main(input_folder,
         def trajectory_positions_retriever(path,
                                            file_list,
                                            atom_list,
-                                           dihedral_bond_dict,
-                                           epoch):
+                                           dihedral_bond_dict):
             """
             Function
             ----------
@@ -455,17 +456,14 @@ def dihedral_angles_retriever_main(input_folder,
                     simulation_dict[int(epoch)] = trajectory_positions_retriever(new_directory,
                                                                                  files,
                                                                                  atom_list,
-                                                                                 dihedral_bond_dict,
-                                                                                 epoch)
+                                                                                 dihedral_bond_dict)
 
         else:
 
-            epoch = 0
             simulation_dict[0] = trajectory_positions_retriever(path_output,
                                                                 files,
                                                                 atom_list,
-                                                                dihedral_bond_dict,
-                                                                epoch)
+                                                                dihedral_bond_dict)
 
         simulation_df = pd.DataFrame([(epoch, trajectory, model, rot_bond, value)
                                       for epoch, traj_mod_rot_val in simulation_dict.items()
@@ -476,11 +474,11 @@ def dihedral_angles_retriever_main(input_folder,
         simulation_df.columns = ['epoch', 'trajectory',
                                  'model', 'rotable bond', 'value']
 
-        data_cluster = simulation_df.pivot(index=['epoch', 'trajectory', 'model'],
-                                           columns='rotable bond',
-                                           values='value')
+        simulation_df.pivot(index=['epoch', 'trajectory', 'model'],
+                            columns='rotable bond',
+                            values='value')
 
-        return data_cluster
+        return simulation_df
 
     path_template, path_output, path_results = path_definer(input_folder)
 
@@ -519,12 +517,14 @@ def clustering(n_cluster,
     Parameters
     ----------
     - n_cluster : int
-        Number of clusters t ocluster data.
-    - dihedral_bond_df : pd.DataFrame
-        Data frame with rotatable bonds, atoms conforming it and the index assigned.
+        Number of clusters to cluster data.
+    - clustering_method : str
+        Method to cluster data: bin or kmeans.
     - simulation_df : pd.DataFrame
         Data frame with all the rotatable bonds' dihedral angle values of all the simulation
         with corresponding model, trajectory and epoch.
+    - dihedral_bond_df : pd.DataFrame
+        Data frame with rotatable bonds, atoms conforming it and the index assigned.
     - path_results : str 
         Path to the directory where the results will be stored. 
 
@@ -534,6 +534,24 @@ def clustering(n_cluster,
                dihedral_bond_df,
                path_results,
                n_cluster):
+        """
+        Function
+        ----------
+        Cluster the results obtained from simulation using kmeans method. Stores results 
+        in a new results folder /dihedrals.
+
+        Parameters
+        ----------
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+            with corresponding model, trajectory and epoch.
+        - dihedral_bond_df : pd.DataFrame
+            Data frame with rotatable bonds, atoms conforming it and the index assigned.
+        - path_results : str 
+            Path to the directory where the results will be stored. 
+        - n_cluster : int
+            Number of clusters to cluster data.
+        """
 
         def scaler(simulation_df,
                    dihedral_bond_df):
@@ -729,6 +747,20 @@ def clustering(n_cluster,
 
     def binning(simulation_df,
                 path_results):
+        """
+        Function
+        ----------
+        Cluster the results obtained from simulation by binning the results.
+        Entropic contributions are calculated from the binned data.
+
+        Parameters
+        ----------
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+            with corresponding model, trajectory and epoch.
+        - path_results : str 
+            Path to the directory where the results will be stored. 
+        """
 
         entropy_contribution = []
 
