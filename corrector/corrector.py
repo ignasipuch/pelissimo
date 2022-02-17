@@ -565,7 +565,7 @@ def corrector(input_folder,
             )
             #           
        
-        bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='auto')
+        bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='fd')
         density, _ = np.histogram(strain_energy_vector, bins=bin_edges)
 
         hist_ene = 0.5*(bin_edges[np.argmax(density)] + bin_edges[np.argmax(density) + 1])
