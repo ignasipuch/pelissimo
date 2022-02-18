@@ -7,6 +7,7 @@ __author__ = "Ignasi Puch-Giner"
 __maintainer__ = "Ignasi Puch-Giner"
 __email__ = "ignasi.puchginer@bsc.es"
 
+from operator import le
 import sys
 import os
 import pathlib
@@ -153,6 +154,10 @@ def dihedral_angles_retriever_main(input_folder,
                     rotatable_bonds_dict[cont] = tuple(
                         [line[2].split('_')[1], line[3].split('_')[1]])
                     cont += 1
+
+        if len(rotatable_bonds_dict) == 0:
+            raise Exception('NoRotatableBonds: No rotatable bonds were found in ' + 
+            str(os.path.join(path_template, residue_name + '.rot.assign')))
 
         return rotatable_bonds_dict
 
