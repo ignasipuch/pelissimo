@@ -701,7 +701,7 @@ def corrector(input_folder,
             average_ene_q,\
             max_ene_q = histogram_function(strain_energy_quantile)
 
-            with open(os.path.join(path, 'strain.csv'), 'w') as fileout:
+            with open(os.path.join(path, 'strain' + str(int(quantile*100)) + '.csv'), 'w') as fileout:
                 fileout.writelines(
                     'Minimum,Histogram max,Average,Maximum\n'
                     '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
@@ -722,7 +722,7 @@ def corrector(input_folder,
             plt.xlabel('Strain (kcal/mol)')
             plt.ylabel('Density')
             plt.legend(loc='best')
-            plt.savefig(os.path.join(path, 'density_strain_quantile.png'), format='png')
+            plt.savefig(os.path.join(path, 'density_strain_quantile' + str(int(quantile*100)) + '.png'), format='png')
 
     #
     print(' ')
