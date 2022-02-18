@@ -296,7 +296,8 @@ def corrector(input_folder,
         """
         Function
         ----------
-        Correct the reports with the calculated corrections at disposal.
+        Correct the reports with the calculated corrections at disposal and 
+        store simulation data.
 
         Parameters
         ----------
