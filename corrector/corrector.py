@@ -45,12 +45,9 @@ def parse_args(args):
                         default='LIG', help="Ligand's residue name.")
     parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report', help="Name of the report files used for the simulation.")
-    parser.add_argument("-cbe", "--column_binding_energy", type=int, dest="column_binding_energy",
-                        default=None, help="Column of the report where the binding energy\
-                             metric is located.")
-    parser.add_argument("-cie", "--column_internal_energy", type=int, dest="column_internal_energy",
-                        default=None, help="Column of the report where the internal energy of the ligand\
-                             metric is located.")
+    parser.add_argument("-q", "--quantile", type=float, dest="quantile",
+                    default=1, help="Percentage of data with lowest total energy snapshots you want\
+        to keep to assess the strain energy")
 
     parsed_args = parser.parse_args(args)
 
@@ -60,8 +57,7 @@ def parse_args(args):
 def corrector(input_folder,
               residue_name,
               report_name,
-              column_binding_energy,
-              column_internal_energy):
+              quantile):
     """
     Function
     ----------
@@ -247,9 +243,7 @@ def corrector(input_folder,
 
         return entropy_change
 
-    def column_retriever(file,
-                         column_binding_energy,
-                         column_internal_energy):
+    def column_retriever(file):
         """
         Function
         ----------
@@ -318,6 +312,13 @@ def corrector(input_folder,
             Ligand's minimum energy of the scoring function chosen.
         - entropy_change : float
             Entropy change calculated from the protein-ligand and the ligand simulations.
+
+        Returns
+        ----------
+        - strain_energy_list : list
+            List of all the strain energies calculated.
+        - simulation_df : pd.DataFrame
+            Data frame with currentEnergy and strainEnergy values of the simulation.
         """
 
         def copier(path_pl_output,
@@ -507,7 +508,7 @@ def corrector(input_folder,
             simulation_df = simulation_df.sort_values(
                 ['epoch', 'trajectory', 'model', 'currentEnergy', 'strainEnergy'], ascending=True).reset_index(drop=True)
 
-            return strain_energy_list, simulation_df
+            return strainEnergies, simulation_df
 
         # Copying  reports
         report_paths = copier(path_pl_output, report_name)
@@ -521,6 +522,35 @@ def corrector(input_folder,
                                                       entropy_change)
 
         return strain_energy_list, simulation_df
+
+    def quantile_retriever(simulation_df,
+                          quantile):
+        """
+        Function
+        ----------
+        Obtain a list of strain energies corresponding to those conformations
+        with energies below a certain quantile.
+
+        Parameters
+        ----------
+        - simulation_df : pd.DataFrame
+            Data frame with current energies and strain information.
+        - quantile : float
+            Percentage of data with lowest total energy snapshots you want to keep 
+        to assess the strain energy.
+
+        Returns
+        ----------
+        - strain_energy_quantile : list
+            List with the strain energies belonging to the quantile percentage of data 
+        with lowest total energy.
+        """
+
+        quantile_value = simulation_df.currentEnergy.quantile(quantile)
+        simulation_df_quantile = simulation_df[simulation_df.currentEnergy < quantile_value]
+        strain_energy_quantile = list(np.array(simulation_df_quantile['strainEnergy']))
+        
+        return strain_energy_quantile
 
     def analysis_files_writer(column_binding_energy,
                               path_pl_simulation):
@@ -571,8 +601,10 @@ def corrector(input_folder,
             )
 
     def results_writer(strain_energy_list,
+                       strain_energy_quantile,
                        path,
                        report_name,
+                       quantile,
                        ligand_min_energy):
         """
         Function
@@ -587,49 +619,109 @@ def corrector(input_folder,
             The path to the protein-ligand strain results folder.
         """
 
-        strain_energy_list = [
-            item for item in strain_energy_list if item < 200]
-        strain_energy_vector = np.array(strain_energy_list)
-        minimum_ene = min(strain_energy_vector)
+        def histogram_function(strain_energy):
+            """
+            Function
+            ----------
+            Writes and plots result files of strain values.
 
-        if minimum_ene < 0.:
+            Parameters
+            ----------
+            - strain_energy_list : list
+                List with all the strain values calculated from the entire simulation.
+            """
 
-            strain_energy_vector = strain_energy_vector - minimum_ene
+            strain_energy = [
+                item for item in strain_energy if item < 200]
 
-            #
-            print('\n'
-                  '                              WARNING:                               \n'
-                  '   Lower ligand energies were found in the induced fit simulations.  \n'
-                  '   The results in mod_' + report_name + ' have been corrected with   \n'
-                  '   Ligand minimum = ' + "{:3.3f}".format(ligand_min_energy) + ' > ' +
-                  "{:3.3f}".format(minimum_ene + ligand_min_energy) +
-                  ' = Induced fit minimum.\n'
-                  '   Better sampling of the ligand is required.          \n'
-                  )
-            #
+            strain_energy_vector = np.array(strain_energy)
 
-        bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='fd')
-        density, _ = np.histogram(strain_energy_vector, bins=bin_edges)
+            bin_edges = np.histogram_bin_edges(strain_energy_vector, bins='fd')
+            density, _ = np.histogram(strain_energy_vector, bins=bin_edges)
 
-        hist_ene = 0.5*(bin_edges[np.argmax(density)] +
-                        bin_edges[np.argmax(density) + 1])
-        minimum_ene = min(strain_energy_vector)
-        average_ene = np.average(strain_energy_vector)
-        max_ene = max(strain_energy_vector)
+            hist_ene = 0.5*(bin_edges[np.argmax(density)] +
+                    bin_edges[np.argmax(density) + 1])
+            minimum_ene = min(strain_energy_vector)
+            average_ene = np.average(strain_energy_vector)
+            max_ene = max(strain_energy_vector)
 
-        with open(os.path.join(path, 'strain.csv'), 'w') as fileout:
-            fileout.writelines(
-                'Minimum,Histogram max,Average,Maximum\n'
-                '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
-                str(average_ene) + ',' + str(max_ene) + '\n'
-            )
+            return strain_energy_vector, bin_edges, hist_ene, minimum_ene, average_ene, max_ene
+        
+        if quantile == 1.:
+            
+            strain_energy_vector, bin_edges, hist_ene, minimum_ene, average_ene, max_ene = histogram_function(strain_energy_list)
 
-        # Plot
-        plt.title('Strain distribution')
-        plt.hist(strain_energy_vector, bins=bin_edges, density=True)
-        plt.xlabel('Strain (kcal/mol)')
-        plt.ylabel('Density')
-        plt.savefig(os.path.join(path, 'density_strain.png'), format='png')
+            if min(strain_energy_vector) < 0.:
+
+                strain_energy_vector = strain_energy_vector - minimum_ene
+
+                #
+                print('\n'
+                      '                              WARNING:                               \n'
+                      '   Lower ligand energies were found in the induced fit simulations.  \n'
+                      '   The results in mod_' + report_name + ' have been corrected with   \n'
+                      '   Ligand minimum = ' + "{:3.3f}".format(ligand_min_energy) + ' > ' +
+                      "{:3.3f}".format(minimum_ene + ligand_min_energy) +
+                      ' = Induced fit minimum.\n'
+                      '   Better sampling of the ligand is required.          \n'
+                      )
+                #
+
+
+            with open(os.path.join(path, 'strain.csv'), 'w') as fileout:
+                fileout.writelines(
+                    'Minimum,Histogram max,Average,Maximum\n'
+                    '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
+                    str(average_ene) + ',' + str(max_ene) + '\n')
+
+            # Plot
+            plt.title('Strain distribution')
+            plt.hist(strain_energy_vector, bins=bin_edges, density=True, color = "blue")
+            plt.xlabel('Strain (kcal/mol)')
+            plt.ylabel('Density')
+            plt.savefig(os.path.join(path, 'density_strain.png'), format='png')
+        
+        else: 
+
+            print(' ')
+            print(' -   Quantile chosen for the results:', quantile)
+
+            strain_energy_vector, \
+            bin_edges, \
+            hist_ene,\
+            minimum_ene,\
+            average_ene,\
+            max_ene = histogram_function(strain_energy_list)
+
+            strain_energy_vector_q,\
+            bin_edges_q,\
+            hist_ene_q,\
+            minimum_ene_q,\
+            average_ene_q,\
+            max_ene_q = histogram_function(strain_energy_quantile)
+
+            with open(os.path.join(path, 'strain.csv'), 'w') as fileout:
+                fileout.writelines(
+                    'Minimum,Histogram max,Average,Maximum\n'
+                    '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
+                    str(average_ene) + ',' + str(max_ene) + '\n'
+                    '' + str(minimum_ene_q) + ',' + str(hist_ene_q) + ',' +
+                    str(average_ene_q) + ',' + str(max_ene_q) + '\n'
+                )
+
+            # Plot
+            plt.title('Strain distribution')
+            plt.hist(strain_energy_vector, bins=bin_edges, density=True, color = "blue", label='original')
+            plt.xlabel('Strain (kcal/mol)')
+            plt.ylabel('Density')
+            plt.savefig(os.path.join(path, 'density_strain.png'), format='png')
+
+            plt.title('Strain distribution quantile ' + str(int(quantile*100)) + '%')
+            plt.hist(strain_energy_vector_q, bins=bin_edges_q, density=True, color = "red", label='quantile')
+            plt.xlabel('Strain (kcal/mol)')
+            plt.ylabel('Density')
+            plt.legend(loc='best')
+            plt.savefig(os.path.join(path, 'density_strain_quantile.png'), format='png')
 
     #
     print(' ')
@@ -668,26 +760,8 @@ def corrector(input_folder,
     # Corrections column location ---
     file = os.path.join(path_pl_simulation, 'output', '0', report_name + '_1')
 
-    if column_internal_energy == None and column_binding_energy == None:
-
-        column_current_energy, column_binding_energy, column_internal_energy = \
-            column_retriever(file,
-                             column_binding_energy,
-                             column_internal_energy)
-
-    elif column_internal_energy == None:
-
-        column_current_energy, column_binding_energy, _ = \
-            column_retriever(file,
-                             column_binding_energy,
-                             column_internal_energy)
-
-    elif column_current_energy == None:
-
-        column_current_energy, _, column_internal_energy = \
-            column_retriever(file,
-                             column_binding_energy,
-                             column_internal_energy)
+    column_current_energy, column_binding_energy, column_internal_energy = \
+        column_retriever(file)
 
     #
     print(' ')
@@ -703,14 +777,19 @@ def corrector(input_folder,
                                                               ligand_min_energy,
                                                               entropy_change)
 
+    strain_energy_quantile = quantile_retriever(simulation_df,
+                                                quantile)
+
     #
     print(' -   Job finished succesfully. Energies corrected will be found in \n'
           '     mod_' + report_name + ' files.')
     #
 
     results_writer(strain_energy_list,
+                   strain_energy_quantile,
                    path_pl_results,
                    report_name,
+                   quantile,
                    ligand_min_energy)
 
     #
@@ -750,8 +829,7 @@ def main(args):
     corrector(input_folder=args.input_folder,
               residue_name=args.residue_name,
               report_name=args.report_name,
-              column_binding_energy=args.column_binding_energy,
-              column_internal_energy=args.column_internal_energy)
+              quantile=args.quantile)
 
 
 if __name__ == '__main__':
