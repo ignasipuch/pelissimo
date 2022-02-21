@@ -227,6 +227,7 @@ def dihedral_angles_retriever_main(input_folder,
                         'LigandFileError: ANISOU lines detected in the pdb. This lines must be erased.')
 
         m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
+        Chem.SanitizeMol(m)
 
         heavy_atoms = [k for k in atoms_list if 'H' not in k]
 
