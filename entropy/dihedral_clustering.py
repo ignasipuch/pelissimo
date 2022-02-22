@@ -7,7 +7,6 @@ __author__ = "Ignasi Puch-Giner"
 __maintainer__ = "Ignasi Puch-Giner"
 __email__ = "ignasi.puchginer@bsc.es"
 
-from operator import le
 import sys
 import os
 import pathlib
@@ -15,8 +14,8 @@ import argparse
 
 import numpy as np
 import pandas as pd
-from rdkit import Chem
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 # ----------------------------------------------------------------------- #
 # Constants:
@@ -196,7 +195,7 @@ def dihedral_angles_retriever_main(input_folder,
         path_ligand = os.path.join(path, input_file)
 
         atoms = {}
-        H_neighbours = {}
+        neighbours = {}
         atoms_list = []
         atom_cont = 1
 
@@ -216,57 +215,32 @@ def dihedral_angles_retriever_main(input_folder,
                     line = line.split()[1:]
                     neighbours_connect = [atoms[int(k)] for k in line]
 
-                    for item in neighbours_connect:
-                        if 'H' in item and len(neighbours_connect) == 2:
-                            H_neighbours[neighbours_connect[abs(
-                                neighbours_connect.index(item)-1)]] = item
+                    try:
+                        
+                        if neighbours[neighbours_connect[0]] is not None:  #Double bonds
+                            pass
 
+                    except KeyError:
+
+                        neighbours[neighbours_connect[0]] = neighbours_connect[1:]
+                    
                 if 'ANISOU' in line:
 
                     raise Exception(
                         'LigandFileError: ANISOU lines detected in the pdb. This lines must be erased.')
 
-        m = Chem.rdmolfiles.MolFromPDBFile(path_ligand)
-        Chem.SanitizeMol(m)
-
-        heavy_atoms = [k for k in atoms_list if 'H' not in k]
-
-        neighbours_dict = {}
         dihedral_bond_dict = {}
         atom_list = []
 
-        for atom in range(len(heavy_atoms)):
-
-            neighbours_dict[heavy_atoms[atom]] = [
-                atoms_list[x.GetIdx()] for x in m.GetAtomWithIdx(atom).GetNeighbors()]
-
         for key in rotatable_bonds_dict:
 
-            all_neighbours_atom_1 = neighbours_dict[rotatable_bonds_dict[key][0]]
-            all_neighbours_atom_2 = neighbours_dict[rotatable_bonds_dict[key][1]]
+            all_neighbours_atom_1 = neighbours[rotatable_bonds_dict[key][0]]
+            all_neighbours_atom_2 = neighbours[rotatable_bonds_dict[key][1]]
 
             neighbours_atom_1 = [
                 x for x in all_neighbours_atom_1 if rotatable_bonds_dict[key][1] not in x]
             neighbours_atom_2 = [
                 x for x in all_neighbours_atom_2 if rotatable_bonds_dict[key][0] not in x]
-
-            if len(neighbours_atom_1) == 0:
-
-                if not H_neighbours:
-                    raise Exception(
-                        'DihedralBondError: Information about the connectivity of the PDB will be required due to lack of heavy atoms to calculate certain dihedral bond angles.')
-
-                neighbours_atom_1 = [
-                    H_neighbours[rotatable_bonds_dict[key][0]]]
-
-            if len(neighbours_atom_2) == 0:
-
-                if not H_neighbours:
-                    raise Exception(
-                        'DihedralBondError: Information about the connectivity of the PDB will be required due to lack of heavy atoms to calculate certain dihedral bond angles.')
-
-                neighbours_atom_2 = [
-                    H_neighbours[rotatable_bonds_dict[key][1]]]
 
             dihedral_bond_dict[key] = neighbours_atom_1[0],\
                 rotatable_bonds_dict[key][0],\
@@ -478,10 +452,10 @@ def dihedral_angles_retriever_main(input_folder,
                                       for rot_bond, value in rot_val.items()])
 
         simulation_df.columns = ['epoch', 'trajectory',
-                                 'model', 'rotable bond', 'value']
+                                 'model', 'rotatable bond', 'value']
 
         simulation_df.pivot(index=['epoch', 'trajectory', 'model'],
-                            columns='rotable bond',
+                            columns='rotatable bond',
                             values='value')
 
         return simulation_df
@@ -770,38 +744,47 @@ def clustering(n_cluster,
 
         entropy_contribution = []
 
-        for key in simulation_df:
+        rotatable_bonds = simulation_df['rotatable bond'].to_numpy()
+        values = simulation_df['value'].to_numpy()
+        results = defaultdict(list)
+
+        for rot_bond, value in zip(rotatable_bonds, values):
+            results[rot_bond].append(value)
+
+        rot_bond_values = list(results.items())
+     
+        for rot_bond, values in rot_bond_values:
 
             bin_edges = np.histogram_bin_edges(
-                simulation_df[key].to_numpy(), bins='fd')
+                values, bins='fd')
             density, _ = np.histogram(
-                simulation_df[key].to_numpy(), bins=bin_edges, density=True)
+                values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]
 
             entropy_contribution.append(
                 np.sum(np.array([p*np.log(p) for p in dense_bins])))
 
             # Plot
-            plt.title('Dihedral ' + str(key) + ' distribution')
-            plt.hist(simulation_df[key].to_numpy(),
+            plt.title('Dihedral ' + str(rot_bond) + ' distribution')
+            plt.hist(values,
                      bins=bin_edges, density=True)
             plt.xlabel('Dihedral angle (º)')
             plt.ylabel('Density')
             plt.xlim(-180, 180)
             plt.xticks(list(np.arange(-180, 190, 30)))
             plt.savefig(os.path.join(path_results, 'dihedral_' +
-                                     str(key) + '_strain.png'), format='png')
+                                     str(rot_bond) + '_strain.png'), format='png')
             plt.close()
 
         entropy_contributions = np.array(entropy_contribution)
-        S = -(R/simulation_df.shape[1])*np.sum(entropy_contributions)
+        S = -(R/len(rot_bond_values))*np.sum(entropy_contributions)
 
         entropy_percentages = 100. * \
             np.array(entropy_contribution)/np.sum(entropy_contributions)
         entropy_df = pd.DataFrame(entropy_percentages)
         entropy_df = entropy_df.round(decimals=2).T
         entropy_df.columns = [
-            'Dihedral_' + str(value) + '_%' for value in list(np.arange(1, simulation_df.shape[1] + 1))]
+            'Dihedral_' + str(value) + '_%' for value in list(np.arange(1, len(rot_bond_values) + 1))]
         entropy_df.insert(loc=0, column='S (kcal/mol K)',
                           value="{:3.6f}".format(S))
         entropy_df.to_csv(os.path.join(
@@ -821,7 +804,7 @@ def clustering(n_cluster,
         binning(simulation_df,
                 path_results)
 
-        simulation_df.to_csv(os.path.join(path_results, 'data.csv'))
+        simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
         dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
 
 
