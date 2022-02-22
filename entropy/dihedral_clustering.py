@@ -116,6 +116,9 @@ def dihedral_angles_retriever_main(input_folder,
         if os.path.exists(path_results) == False:
             os.mkdir(path_results)
 
+        if os.path.exists(os.path.join(path_results,'images')) == False:
+            os.mkdir(os.path.join(path_results,'images'))
+
         return path_template, path_output, path_results
 
     def template_info_retriever(path_template,
@@ -772,7 +775,7 @@ def clustering(n_cluster,
             plt.ylabel('Density')
             plt.xlim(-180, 180)
             plt.xticks(list(np.arange(-180, 190, 30)))
-            plt.savefig(os.path.join(path_results, 'dihedral_' +
+            plt.savefig(os.path.join(path_results,'images', 'dihedral_' +
                                      str(rot_bond) + '_strain.png'), format='png')
             plt.close()
 
