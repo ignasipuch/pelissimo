@@ -175,7 +175,6 @@ def lice_results(input_folder,
     copy_tree(path_l_dihedrals, os.path.join(path_entropy,'dihedrals_lig'))
     copy_tree(path_pl_dihedrals, os.path.join(path_entropy,'dihedrals_if'))
 
-
     DS = S_in - S_out
     DG_s = -T*DS
 
@@ -188,7 +187,10 @@ def lice_results(input_folder,
     print(' -   Entropic contribution to the free energy: ',
           DG_s, ' kcal/mol')
     print(' ')
-    print(' -   Writing entropy.csv inside ' + input_folder + '.')
+    print(' -   Writing entropy.csv inside ' + input_folder + '/entropy.')
+    print(' -   Folders containing intermediate results are also in ' + input_folder + '/entropy.\n'
+          '         /dihedrals_lig -> ligand simulation\n'
+          '         /dihedrals_if  -> induced fit simulation')
     print(' ')
     #
 
