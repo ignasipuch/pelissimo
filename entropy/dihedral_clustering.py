@@ -11,11 +11,11 @@ import sys
 import os
 import pathlib
 import argparse
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from collections import defaultdict
 
 # ----------------------------------------------------------------------- #
 # Constants:
@@ -203,7 +203,7 @@ def dihedral_angles_retriever_main(input_folder,
 
             for line in filein:
 
-                if residue_name in line:
+                if 'HETATM' in line:
 
                     atom = line.split()[2]
                     atoms[atom_cont] = atom
@@ -391,7 +391,7 @@ def dihedral_angles_retriever_main(input_folder,
 
                         model_lines = model.splitlines(True)
                         ligand_lines = [
-                            line for line in model_lines if 'LIG' in line]
+                            line for line in model_lines if 'HETATM' in line]
 
                         for line in ligand_lines:
 
