@@ -13,6 +13,7 @@ import sys
 import os
 import pathlib
 import argparse
+from distutils.dir_util import copy_tree
 
 # ----------------------------------------------------------------------- #
 # Constants:
@@ -104,12 +105,13 @@ def lice_results(input_folder,
         path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
         path_l_dihedrals = os.path.join(
             path_l_simulation, 'dihedrals')
+        path_entropy = os.path.join(path_pl_simulation,'entropy')
 
         if os.path.isdir(path_pl_simulation) == False:
             raise Exception('PathError: There is no folder with this name: ' +
                             path_pl_simulation + '. Please check the path and the folder name.')
 
-        return path_pl_simulation, path_pl_dihedrals, path_l_dihedrals
+        return path_pl_simulation, path_pl_dihedrals, path_l_dihedrals, path_entropy
 
     def entropy_retriever(path):
         """
@@ -155,7 +157,8 @@ def lice_results(input_folder,
 
     path_pl_simulation,\
         path_pl_dihedrals,\
-        path_l_dihedrals = path_definer(
+        path_l_dihedrals,\
+        path_entropy = path_definer(
             input_folder, residue_name)
 
     if os.path.isdir(path_pl_dihedrals) == False:
@@ -168,6 +171,10 @@ def lice_results(input_folder,
 
     S_out = entropy_retriever(path_l_dihedrals)
     S_in = entropy_retriever(path_pl_dihedrals)
+
+    copy_tree(path_l_dihedrals, os.path.join(path_entropy,'dihedrals_lig'))
+    copy_tree(path_pl_dihedrals, os.path.join(path_entropy,'dihedrals_if'))
+
 
     DS = S_in - S_out
     DG_s = -T*DS
@@ -185,7 +192,7 @@ def lice_results(input_folder,
     print(' ')
     #
 
-    with open(os.path.join(path_pl_simulation, 'entropy.csv'), 'w') as fileout:
+    with open(os.path.join(path_entropy, 'entropy.csv'), 'w') as fileout:
         fileout.writelines(
             'S_out,S_in,DS,-TDS\n'
             '' + str(S_out) + ',' + str(S_in) + ',' +
