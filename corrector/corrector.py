@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-This module is designed to correct energies of a simulation.
+This module is designed to correct energies and obtain
+strain data of a simulation.
 """
 
 __author__ = "Ignasi Puch-Giner"
@@ -73,10 +74,9 @@ def corrector(input_folder,
         Residue name of the ligand in the pdb of each cluster
     -report_name : str
         Name of the report files we want to correct.
-    - column_binding_energy : int
-        Column of the report where the binding energy metric is located.
-    - column_internal_energy : int
-        Column of the report where the internal energy metric is located.
+    - quantile : float
+        Percentage (0,1] of data with lowest total energy snapshots you want
+        to keep to assess the strain energy
     """
 
     def path_definer(input_folder,
@@ -92,8 +92,6 @@ def corrector(input_folder,
             The path to the directory created by the induced fit simulation.
         - residue_name : str
             Residue name of the ligand in the pdb of each cluster
-        - clusters_folder : str
-            Name of the directory where the directory clusters is located (results/analysis).
 
         Returns
         ----------
@@ -254,14 +252,16 @@ def corrector(input_folder,
         Parameters
         ----------
         - file : list
-            The path to the one report.
-        - column : int 
-            Value give to the --column flag. 
+            The path to the first report.
 
         Returns
         ----------
-        - column : int 
-            Column where the interesting data is located. 
+        - column_current_energy : int 
+            Column where the interesting total energy is located in the report.
+        - column_binding_energy : int 
+            Column where the interesting binding energy is located in the report.
+        - column_internal_energy : int 
+            Column where the interesting internal energy is located in the report.
         """
 
         cont = 0
@@ -303,10 +303,12 @@ def corrector(input_folder,
 
         Parameters
         ----------
-        - column_binding_energy : int
-            Column of the report where the binding energy metric is located.
-        - column_internal_energy : int
-            Column of the report where the internal energy metric is located.
+        - column_current_energy : int 
+            Column where the interesting total energy is located in the report.
+        - column_binding_energy : int 
+            Column where the interesting binding energy is located in the report.
+        - column_internal_energy : int 
+            Column where the interesting internal energy is located in the report.
         - path_pl_output : str
             The path to the protein-ligand simulation output.
         - report_name : str
@@ -540,13 +542,13 @@ def corrector(input_folder,
             Data frame with current energies and strain information.
         - quantile : float
             Percentage of data with lowest total energy snapshots you want to keep 
-        to assess the strain energy.
+            to assess the strain energy.
 
         Returns
         ----------
         - strain_energy_quantile : list
             List with the strain energies belonging to the quantile percentage of data 
-        with lowest total energy.
+            with lowest total energy.
         """
 
         quantile_value = simulation_df.currentEnergy.quantile(quantile)
@@ -741,8 +743,17 @@ def corrector(input_folder,
         ----------
         - strain_energy_list : list
             List with all the strain values calculated from the entire simulation.
+        - strain_energy_quantile : list
+            List with strain values of the entire simulation corresponding to a certain quantile.
         - path : str
             The path to the protein-ligand strain results folder.
+        - report_name : str
+            Name of the report files we want to correct.
+        - quantile : float
+            Percentage of data with lowest total energy snapshots you want to keep 
+            to assess the strain energy.
+        - ligand_min_energy : float
+            Ligand's minimum energy of the scoring function chosen.
         """
 
         def histogram_function(strain_energy):
