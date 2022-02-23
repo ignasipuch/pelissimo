@@ -480,22 +480,6 @@ def linen_prepare(input_folder,
 
     #
     print(' ')
-    print('------------------------------ INFO -------------------------------')
-    print(' (1) ')
-    print(' -   To run the energy calculation for the ligand:')
-    print(' (1.1)    :> cd ' + residue_name + '_linen.')
-    print(' (1.2)    Modify the following sections of pele.conf:')
-    print(' (1.2.1)     "constraints"')
-    print(' (1.2.2)     "SideChainPerturbation"')
-    print(' (1.3)    :> sbatch run')
-    print(' -   Results are stored in /output.')
-    print(' ')
-    print(' (2) ')
-    print(' -   To perform a clustering with PELE platform:')
-    print(' -   Go to ' + residue_name + '_linen directory.')
-    print('          :> sbatch run_analysis')
-    print(' ')
-    print('-------------------------------------------------------------------')
 
 
 def main(args):
