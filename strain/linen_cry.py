@@ -186,7 +186,7 @@ def linen_prepare(input_folder,
 
         new_path = os.path.join(path_linen, 'ligand.pdb')
         shutil.copy(os.path.join(path, pdb_name), new_path)
- 
+
         path_DataLocal = os.path.join(path_linen, 'DataLocal')
 
         if os.path.exists(path_DataLocal) == False:
@@ -194,7 +194,7 @@ def linen_prepare(input_folder,
 
         path_previous_DataLocal = os.path.join(path_previous_simulation,
                                                'DataLocal')
-        
+
         if os.path.exists(path_previous_DataLocal) == False:
 
             print('\n'
@@ -233,7 +233,7 @@ def linen_prepare(input_folder,
 
         cont = 0
 
-        with open(os.path.join(path,pdb_name)) as filein:
+        with open(os.path.join(path, pdb_name)) as filein:
             for line in filein:
                 if cont != 0:
                     if 'HETATM' in line:
@@ -251,7 +251,7 @@ def linen_prepare(input_folder,
                             chain = line[4]
                             number = line[5]
                             atom = '_' + line[2] + '_'
-                    
+
                         break
 
                 cont += 1
@@ -335,7 +335,8 @@ def linen_prepare(input_folder,
                 '      },\n'
                 '\n'
                 '      "constraints":[\n'
-                '      { "type": "constrainAtomToPosition", "springConstant": 0.5, "equilibriumDistance": 0.0, "constrainThisAtom": "' + chain + ':' + number + ':' + atom + '" }\n'
+                '      { "type": "constrainAtomToPosition", "springConstant": 0.5, "equilibriumDistance": 0.0, "constrainThisAtom": "' +
+                chain + ':' + number + ':' + atom + '" }\n'
                 '      ],\n'
                 '\n'
                 '      "SideChainPerturbation": {\n'
@@ -438,7 +439,7 @@ def linen_prepare(input_folder,
                 '", chain="L", simulation_output="output", report="report", cpus=48)\n'
                 'analysis.generate(path="analysis", clustering_type="meanshift")\n'
             )
-    
+
         return path_to_run
 
     #
@@ -466,7 +467,7 @@ def linen_prepare(input_folder,
                           path_linen,
                           path_previous_simulation)
 
-    chain, number, atom = constraint_retriever(pdb_name,path)
+    chain, number, atom = constraint_retriever(pdb_name, path)
 
     path_to_run = write_files(force_field,
                               solvent_model,
@@ -476,7 +477,7 @@ def linen_prepare(input_folder,
                               path_linen)
 
     os.chdir(path_linen)
-    os.system("sbatch %s" %path_to_run)
+    os.system("sbatch %s" % path_to_run)
 
     #
     print(' ')
