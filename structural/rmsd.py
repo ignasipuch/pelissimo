@@ -14,6 +14,7 @@ import pathlib
 import argparse
 import shutil
 
+
 def parse_args(args):
     """
     Function
@@ -201,7 +202,7 @@ def rmsd_preparation(input_folder,
                 iterations = conf_extraction(
                     path_pl_simulation, 'adaptive.conf')
 
-                #    
+                #
                 print('     -   Number of iterations found: ' + str(iterations))
                 #
 
@@ -217,7 +218,8 @@ def rmsd_preparation(input_folder,
                     iterations = output_extraction(path_pl_simulation)
 
                     #
-                    print('         -   Number of iterations found: ' + str(iterations + 1))
+                    print('         -   Number of iterations found: ' +
+                          str(iterations + 1))
                     #
 
                 else:
@@ -231,8 +233,8 @@ def rmsd_preparation(input_folder,
                           '   \n'
                           '   Please, modify the newly generated run_rmsd in order to match     \n'
                           '   your simulation or rerun this script with the flag -i.\n'
-                          )  
-                    #              
+                          )
+                    #
 
                     iterations = 0
 
@@ -272,14 +274,14 @@ def rmsd_preparation(input_folder,
             #
 
             pdb_rmsd = 'input/ligand.pdb'
-        
+
         else:
 
             #
             print(' -   PDB structure:', str(pdb_rmsd))
             #
 
-        shutil.copy(os.path.join(path,pdb_rmsd), path_pl_simulation)
+        shutil.copy(os.path.join(path, pdb_rmsd), path_pl_simulation)
 
         return pdb_rmsd
 
@@ -309,14 +311,16 @@ def rmsd_preparation(input_folder,
         - pdb_rmsd : str
             Name of the pdb structure to calculate rmsd.
         """
-        
+
         #
-        print(' -   Writing files.')
+        print(' -   Writing files.\n')
         #
+
+        path_to_run = os.path.join(path_pl_simulation, 'run_rmsd')
 
         if iterations == 0:
 
-            with open(os.path.join(path_pl_simulation, 'run_rmsd'), 'w') as fileout:
+            with open(path_to_run, 'w') as fileout:
 
                 fileout.writelines(
                     '#!/bin/bash\n'
@@ -342,7 +346,7 @@ def rmsd_preparation(input_folder,
 
         else:
 
-            with open(os.path.join(path_pl_simulation, 'run_rmsd'), 'w') as fileout:
+            with open(path_to_run, 'w') as fileout:
 
                 fileout.writelines(
                     '#!/bin/bash\n'
@@ -368,6 +372,8 @@ def rmsd_preparation(input_folder,
                     'done\n'
                 )
 
+        return path_to_run
+
     #
     print(' ')
     print('*******************************************************************')
@@ -386,10 +392,13 @@ def rmsd_preparation(input_folder,
                            path,
                            path_pl_simulation)
 
-    write_files(residue_name,
-                iterations,
-                pdb_rmsd,
-                path_pl_simulation)
+    path_to_run = write_files(residue_name,
+                              iterations,
+                              pdb_rmsd,
+                              path_pl_simulation)
+
+    os.chdir(path_pl_simulation)
+    os.system("sbatch %s" % path_to_run)
 
     #
     print(' ')
