@@ -44,7 +44,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-f", "--file", type=str, dest="input_file",
-                        default=None, help="Name of the file corresponding to the isolated ligand with connectivity.")
+                        default=None, required=True, help="Name of the file corresponding to the isolated ligand with connectivity.")
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
                         default='output', help="Name of the output directory where the simulation\
         is located.")
@@ -75,6 +75,8 @@ def dihedral_angles_retriever_main(input_folder,
         Name of the folder where the output of the simulation is located.
     - residue_name : str
         Residue name of the ligand.
+    - input_file : str
+        Name of the file corresponding to the isolated ligand with connectivity.
 
     Returns
     ----------
@@ -163,8 +165,7 @@ def dihedral_angles_retriever_main(input_folder,
 
         return rotatable_bonds_dict
 
-    def atoms_to_track(residue_name,
-                       rotatable_bonds_dict,
+    def atoms_to_track(rotatable_bonds_dict,
                        input_file):
         """
         Function
@@ -174,10 +175,10 @@ def dihedral_angles_retriever_main(input_folder,
 
         Parameters
         ----------
-        - residue_name : str
-            Residue name of the ligand.
         - rotatable_bonds_dict : dict
             Dictionary with the rotatable bonds of the ligand.
+        - input_file : str
+            Name of the file corresponding to the isolated ligand with connectivity.
 
         Returns
         ----------
@@ -472,8 +473,7 @@ def dihedral_angles_retriever_main(input_folder,
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
 
-    dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(residue_name,
-                                                                     rotatable_bonds_dict,
+    dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(rotatable_bonds_dict,
                                                                      input_file)
 
     #
@@ -793,7 +793,7 @@ def clustering(n_cluster,
         entropy_df.to_csv(os.path.join(
             path_results, 'entropy.csv'), index=False)
 
-        print(' -   Entropic information written in /dihedrals/entropy.csv ')
+        print(' -   Entropic information written in /dihedrals/entropy.csv.')
 
     if clustering_method == 'kmeans':
 
@@ -848,8 +848,7 @@ def main(args):
 
     #
     print(' ')
-    print(' -   Results written in /dihedrals')
-    print(' ')
+    print(' -   Results written in /dihedrals.\n')
 
 
 if __name__ == '__main__':
