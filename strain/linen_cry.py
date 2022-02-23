@@ -173,7 +173,7 @@ def linen_prepare(input_folder,
         - path : str
             Absolute path from where the code is being executed.
         - pdb_name : str
-            Name of the pdb we ant to perform the simulation with.
+            Name of the pdb we want to perform the simulation with.
         - residue_name : str
             Residue name of the ligand in the pdb of each cluster.
         - path_energies : str
@@ -207,9 +207,62 @@ def linen_prepare(input_folder,
 
             copy_tree(path_previous_DataLocal, path_DataLocal)
 
+    def constraint_retriever(pdb_name,
+                             path):
+        """
+        Function
+        ----------
+        Retrieves information from pdb to introduce in the .conf file.
+
+        Parameters
+        ----------
+        - pdb_name : str
+            Name of the pdb we want to perform the simulation with.
+        - path : str
+            Absolute path from where the code is being executed.
+
+        Returns
+        ----------
+        - chain : str
+            Chain name of the ligand.
+        - number : str
+            Number of the ligand.
+        - atom : str
+            First atom of te pdb.
+        """
+
+        cont = 0
+
+        with open(os.path.join(path,pdb_name)) as filein:
+            for line in filein:
+                if cont != 0:
+                    if 'HETATM' in line:
+
+                        line = line.split()
+
+                        if len(line[4]) == 5:
+
+                            chain = line[4].split()[0]
+                            number = "".join(line[4].split()[1:])
+                            atom = '_' + line[2] + '_'
+
+                        else:
+
+                            chain = line[4]
+                            number = line[5]
+                            atom = '_' + line[2] + '_'
+                    
+                        break
+
+                cont += 1
+
+        return chain, number, atom
 
     def write_files(force_field,
                     solvent_model,
+                    chain,
+                    number,
+                    atom,
                     path_energies):
         """
         Function
@@ -280,14 +333,14 @@ def linen_prepare(input_folder,
                 '      },\n'
                 '\n'
                 '      "constraints":[\n'
-                '      { "type": "constrainAtomToPosition", "springConstant": 0.5, "equilibriumDistance": 0.0, "constrainThisAtom": "L:290:_C2_" }\n'
+                '      { "type": "constrainAtomToPosition", "springConstant": 0.5, "equilibriumDistance": 0.0, "constrainThisAtom": "' + chain + ':' + number + ':' + atom + '" }\n'
                 '      ],\n'
                 '\n'
                 '      "SideChainPerturbation": {\n'
                 '        "sideChainsToPerturb": {\n'
                 '          "links": {\n'
                 '            "ids": [\n'
-                '              "L:290"\n'
+                '              "' + chain + ':' + number + '"\n'
                 '            ]\n'
                 '          }\n'
                 '        },\n'
@@ -409,7 +462,14 @@ def linen_prepare(input_folder,
                           path_energies,
                           path_previous_simulation)
 
-    write_files(force_field, solvent_model, path_energies)
+    chain, number, atom = constraint_retriever(pdb_name,path)
+
+    write_files(force_field,
+                solvent_model,
+                chain,
+                number,
+                atom,
+                path_energies)
 
     #
     print(' ')
@@ -429,7 +489,6 @@ def linen_prepare(input_folder,
     print('          :> sbatch run_analysis')
     print(' ')
     print('-------------------------------------------------------------------')
-    #
 
 
 def main(args):
