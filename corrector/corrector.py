@@ -51,6 +51,8 @@ def parse_args(args):
     parser.add_argument("-q", "--quantile", type=float, dest="quantile",
                         default=1, help="Percentage of data with lowest total energy snapshots you want\
         to keep to assess the strain energy")
+    parser.add_argument("--skip_strain_per_cluster", dest="strain_per_cluster_bool",
+                        default=False, action='store_true', help="Flag to choose if strain per cluster code is skipped.")
 
     parsed_args = parser.parse_args(args)
 
@@ -60,7 +62,8 @@ def parse_args(args):
 def corrector(input_folder,
               residue_name,
               report_name,
-              quantile):
+              quantile,
+              strain_per_cluster_bool):
     """
     Function
     ----------
@@ -821,7 +824,6 @@ def corrector(input_folder,
 
         else:
 
-            print(' ')
             print(' -   Quantile chosen for the results:', quantile)
 
             strain_energy_vector, \
@@ -924,12 +926,27 @@ def corrector(input_folder,
     #
     print('     -   Job finished succesfully. Energies corrected will be found in \n'
           '         mod_' + report_name + ' files.\n')
-    print(' -   Associating strain to RMSD clustered positions.')
     #
 
-    strain_per_cluster(simulation_df,
-                       path_pl_simulation,
-                       path_pl_results)
+    if not strain_per_cluster_bool:
+
+        #
+        print(' -   Associating strain to RMSD clustered positions.')
+        #
+
+        strain_per_cluster(simulation_df,
+                           path_pl_simulation,
+                           path_pl_results)
+
+    else: 
+
+        #
+        print(' -   Strain association to clustered positions skipped.\n')
+        #
+
+        
+
+
 
     results_writer(strain_energy_list,
                    strain_energy_quantile,
@@ -971,7 +988,8 @@ def main(args):
     corrector(input_folder=args.input_folder,
               residue_name=args.residue_name,
               report_name=args.report_name,
-              quantile=args.quantile)
+              quantile=args.quantile,
+              strain_per_cluster_bool=args.strain_per_cluster_bool)
 
 
 if __name__ == '__main__':
