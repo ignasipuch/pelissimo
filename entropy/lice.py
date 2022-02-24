@@ -147,11 +147,7 @@ def lice_results(input_folder,
 
     #
     print(' ')
-    print('*******************************************************************')
-    print('*                           peleLiCE                              *')
-    print('* --------------------------------------------------------------- *')
-    print('*        Ligand\'s conformational entropy from simulations         *')
-    print('*******************************************************************')
+    print('* LiCE *')
     print(' ')
     #
 
