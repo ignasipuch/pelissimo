@@ -53,7 +53,7 @@ def parse_args(args):
     parser.add_argument("-cm", "--clustering_method", type=str, dest="clustering_method",
                         default='bin', help="Method to cluster data: bin or kmeans.")
     parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
-                        default=None, help="Number of clusters to cluster the data.")
+                        default=0, help="Number of clusters to cluster the data.")
 
     parsed_args = parser.parse_args(args)
 
@@ -698,7 +698,7 @@ def clustering(n_cluster,
         simulation_df = scaler(simulation_df,
                                dihedral_bond_df)
 
-        if n_cluster == None:
+        if n_cluster == 0:
 
             #
             print('     -   No information about the number of clusters was given.')
@@ -824,9 +824,7 @@ def main(args):
     """
     #
     print(' ')
-    print('*******************************************************************')
-    print('*                     peleDihedralClustering                      *')
-    print('*******************************************************************')
+    print('* Dihedral Clustering *')
     print(' ')
     print(' -   Gathering information')
     #
