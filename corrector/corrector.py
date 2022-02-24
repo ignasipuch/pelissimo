@@ -742,7 +742,6 @@ def corrector(input_folder,
                 'analysis.generate(path="analysis", clustering_type="meanshift")\n'
             )
 
-
         return path_to_run
 
     def results_writer(strain_energy_list,
@@ -952,12 +951,11 @@ def corrector(input_folder,
                            path_pl_simulation,
                            path_pl_results)
 
-    else: 
+    else:
 
         #
         print(' -   Strain association to clustered positions skipped.\n')
         #
-
 
     results_writer(strain_energy_list,
                    strain_energy_quantile,
@@ -967,7 +965,7 @@ def corrector(input_folder,
                    ligand_min_energy)
 
     path_to_run = analysis_files_writer(column_binding_energy,
-                          path_pl_simulation)
+                                        path_pl_simulation)
 
     #
     print(' -   run_analysis and script.py files have been generated.')
@@ -983,7 +981,7 @@ def corrector(input_folder,
         os.chdir(path_pl_simulation)
         os.system("sbatch %s" % path_to_run)
 
-        # 
+        #
         print(' ')
 
     else:
@@ -991,8 +989,6 @@ def corrector(input_folder,
         #
         print(' -   Platform analysis skipped.')
         print(' -   It can be run afterwards with: sbatch run_analysis \n')
-        #
-
 
 
 def main(args):
