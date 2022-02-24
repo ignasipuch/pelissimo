@@ -51,8 +51,11 @@ def parse_args(args):
     parser.add_argument("-q", "--quantile", type=float, dest="quantile",
                         default=1, help="Percentage of data with lowest total energy snapshots you want\
         to keep to assess the strain energy")
+
     parser.add_argument("--skip_strain_per_cluster", dest="strain_per_cluster_bool",
                         default=False, action='store_true', help="Flag to choose if strain per cluster code is skipped.")
+    parser.add_argument("--skip_platform_analysis", dest="analysis_bool",
+                        default=False, action='store_true', help="Flag to choose if the platform analysis is skipped.")
 
     parsed_args = parser.parse_args(args)
 
@@ -63,7 +66,8 @@ def corrector(input_folder,
               residue_name,
               report_name,
               quantile,
-              strain_per_cluster_bool):
+              strain_per_cluster_bool,
+              analysis_bool):
     """
     Function
     ----------
@@ -696,9 +700,16 @@ def corrector(input_folder,
             Column of the report where the binding energy metric is located.
         - path_pl_simulation: str
             The path to the protein-ligand simulation.
+
+        Returns
+        ----------
+        - path_to_run : str
+            Path to the slurm file to be run.
         """
 
-        with open(os.path.join(path_pl_simulation, 'run_analysis'), 'w') as fileout:
+        path_to_run = os.path.join(path_pl_simulation, 'run_analysis')
+
+        with open(path_to_run, 'w') as fileout:
 
             fileout.writelines(
                 '#!/bin/bash\n'
@@ -730,6 +741,9 @@ def corrector(input_folder,
                 'mod_' + report_name + '", cpus=48)\n'
                 'analysis.generate(path="analysis", clustering_type="meanshift")\n'
             )
+
+
+        return path_to_run
 
     def results_writer(strain_energy_list,
                        strain_energy_quantile,
@@ -944,9 +958,6 @@ def corrector(input_folder,
         print(' -   Strain association to clustered positions skipped.\n')
         #
 
-        
-
-
 
     results_writer(strain_energy_list,
                    strain_energy_quantile,
@@ -955,22 +966,33 @@ def corrector(input_folder,
                    quantile,
                    ligand_min_energy)
 
-    analysis_files_writer(column_binding_energy,
+    path_to_run = analysis_files_writer(column_binding_energy,
                           path_pl_simulation)
 
     #
     print(' -   run_analysis and script.py files have been generated.')
-    print(' -   All results are stored in ../' + input_folder + '/strain')
-    print(' ')
-    print('------------------------------ INFO -------------------------------')
-    print(' ')
-    print(' -   To perform a new analysis:')
-    print('     :> cd ' + input_folder)
-    print('     :> sbatch run_analysis')
-    print(' -   The new plots and files will be in /analysis.')
-    print(' ')
-    print('-------------------------------------------------------------------')
-    print(' ')
+    print(' -   All results are stored in ../' + input_folder + '/strain.\n')
+    #
+
+    if not analysis_bool:
+
+        #
+        print(' -   Launching platform job:\n')
+        #
+
+        os.chdir(path_pl_simulation)
+        os.system("sbatch %s" % path_to_run)
+
+        # 
+        print(' ')
+
+    else:
+
+        #
+        print(' -   Platform analysis skipped.')
+        print(' -   It can be run afterwards with: sbatch run_analysis \n')
+        #
+
 
 
 def main(args):
@@ -989,7 +1011,8 @@ def main(args):
               residue_name=args.residue_name,
               report_name=args.report_name,
               quantile=args.quantile,
-              strain_per_cluster_bool=args.strain_per_cluster_bool)
+              strain_per_cluster_bool=args.strain_per_cluster_bool,
+              analysis_bool=args.analysis_bool)
 
 
 if __name__ == '__main__':
