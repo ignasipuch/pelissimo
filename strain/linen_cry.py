@@ -45,6 +45,9 @@ def parse_args(args):
     parser.add_argument("-sm", "--solvent_model", type=str, dest="solvent_model",
                         default=None, help="Solvent model with which the simulation will run.")
 
+    parser.add_argument("--skip_simulation", dest="simulation_bool",
+                        default=False, action='store_true', help="Flag to choose if the PELE simulation is performed automatically or not.")
+
     parsed_args = parser.parse_args(args)
 
     return parsed_args
@@ -54,7 +57,8 @@ def linen_prepare(input_folder,
                   residue_name,
                   pdb_name,
                   force_field,
-                  solvent_model):
+                  solvent_model,
+                  simulation_bool):
     """
     Function
     ----------
@@ -263,7 +267,8 @@ def linen_prepare(input_folder,
                     chain,
                     number,
                     atom,
-                    path_linen):
+                    path_linen,
+                    pdb_name):
         """
         Function
         ----------
@@ -392,12 +397,11 @@ def linen_prepare(input_folder,
 
             fileout.writelines(
                 '#!/bin/bash\n'
-                '#SBATCH -J PELEne\n'
+                '#SBATCH -J ' + pdb_name.split('.pdb')[0] + '\n'
                 '#SBATCH --output=PELEne.out\n'
                 '#SBATCH --error=PELEne.err\n'
                 '#SBATCH --ntasks=48\n'
-                '#SBATCH --qos=debug\n'
-                '#SBATCH --time=00:10:00\n'
+                '#SBATCH --time=05:00:00\n'
                 '\n'
                 'module purge\n'
                 'module load intel mkl impi gcc\n'
@@ -416,16 +420,15 @@ def linen_prepare(input_folder,
                 '#SBATCH --output=analysis.out\n'
                 '#SBATCH --error=analysis.err\n'
                 '#SBATCH --ntasks=48\n'
-                '#SBATCH --qos=debug\n'
-                '#SBATCH --time=00-01:00:00\n'
+                '#SBATCH --time=00-05:00:00\n'
                 '\n'
                 'module load ANACONDA/2019.10\n'
-                'module load intel mkl impi gcc # 2> /dev/null\n'
+                'module load intel mkl impi gcc\n'
                 'module load impi\n'
                 'module load boost/1.64.0\n'
                 '\n'
                 'eval "$(conda shell.bash hook)"\n'
-                'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
+                'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.3\n'
                 '\n'
                 'python script.py\n'
             )
@@ -474,10 +477,19 @@ def linen_prepare(input_folder,
                               chain,
                               number,
                               atom,
-                              path_linen)
+                              path_linen,
+                              pdb_name)
 
-    os.chdir(path_linen)
-    os.system("sbatch %s" % path_to_run)
+    if not simulation_bool:
+
+        print(' ')
+
+        os.chdir(path_linen)
+        os.system("sbatch %s" % path_to_run)
+
+    else:
+
+        print(' -   PELE simulation skipped.')
 
     #
     print(' ')
@@ -498,7 +510,8 @@ def main(args):
                   residue_name=args.residue_name,
                   pdb_name=args.input_file,
                   force_field=args.force_field,
-                  solvent_model=args.solvent_model)
+                  solvent_model=args.solvent_model,
+                  simulation_bool=args.simulation_bool)
 
 
 if __name__ == '__main__':
