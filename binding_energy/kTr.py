@@ -9,7 +9,6 @@ import numpy as np
 import time
 from scipy import stats
 import matplotlib.pyplot as plt
-from scipy.special import expit
 
 # Constant
 R = 1.985e-3
@@ -141,12 +140,12 @@ def statistics(input_folder,
                             if cont != 0:
                                 line = line.split('   ')
                                 be.append(float(line[column-1]))
-                                step.append(int(line[1]))
+                                ene_t.append(float(line[3]))
                             cont += 1
-            return be, step
+            return be, ene_t
 
         be = []
-        step = []
+        ene_t = []
         numeric_files = [s for s in files if s.isnumeric()]
 
         if len(numeric_files) != 0:
@@ -165,7 +164,7 @@ def statistics(input_folder,
                         raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                         Please check the path to the files and the files name.')
 
-                    be, step = file_reader(
+                    be, ene_t = file_reader(
                         files, new_directory, report_name, column)
 
         else:
@@ -174,11 +173,15 @@ def statistics(input_folder,
                 raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                 Please check the path to the files and the files name.')
 
-            be, step = file_reader(files, folderpath, report_name, column)
+            be, ene_t = file_reader(files, folderpath, report_name, column)
 
-        return be, step
+        min_energy = min(ene_t)
+        ene_t = np.array(ene_t) - min_energy
+        be = np.array(be)
 
-    def boltzmann_weighted(be, T):
+        return be, ene_t
+
+    def boltzmann_weighted(be, ene_t, T):
         """
         Function
         ----------
@@ -199,7 +202,7 @@ def statistics(input_folder,
             Value of the boltzmann weighted energy.
         """
 
-        exp_bz = np.exp(-be/(R*T))
+        exp_bz = np.exp(-ene_t/(R*T))
         nominator = be.dot(exp_bz)
         denominator = np.sum(exp_bz)
         ene_bz = nominator/denominator
@@ -279,9 +282,9 @@ def statistics(input_folder,
         folderpath = os.path.join(outputspath, folder)
         files = os.listdir(folderpath)
 
-        be, _ = reader(files, folderpath, column)
+        be, ene_t = reader(files, folderpath, column)
         be = np.array(be, dtype=np.float128)
-        ene_bz = boltzmann_weighted(be, T)
+        ene_bz = boltzmann_weighted(be, ene_t, T)
 
         dict[system] = float(ene_bz)
 
@@ -321,8 +324,8 @@ def main(args):
 
     start_time = time.time()
 
-    T1 = np.linspace(10e-2, 1, 20, endpoint=False)
-    T2 = np.linspace(1, 100, 100)
+    T1 = np.linspace(2, 10, 40, endpoint=False)
+    T2 = np.linspace(10, 100, 20)
     T_list = list(np.concatenate((T1, T2))/R)
 
     kT = []
