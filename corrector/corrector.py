@@ -424,6 +424,8 @@ def corrector(input_folder,
             ----------
             - strain_energy_list : list
                 List with all the strain energies calculated in a simulation.
+            - simulation_df : pd.DataFrame
+                Data frame with current energies and strain information.
             """
 
             epochs = []
