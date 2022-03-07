@@ -49,9 +49,6 @@ def parse_args(args):
                         default=298., help="Temperature of the experiment.")
     parser.add_argument("-pS", "--pele_Steps", type=int, dest="pele_steps",
                         default=None, help="Number of Pele Steps in the simulation.")
-    parser.add_argument("-c", "--column", type=int, dest="column",
-                        default=None, help="Column of the report where the interesting\
-                             metric is located.")
     parser.add_argument("-a", "--action", type=str, dest="action",
                         default='all', help="Function the user wants the script to do: all or evolution.")
 
@@ -64,7 +61,6 @@ def statistics(input_folder,
                report_name,
                T,
                pele_steps,
-               column,
                action):
     """
     Function
@@ -82,14 +78,13 @@ def statistics(input_folder,
         Temperature to perform the Boltzmann weights with.
     - pele_steps : int
         Number of pele_steps in the simulation.
-    - column : int 
-        Column where the interesting data is located.
+    - action : str 
+        Functionality of the script we want to use.
     """
 
     def reader(files,
                folderpath,
-               report_name,
-               column):
+               report_name):
         """
         Function
         ----------
@@ -103,14 +98,14 @@ def statistics(input_folder,
             Path where the different epochs of the simulation are located.
         - report_name : str
             Name of the reports to obtain the data from
-        - column : int 
-            Column where the interesting data is located.
 
 
         Returns
         ----------
         - be : list
             Binding energies of all the simulation.
+        - te : list
+            Total energies of all the simulation.
         - step : list
             Steps associated to poses for all the simulation.
         """
@@ -118,7 +113,8 @@ def statistics(input_folder,
         def file_reader(files,
                         folderpath,
                         report_name,
-                        column):
+                        column_be,
+                        column_te):
             """
             Function
             ----------
@@ -132,13 +128,17 @@ def statistics(input_folder,
                 Path where the different epochs of the simulation are located.
             - report_name : str
                 Name of the reports to obtain the data from
-            - column : int 
-                Column where the interesting data is located. 
+            - column_be : int 
+                Column where the binding energy data is located. 
+            - column_be : int 
+                Column where the total energy data is located. 
 
             Returns
             ----------
             - be : list
                 Binding energies of all the simulation.
+            - te : list
+                Total energies of all the simulation.
             - step : list
                 Steps associated to poses for all the simulation.
             """
@@ -161,31 +161,31 @@ def statistics(input_folder,
 
                             if cont != 0:
 
-                                be.append(float(line[column-1]))
+                                be.append(float(line[column_be-1]))
+                                te.append(float(line[column_te-1]))
                                 step.append(int(line[1]))
 
                             cont += 1
 
-            return be, step
+            return be, te, step
 
-        def column_retriever(file,
-                             column):
+        def column_retriever(file):
             """
             Function
             ----------
-            Retrieves the position of the binding energy.
+            Retrieves the position of the binding energy and current energy.
 
             Parameters
             ----------
             - file : list
                 The path to the one report.
-            - column : int 
-                Value give to the --column flag. 
 
             Returns
             ----------
-            - column : int 
-                Column where the interesting data is located. 
+            - column_be : int 
+                Column where the binding energy data is located. 
+            - column_te : int 
+                Column where the total energy data is located. 
             """
 
             cont = 0
@@ -197,29 +197,28 @@ def statistics(input_folder,
                     if cont == 0:
 
                         line = line.split('    ')
-                        column = line.index('BindingEnergy') + 1
+                        column_be = line.index('BindingEnergy') + 1
+                        column_te = line.index('currentEnergy') + 1
 
                         #
                         print(
-                            ' -   No column introduced, picking BindingEnergy column:', column - 1)
+                            ' -   Picking BindingEnergy column:', column_be - 1)
                         #
 
                     cont += 1
 
-            return column
+            return column_be, column_te
 
         be = []
+        te = []
         step = []
         numeric_files = [s for s in files if s.isnumeric()]
 
-        if len(numeric_files) != 0:
+        if len(numeric_files) != 0:          
 
-            if column == None:
-
-                column_file = os.path.join(
-                    folderpath, numeric_files[0], report_name + '_1')
-                column = column_retriever(column_file,
-                                          column)
+            column_file = os.path.join(
+                folderpath, numeric_files[0], report_name + '_1')
+            column_be, column_te = column_retriever(column_file)
 
             for document in numeric_files:
 
@@ -235,10 +234,11 @@ def statistics(input_folder,
                         raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                         Please check the path to the files and the files name.')
 
-                    be, step = file_reader(files,
-                                           new_directory,
-                                           report_name,
-                                           column)
+                    be, te, step = file_reader(files,
+                                               new_directory,
+                                               report_name,
+                                               column_be,
+                                               column_te)
 
         else:
 
@@ -246,20 +246,19 @@ def statistics(input_folder,
                 raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                 Please check the path to the files and the files name.')
 
-            if column == None:
-
-                column_file = os.path.join(folderpath, report_name + '1')
-                column = column_retriever(column_file,
+            column_file = os.path.join(folderpath, report_name + '1')
+            column = column_retriever(column_file,
                                           column)
 
-            be, step = file_reader(files,
+            be, te, step = file_reader(files,
                                    folderpath,
                                    report_name,
                                    column)
 
-        return be, step
+        return be, te, step
 
     def boltzmann_weighted(be,
+                           te,
                            T,
                            steps=[]):
         """
@@ -271,6 +270,8 @@ def statistics(input_folder,
         ----------
         - be : list
             Binding energies of all the simulation.
+        - te : list
+            Total energies of all the simulation.
         - T : float
             Temperature to perform the Boltzmann weights with.
         - steps : list
@@ -281,7 +282,8 @@ def statistics(input_folder,
         - ene_bz : float
             Value of the boltzmann weighted energy.
         """
-        exp_bz = np.exp(-be/(R*T))
+
+        exp_bz = np.exp(-te/(R*T))
 
         if not steps:
 
@@ -683,18 +685,17 @@ def statistics(input_folder,
 
     if action == 'all':
 
-        be, step = reader(files,
+        be, te, step = reader(files,
                           folderpath,
-                          report_name,
-                          column)
+                          report_name)
 
         minimum_energy = min(be)
         be = np.array(be)
-        be4 = be/4
 
-        ene_bz = boltzmann_weighted(be, T)
-        ene_bz4 = boltzmann_weighted(be4, T)
-        ene_step_bz = boltzmann_weighted(be, T, step)
+        min_energy = min(te)
+        te = np.array(te) - min_energy
+
+        ene_bz = boltzmann_weighted(be, te, T)
 
         if pele_steps == None:
 
@@ -727,8 +728,6 @@ def statistics(input_folder,
         print(' -   Average Binding Energy:', np.average(be))
         print(' -   Boltzmann weighted Energy:', ene_bz)
         print(' -   Step weighted Energy:', ene_step)
-        print(' -   Step-Boltzmann weighted Energy:', ene_step_bz)
-        print(' -   Boltzmann weighted corrected Energy:', ene_bz4)
         print(' ')
         #
 
@@ -736,8 +735,7 @@ def statistics(input_folder,
             fileout.writelines(
                 'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
                 '' + str(minimum_energy) + ',' + str(np.average(be)) + ',' + str(ene_bz) +
-                ',' + str(ene_step) + ',' + str(ene_step_bz) +
-                ',' + str(ene_bz4) + '\n'
+                ',' + str(ene_step) + '\n'
             )
 
     elif action == 'evolution':
@@ -791,7 +789,6 @@ def main(args):
                report_name=args.report_name,
                T=args.temperature,
                pele_steps=args.pele_steps,
-               column=args.column,
                action=args.action)
 
     print(' ')
