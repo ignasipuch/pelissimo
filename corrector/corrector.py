@@ -51,6 +51,8 @@ def parse_args(args):
     parser.add_argument("-q", "--quantile", type=float, dest="quantile",
                         default=1, help="Percentage of data with lowest total energy snapshots you want\
         to keep to assess the strain energy")
+    parser.add_argument("-cl", "--clusters_folder", type=str, dest="clusters_folder",
+                    default=None, help="Name of the folder you want to obtain the clusters information from.")
 
     parser.add_argument("--skip_strain_per_cluster", dest="strain_per_cluster_bool",
                         default=False, action='store_true', help="Flag to choose if strain per cluster code is skipped.")
@@ -66,6 +68,7 @@ def corrector(input_folder,
               residue_name,
               report_name,
               quantile,
+              clusters_folder,
               strain_per_cluster_bool,
               analysis_bool):
     """
@@ -565,7 +568,8 @@ def corrector(input_folder,
 
         return strain_energy_quantile
 
-    def strain_per_cluster(simulation_df,
+    def strain_per_cluster(clusters_folder,
+                           simulation_df,
                            path_pl_simulation,
                            path_pl_results):
         """
@@ -651,41 +655,56 @@ def corrector(input_folder,
             cluster_strain_df.to_csv(os.path.join(
                 path_pl_results, 'strain_cluster.csv'))
 
-        path_cluster_analysis = os.path.join(path_pl_simulation, 'analysis')
-        path_cluster_results = os.path.join(path_pl_simulation, 'results')
+        if clusters_folder is None:
 
-        if os.path.isdir(path_cluster_analysis) == False:
+            path_cluster_analysis = os.path.join(path_pl_simulation, 'analysis')
+            path_cluster_results = os.path.join(path_pl_simulation, 'results')
 
-            if os.path.isdir(path_cluster_results) == False:
+            if os.path.isdir(path_cluster_analysis) == False:
 
-                print('     -   No /analysis or /results folder has been found in\n\n   ' +
-                      path_pl_simulation + '\n      Strain per cluster cannot be calculated.')
+                if os.path.isdir(path_cluster_results) == False:
+
+                    #
+                    print('     -   No /analysis or /results folder has been found in\n\n   ' +
+                          path_pl_simulation + '\n      Strain per cluster cannot be calculated.')
+                    #
+
+                else:
+
+                    #
+                    print('     -   Information will be obtained from /results.')
+                    #
+
+                    cluster_information_retriever(path_cluster_results,
+                                                  path_pl_results)
+
+                    #
+                    print('     -   Strain per cluster stored in results folder.\n')
+                    #
 
             else:
 
                 #
-                print('     -   Information will be obtained from /results.')
+                print('     -   Information will be obtained from /analysis.')
                 #
 
                 cluster_information_retriever(path_cluster_results,
                                               path_pl_results)
 
                 #
-                print('     -   Strain per cluster stored in results folder.\n')
-                #
+                print('     -   Strain per cluster stored in\n ' +
+                      input_folder + '/strain/strain_cluster.csv.\n')
 
         else:
 
             #
-            print('     -   Information will be obtained from /analysis.')
+            print('     -   Information will be obtained from /' + clusters_folder + '.\n')
             #
 
-            cluster_information_retriever(path_cluster_results,
+            path_cluster = os.path.join(path_pl_simulation,clusters_folder)
+
+            cluster_information_retriever(path_cluster,
                                           path_pl_results)
-
-            #
-            print('     -   Strain per cluster stored in\n ' +
-                  input_folder + '/strain/strain_cluster.csv.\n')
 
     def analysis_files_writer(column_binding_energy,
                               path_pl_simulation):
@@ -837,7 +856,7 @@ def corrector(input_folder,
 
         else:
 
-            print(' -   Quantile chosen for the results:', quantile)
+            print(' -   Quantile chosen for the results:', quantile, '\n')
 
             strain_energy_vector, \
                 bin_edges, \
@@ -947,7 +966,8 @@ def corrector(input_folder,
         print(' -   Associating strain to RMSD clustered positions.')
         #
 
-        strain_per_cluster(simulation_df,
+        strain_per_cluster(clusters_folder,
+                           simulation_df,
                            path_pl_simulation,
                            path_pl_results)
 
@@ -1007,6 +1027,7 @@ def main(args):
               residue_name=args.residue_name,
               report_name=args.report_name,
               quantile=args.quantile,
+              clusters_folder=args.clusters_folder,
               strain_per_cluster_bool=args.strain_per_cluster_bool,
               analysis_bool=args.analysis_bool)
 
