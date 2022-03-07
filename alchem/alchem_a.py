@@ -339,7 +339,6 @@ def main(args):
     print('                      %s seconds' % (time.time() - start_time))
     print(' ')
     print('*******************************************************************')
-    #
 
 
 if __name__ == '__main__':
