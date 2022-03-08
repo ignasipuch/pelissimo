@@ -197,13 +197,26 @@ def statistics(input_folder,
                     if cont == 0:
 
                         line = line.split('    ')
-                        column_be = line.index('BindingEnergy') + 1
-                        column_te = line.index('currentEnergy') + 1
 
-                        #
-                        print(
+                        if 'BindingEnergy' in line:
+
+                            column_be = line.index('BindingEnergy') + 1
+                            
+                            #
+                            print(
                             ' -   Picking BindingEnergy column:', column_be - 1)
-                        #
+                            #
+
+                        else:
+
+                            column_be = 1
+
+                            #
+                            print(
+                                ' -   No BindingEnergy column.')
+                            #
+
+                        column_te = line.index('currentEnergy') + 1
 
                     cont += 1
 
@@ -246,16 +259,16 @@ def statistics(input_folder,
                 raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                 Please check the path to the files and the files name.')
 
-            column_file = os.path.join(folderpath, report_name + '1')
-            column = column_retriever(column_file,
-                                          column)
+            column_file = os.path.join(folderpath, report_name + '_1')
+            column_be, column_te = column_retriever(column_file)
 
             be, te, step = file_reader(files,
-                                   folderpath,
-                                   report_name,
-                                   column)
+                                       folderpath,
+                                       report_name,
+                                       column_be,
+                                       column_te)
 
-        return be, te, step
+        return be, te, step, column_be
 
     def boltzmann_weighted(be,
                            te,
@@ -685,17 +698,30 @@ def statistics(input_folder,
 
     if action == 'all':
 
-        be, te, step = reader(files,
-                          folderpath,
-                          report_name)
+        be, te, step, column_be = reader(files,
+                                         folderpath,
+                                         report_name)
 
-        minimum_energy = min(be)
-        be = np.array(be)
+        if column_be != 1:
 
-        min_energy = min(te)
-        te = np.array(te) - min_energy
+            min_energy = min(te)
+            te = np.array(te) - min_energy
 
-        ene_bz = boltzmann_weighted(be, te, T)
+            minimum_energy = min(be)
+            be = np.array(be)
+
+            average = np.average(be)
+
+            ene_bz = boltzmann_weighted(be, te, T)
+
+        else:
+
+            minimum_energy = min(te)
+            te = np.array(te)
+
+            average = np.average(te)
+
+            ene_bz = boltzmann_weighted(te, te, T)
 
         if pele_steps == None:
 
@@ -711,7 +737,13 @@ def statistics(input_folder,
 
             else:
 
-                ene_step, _ = step_weighted(be, step, pele_steps)
+                if column_be != 1:
+
+                    ene_step, _ = step_weighted(be, step, pele_steps)
+
+                else: 
+
+                    ene_step, _ = step_weighted(te, step, pele_steps)
 
             #
             print(' -   Pele steps:', pele_steps)
@@ -719,13 +751,19 @@ def statistics(input_folder,
 
         else:
 
-            ene_step, _ = step_weighted(be, step, pele_steps)
+            if column_be != 1:
+
+                ene_step, _ = step_weighted(be, step, pele_steps)
+
+            else: 
+
+                ene_step, _ = step_weighted(te, step, pele_steps)
 
         #
         print(' ')
         print(' RESULTS:')
         print(' -   Minimum Binding Energy:', minimum_energy)
-        print(' -   Average Binding Energy:', np.average(be))
+        print(' -   Average Binding Energy:', average)
         print(' -   Boltzmann weighted Energy:', ene_bz)
         print(' -   Step weighted Energy:', ene_step)
         print(' ')
@@ -734,7 +772,7 @@ def statistics(input_folder,
         with open('energy.csv', 'w') as fileout:
             fileout.writelines(
                 'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
-                '' + str(minimum_energy) + ',' + str(np.average(be)) + ',' + str(ene_bz) +
+                '' + str(minimum_energy) + ',' + str(average) + ',' + str(ene_bz) +
                 ',' + str(ene_step) + '\n'
             )
 
