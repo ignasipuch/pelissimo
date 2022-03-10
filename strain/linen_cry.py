@@ -245,9 +245,9 @@ def linen_prepare(input_folder,
                         line = line.split()
 
                         if len(line[4]) == 5:
-
-                            chain = line[4].split()[0]
-                            number = "".join(line[4].split()[1:])
+                        
+                            chain = list(line[4])[0]
+                            number = "".join(list(line[4])[1:])
                             atom = '_' + line[2] + '_'
 
                         else:
