@@ -256,6 +256,10 @@ def linen_prepare(input_folder,
                             number = line[5]
                             atom = '_' + line[2] + '_'
 
+                        if len(atom) == 3:
+
+                            atom = atom + '_'
+
                         break
 
                 cont += 1
@@ -401,7 +405,8 @@ def linen_prepare(input_folder,
                 '#SBATCH --output=PELEne.out\n'
                 '#SBATCH --error=PELEne.err\n'
                 '#SBATCH --ntasks=48\n'
-                '#SBATCH --time=05:00:00\n'
+                '#SBATCH --qos=debug\n'
+                '#SBATCH --time=02:00:00\n'
                 '\n'
                 'module purge\n'
                 'module load intel mkl impi gcc\n'
