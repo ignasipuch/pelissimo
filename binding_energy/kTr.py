@@ -13,14 +13,64 @@ import matplotlib.pyplot as plt
 # Constant
 R = 1.985e-3
 
-DG = {'1CB0': -7.6,
-      '1K27': -12.3,
-      '1HPV': -13.3,
-      '1HSG': -13.1,
-      '1MSM': -14.9,
-      '1T3R': -15.0,
-      '6QGE': -7.8,
-      '6QGF': -8.3}
+DG = {'1A28':-3.01,
+      '1AI5':3.10,
+      '1AZM':-0.82,
+      '1BR6':3.79,
+      '1CTR':2.34,
+      '1CVU':-2.58,
+      '1EOC':-0.06,
+      '1EZQ':-4.15,
+      '1F0S':1.71,
+      '1F0T':0.00,
+      '1F0U':2.51,
+      '1FH8':-1.21,
+      '1FH9':-0.59,
+      '1FHD':-1.12,
+      '1FJS':-5.39,
+      '1FQ5':0.82,
+      '1GWX':-1.90,
+      '1H1P':1.47,
+      '1H1S':-3.03,
+      '1HP0':-0.95,
+      '1IVD':2.38,
+      '1IVE':5.25,
+      '1IY7':-0.25,
+      '1JD0':-3.06,
+      '1K1J':-2.12,
+      '1LPZ':-2.18,
+      '1LQD':-2.79,
+      '1LRH':-1.12,
+      '1M2Z':-3.85,
+      '1ML1':2.25,
+      '1MQ6':-7.02,
+      '1MTS':-2.57,
+      '1N2V':2.62,
+      '1N46':-6.16,
+      '1OWE':-0.27,
+      '1PSO':-5.91,
+      '1Q1G':-3.50,
+      '1QHI':-1.77,
+      '1R09':-0.54,
+      '1S19':-0.06,
+      '1TT1':-1.62,
+      '1ULB':0.95,
+      '1UML':-2.08,
+      '1UOU':-2.32,
+      '1W2G':1.95,
+      '1YDR':0.65,
+      '1YDS':0.11,
+      '1YDT':-1.80,
+      '1YQY':-2.21,
+      '2ACK':-0.82,
+      '2BR1':1.17,
+      '2CTC':2.88,
+      '2MCP':1.77,
+      '2PCP':-3.68,
+      '2TMN':0.16,
+      '3PTB':1.71,
+      '4TS1':1.45}
+
 
 
 def parse_args(args):
@@ -267,24 +317,32 @@ def statistics(input_folder,
 
     path = str(pathlib.Path().absolute())
     outputspath = os.path.join(path, input_folder)
+    systems = os.listdir(path)
 
-    if os.path.isdir(outputspath) == False:
-        raise Exception(
-            'FolderPathError: There is no folder with this name. Please check the path and the folder name.')
+    output_directories = [os.path.join(path,system,'LIG_Pele','output') for system in systems if os.path.isdir(system)]
 
-    outputpaths = os.listdir(outputspath)
+    #if os.path.isdir(outputspath) == False:
+    #    raise Exception(
+    #        'FolderPathError: There is no folder with this name. Please check the path and the folder name.')
 
     dict = {}
 
-    for folder in outputpaths:
+    for folder in output_directories:
 
-        system = folder.split('_')[4]
-        folderpath = os.path.join(outputspath, folder)
-        files = os.listdir(folderpath)
+        print(folder)
 
-        be, ene_t = reader(files, folderpath, column)
+        system = folder.split('/')[-3]
+
+        print(system)
+
+        files = os.listdir(folder)
+
+        be, ene_t = reader(files, folder, column)
         be = np.array(be, dtype=np.float128)
         ene_bz = boltzmann_weighted(be, ene_t, T)
+
+        print(ene_bz)
+        print(' ')
 
         dict[system] = float(ene_bz)
 
@@ -324,8 +382,8 @@ def main(args):
 
     start_time = time.time()
 
-    T1 = np.linspace(2, 10, 40, endpoint=False)
-    T2 = np.linspace(10, 100, 20)
+    T1 = np.linspace(0.1, 2, 40, endpoint=False)
+    T2 = np.linspace(2, 100, 20)
     T_list = list(np.concatenate((T1, T2))/R)
 
     kT = []
