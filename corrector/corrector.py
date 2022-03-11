@@ -20,6 +20,12 @@ import pandas as pd
 from collections import OrderedDict
 from collections import defaultdict
 
+# ----------------------------------------------------------------------- #
+# Constant:
+T = 298.
+R = 1.985e-3
+# ----------------------------------------------------------------------- #
+
 
 def parse_args(args):
     """
@@ -708,6 +714,34 @@ def corrector(input_folder,
             cluster_information_retriever(path_cluster,
                                           path_pl_results)
 
+    def boltzmann_weighted(be, ene_t, T):
+        """
+        Function
+        ----------
+        Calculates boltzmann weighted energy.
+
+        Parameters
+        ----------
+        - be : list
+            Binding energies of all the simulation.
+        - T : float
+            Temperature to perform the Boltzmann weights with.
+        - steps : list
+            Steps associated to poses for all the simulation.
+
+        Returns
+        ----------
+        - ene_bz : float
+            Value of the boltzmann weighted energy.
+        """
+
+        exp_bz = np.exp(-ene_t/(R*T))
+        nominator = be.dot(exp_bz)
+        denominator = np.sum(exp_bz)
+        ene_bz = nominator/denominator
+
+        return ene_bz
+
     def analysis_files_writer(column_binding_energy,
                               path_pl_simulation):
         """
@@ -770,7 +804,8 @@ def corrector(input_folder,
                        path,
                        report_name,
                        quantile,
-                       ligand_min_energy):
+                       ligand_min_energy,
+                       strain_bz):
         """
         Function
         ----------
@@ -844,9 +879,9 @@ def corrector(input_folder,
 
             with open(os.path.join(path, 'strain.csv'), 'w') as fileout:
                 fileout.writelines(
-                    'Minimum,Histogram max,Average,Maximum\n'
+                    'Minimum,Histogram max,Average,Maximum,Boltzmann\n'
                     '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
-                    str(average_ene) + ',' + str(max_ene) + '\n')
+                    str(average_ene) + ',' + str(max_ene) + ',' +  str(strain_bz) + '\n')
 
             # Plot
             plt.title('Strain distribution')
@@ -878,7 +913,7 @@ def corrector(input_folder,
                 fileout.writelines(
                     'Minimum,Histogram max,Average,Maximum\n'
                     '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
-                    str(average_ene) + ',' + str(max_ene) + '\n'
+                    str(average_ene) + ',' + str(max_ene) + ',' +  str(strain_bz) +'\n'
                     '' + str(minimum_ene_q) + ',' + str(hist_ene_q) + ',' +
                     str(average_ene_q) + ',' + str(max_ene_q) + '\n'
                 )
@@ -979,12 +1014,17 @@ def corrector(input_folder,
         print(' -   Strain association to clustered positions skipped.\n')
         #
 
+    strain_bz = boltzmann_weighted(simulation_df['strainEnergy'].to_numpy(),
+                                   simulation_df['currentEnergy'].to_numpy() - min(simulation_df['currentEnergy'].tolist()),
+                                   T)
+
     results_writer(strain_energy_list,
                    strain_energy_quantile,
                    path_pl_results,
                    report_name,
                    quantile,
-                   ligand_min_energy)
+                   ligand_min_energy,
+                   strain_bz)
 
     path_to_run = analysis_files_writer(column_binding_energy,
                                         path_pl_simulation)
