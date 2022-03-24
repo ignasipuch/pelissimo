@@ -127,7 +127,7 @@ def corrector(input_folder,
         path_pl_output = os.path.join(path_pl_simulation, 'output')
         path_pl_results = os.path.join(path_pl_simulation, 'strain')
 
-        path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
+        path_l_simulation = os.path.join(path, residue_name + '_linen')
 
         if os.path.isdir(path_pl_simulation) == False:
             raise Exception('PathError: There is no folder with this path: ' +
