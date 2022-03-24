@@ -45,6 +45,8 @@ def parse_args(args):
         analyze are located.")
     parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report', help="Name of the report files.")
+    parser.add_argument("-c", "--column", type=int, dest="column",
+                        default=None, help="Column of the metric to consider.")
     parser.add_argument("-T", "--temperature", type=float, dest="temperature",
                         default=298., help="Temperature of the experiment.")
     parser.add_argument("-pS", "--pele_Steps", type=int, dest="pele_steps",
@@ -59,6 +61,7 @@ def parse_args(args):
 
 def statistics(input_folder,
                report_name,
+               column,
                T,
                pele_steps,
                action):
@@ -159,11 +162,21 @@ def statistics(input_folder,
 
                             line = line.split('    ')
 
-                            if cont != 0:
+                            if cont == 1:
 
                                 be.append(float(line[column_be-1]))
                                 te.append(float(line[column_te-1]))
                                 step.append(int(line[1]))
+
+                            elif cont > 1:
+
+                                repeat = int(line[1]) - step[-1]
+
+                                step.append(int(line[1]))
+                                be.extend([float(line[column_be-1])
+                                          for i in range(repeat)])
+                                te.extend([float(line[column_te-1])
+                                          for i in range(repeat)])
 
                             cont += 1
 
@@ -201,10 +214,10 @@ def statistics(input_folder,
                         if 'BindingEnergy' in line:
 
                             column_be = line.index('BindingEnergy') + 1
-                            
+
                             #
                             print(
-                            ' -   Picking BindingEnergy column:', column_be - 1)
+                                ' -   Picking BindingEnergy column:', column_be - 1)
                             #
 
                         else:
@@ -227,7 +240,7 @@ def statistics(input_folder,
         step = []
         numeric_files = [s for s in files if s.isnumeric()]
 
-        if len(numeric_files) != 0:          
+        if len(numeric_files) != 0:
 
             column_file = os.path.join(
                 folderpath, numeric_files[0], report_name + '_1')
@@ -373,60 +386,6 @@ def statistics(input_folder,
 
         return pele_steps
 
-    def step_weighted(be,
-                      step,
-                      pele_steps):
-        """
-        Function
-        ----------
-        Calculates step weighted energy.
-
-        Parameters
-        ----------
-        - be : list
-            Binding energies of all the simulation.
-        - step : list
-            Steps associated to poses for all the simulation.
-        - pele_steps : list
-            Steps associated to poses for all the simulation.
-
-        Returns
-        ----------
-        - ene_step : float
-            Value of the step weighted energy.
-        - num_step : numpy.array
-            Array with all the steps of all the simulation.
-        """
-
-        num_steps = []
-
-        for i in range(len(step) - 1):
-
-            if step[i] == 0 and step[i+1] != 0:
-
-                num_steps.append(step[i+1] - step[i])
-
-            elif step[i] == 0 and step[i+1] == 0:
-
-                num_steps.append(pele_steps)
-
-            elif step[i] != 0 and step[i+1] == 0:
-
-                num_steps.append(pele_steps-step[i])
-
-            else:
-
-                num_steps.append(step[i+1] - step[i])
-
-        num_steps.append(pele_steps - step[len(step)-1])
-
-        num_steps = np.array(num_steps)
-        numerator = be.dot(num_steps)
-        denominator = np.sum(num_steps)
-        ene_step = numerator/denominator
-
-        return ene_step, num_steps
-
     def simulation_evolution(files,
                              report_name,
                              pele_steps,
@@ -462,9 +421,44 @@ def statistics(input_folder,
             Dictionary with the number of maximum accepted steps per epoch.
         """
 
+        def column_retriever(file):
+            """
+            Function
+            ----------
+            Retrieves the position of the binding energy and current energy.
+
+            Parameters
+            ----------
+            - file : list
+                The path to the one report.
+
+            Returns
+            ----------
+            - column_be : int 
+                Column where the binding energy data is located. 
+            - column_te : int 
+                Column where the total energy data is located. 
+            """
+
+            cont = 0
+
+            with open(file, 'r') as filein:
+
+                for line in filein:
+
+                    if cont == 0:
+
+                        line = line.split('    ')
+                        column_te = line.index('currentEnergy') + 1
+
+                    cont += 1
+
+            return column_te
+
         def step_data_reader(files,
                              report_name,
                              column,
+                             column_te,
                              folderpath,
                              step,
                              step_data):
@@ -514,6 +508,7 @@ def statistics(input_folder,
                                 if step == int(line[2]):
 
                                     step_data.append(float(line[column - 1]))
+                                    te.append(float(line[column_te - 1]))
 
                             cont += 1
 
@@ -523,7 +518,7 @@ def statistics(input_folder,
 
             step += 1
 
-            return step_data, step
+            return step_data, step, te
 
         numeric_files = [s for s in files if s.isnumeric()]
 
@@ -532,6 +527,10 @@ def statistics(input_folder,
         min_dict = {}
 
         if len(numeric_files) != 0:
+
+            column_file = os.path.join(
+                folderpath, numeric_files[0], report_name + '_1')
+            column_te = column_retriever(column_file)
 
             #
             print(' -   Calculating...')
@@ -543,6 +542,7 @@ def statistics(input_folder,
 
                 step_data = []
                 step_list = []
+                te = []
                 minimum_energy_list = []
                 bz_energy_list = []
 
@@ -559,14 +559,18 @@ def statistics(input_folder,
                             break
 
                         step_list.append(int(step))
-                        step_data, step = step_data_reader(files,
-                                                           report_name,
-                                                           column,
-                                                           new_directory,
-                                                           step,
-                                                           step_data)
+                        step_data, step, te = step_data_reader(files,
+                                                               report_name,
+                                                               column,
+                                                               column_te,
+                                                               new_directory,
+                                                               step,
+                                                               step_data)
 
-                        ene_bz = boltzmann_weighted(np.array(step_data), T)
+                        minimum_energy = min(te)
+
+                        ene_bz = boltzmann_weighted(
+                            np.array(step_data), np.array(te) - minimum_energy, T)
                         minimum_energy = min(np.array(step_data))
 
                         bz_energy_list.append(ene_bz)
@@ -656,7 +660,7 @@ def statistics(input_folder,
         bz_dict = dict(sorted(bz_dict.items()))
         min_dict = dict(sorted(min_dict.items()))
 
-        plt.figure(figsize=(7,3.5))
+        plt.figure(figsize=(7, 3.5))
 
         fig1, ax1 = plt.subplots()
         fig2, ax2 = plt.subplots()
@@ -676,7 +680,7 @@ def statistics(input_folder,
             left, bottom, width, height = [0.65, 0.3, 0.2, 0.2]
             ax1_1 = fig1.add_axes([left, bottom, width, height])
             ax1_1.plot(step_dict[key], bz_dict[key], label=key)
-            ax1_1.set_xlim([0,20])
+            ax1_1.set_xlim([0, 20])
 
         fig1.savefig(os.path.join(
             path_plots, input_folder + '_bz_evolution.png'))
@@ -723,57 +727,20 @@ def statistics(input_folder,
 
             ene_bz = boltzmann_weighted(te, te, T)
 
-        if pele_steps == None:
-
-            #
-            print(' -   No information about pele_steps was given.')
-            #
-
-            pele_steps = pelesteps_retriever()
-
-            if pele_steps == None:
-
-                ene_step = 0.
-
-            else:
-
-                if column_be != 1:
-
-                    ene_step, _ = step_weighted(be, step, pele_steps)
-
-                else: 
-
-                    ene_step, _ = step_weighted(te, step, pele_steps)
-
-            #
-            print(' -   Pele steps:', pele_steps)
-            #
-
-        else:
-
-            if column_be != 1:
-
-                ene_step, _ = step_weighted(be, step, pele_steps)
-
-            else: 
-
-                ene_step, _ = step_weighted(te, step, pele_steps)
-
         #
         print(' ')
         print(' RESULTS:')
         print(' -   Minimum Binding Energy:', minimum_energy)
         print(' -   Average Binding Energy:', average)
         print(' -   Boltzmann weighted Energy:', ene_bz)
-        print(' -   Step weighted Energy:', ene_step)
         print(' ')
         #
 
         with open('energy.csv', 'w') as fileout:
             fileout.writelines(
                 'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
-                '' + str(minimum_energy) + ',' + str(average) + ',' + str(ene_bz) +
-                ',' + str(ene_step) + '\n'
+                '' + str(minimum_energy) + ',' +
+                str(average) + ',' + str(ene_bz) + '\n'
             )
 
     elif action == 'evolution':
@@ -825,6 +792,7 @@ def main(args):
 
     statistics(input_folder=args.input_folder,
                report_name=args.report_name,
+               column=args.column,
                T=args.temperature,
                pele_steps=args.pele_steps,
                action=args.action)
