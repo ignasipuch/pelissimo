@@ -780,7 +780,7 @@ def clustering(n_cluster,
             plt.close()
 
         entropy_contributions = np.array(entropy_contribution)
-        S = -(R/len(rot_bond_values))*np.sum(entropy_contributions)
+        S = -(R)*np.sum(entropy_contributions)
 
         entropy_percentages = 100. * \
             np.array(entropy_contribution)/np.sum(entropy_contributions)
