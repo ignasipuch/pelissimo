@@ -58,7 +58,7 @@ def parse_args(args):
                         default=1, help="Percentage of data with lowest total energy snapshots you want\
         to keep to assess the strain energy")
     parser.add_argument("-cl", "--clusters_folder", type=str, dest="clusters_folder",
-                    default=None, help="Name of the folder you want to obtain the clusters information from.")
+                        default=None, help="Name of the folder you want to obtain the clusters information from.")
 
     parser.add_argument("--skip_strain_per_cluster", dest="strain_per_cluster_bool",
                         default=False, action='store_true', help="Flag to choose if strain per cluster code is skipped.")
@@ -377,26 +377,30 @@ def corrector(input_folder,
 
                         full_path = os.path.join(path_pl_output, folder)
 
-                    files_subdir = os.listdir(full_path)
+                        files_subdir = os.listdir(full_path)
 
-                    for report in files_subdir:
+                        for report in files_subdir:
 
-                        if report.startswith(report_name) and report.split(report_name + '_')[1].isnumeric():
+                            if report.startswith(report_name) and report.split(report_name + '_')[1].isnumeric():
 
-                            shutil.copy(os.path.join(full_path, report),
-                                        os.path.join(full_path, 'mod_' + report_name + '_' + report.split(report_name + '_')[1]))
+                                shutil.copy(os.path.join(full_path, report),
+                                            os.path.join(full_path, 'mod_' + report_name + '_' + report.split(report_name + '_')[1]))
 
-                            report_paths.append(
-                                os.path.join(full_path, report))
-                            cont_reports += 1
+                                report_paths.append(
+                                    os.path.join(full_path, report))
+                                cont_reports += 1
 
-                        else:
-                            continue
+                            else:
+                                continue
 
-                    if cont_reports == 0:
+                        if cont_reports == 0:
 
-                        raise Exception('ReportNameError: No reports beginning with \"' + report_name + '\" were found in '
-                                        + full_path + '.')
+                            raise Exception('ReportNameError: No reports beginning with \"' + report_name + '\" were found in '
+                                            + full_path + '.')
+
+                    else:
+
+                        continue
 
             return report_paths
 
@@ -587,6 +591,9 @@ def corrector(input_folder,
 
         Parameters
         ----------
+        - clusters_folder : str
+            Name of the clusters folder you want to obtain the information
+            from.
         - simulation_df : pd.DataFrame
             Data frame with current energies and strain information.
         - path_pl_simulation : str
@@ -665,7 +672,8 @@ def corrector(input_folder,
 
         if clusters_folder is None:
 
-            path_cluster_analysis = os.path.join(path_pl_simulation, 'analysis')
+            path_cluster_analysis = os.path.join(
+                path_pl_simulation, 'analysis')
             path_cluster_results = os.path.join(path_pl_simulation, 'results')
 
             if os.path.isdir(path_cluster_analysis) == False:
@@ -706,10 +714,11 @@ def corrector(input_folder,
         else:
 
             #
-            print('     -   Information will be obtained from /' + clusters_folder + '.\n')
+            print('     -   Information will be obtained from /' +
+                  clusters_folder + '.\n')
             #
 
-            path_cluster = os.path.join(path_pl_simulation,clusters_folder)
+            path_cluster = os.path.join(path_pl_simulation, clusters_folder)
 
             cluster_information_retriever(path_cluster,
                                           path_pl_results)
@@ -724,10 +733,10 @@ def corrector(input_folder,
         ----------
         - be : list
             Binding energies of all the simulation.
+        - ene_t : list
+            Total energies of all the simulation.
         - T : float
-            Temperature to perform the Boltzmann weights with.
-        - steps : list
-            Steps associated to poses for all the simulation.
+            Temperature of the simulation.
 
         Returns
         ----------
@@ -826,6 +835,8 @@ def corrector(input_folder,
             to assess the strain energy.
         - ligand_min_energy : float
             Ligand's minimum energy of the scoring function chosen.
+        - strain_bz : float
+            Boltzmann averaged strain energy of the simulation.
         """
 
         def histogram_function(strain_energy):
@@ -836,7 +847,7 @@ def corrector(input_folder,
 
             Parameters
             ----------
-            - strain_energy_list : list
+            - strain_energy : list
                 List with all the strain values calculated from the entire simulation.
             """
 
@@ -881,7 +892,7 @@ def corrector(input_folder,
                 fileout.writelines(
                     'Minimum,Histogram max,Average,Maximum,Boltzmann\n'
                     '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
-                    str(average_ene) + ',' + str(max_ene) + ',' +  str(strain_bz) + '\n')
+                    str(average_ene) + ',' + str(max_ene) + ',' + str(strain_bz) + '\n')
 
             # Plot
             plt.title('Strain distribution')
@@ -913,7 +924,8 @@ def corrector(input_folder,
                 fileout.writelines(
                     'Minimum,Histogram max,Average,Maximum\n'
                     '' + str(minimum_ene) + ',' + str(hist_ene) + ',' +
-                    str(average_ene) + ',' + str(max_ene) + ',' +  str(strain_bz) +'\n'
+                    str(average_ene) + ',' + str(max_ene) +
+                    ',' + str(strain_bz) + '\n'
                     '' + str(minimum_ene_q) + ',' + str(hist_ene_q) + ',' +
                     str(average_ene_q) + ',' + str(max_ene_q) + '\n'
                 )
@@ -971,7 +983,7 @@ def corrector(input_folder,
         entropy_change = entropy_correction(path_pl_simulation)
 
     # Corrections column location ---
-    file = os.path.join(path_pl_simulation, 'output', '0', report_name + '_1')
+    file = os.path.join(path_pl_simulation, 'output', '1', report_name + '_1')
 
     column_current_energy, column_binding_energy, column_internal_energy = \
         column_retriever(file)
@@ -1015,8 +1027,9 @@ def corrector(input_folder,
         #
 
     strain_bz = boltzmann_weighted(simulation_df['strainEnergy'].to_numpy(),
-                                   simulation_df['currentEnergy'].to_numpy() - min(simulation_df['currentEnergy'].tolist()),
-                                   T)
+                                   simulation_df['currentEnergy'].to_numpy(
+    ) - min(simulation_df['currentEnergy'].tolist()),
+        T)
 
     results_writer(strain_energy_list,
                    strain_energy_quantile,
