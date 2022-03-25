@@ -77,6 +77,8 @@ def statistics(input_folder,
         The path to the directory where the output of the PELE simulation is located.
     - report_name : str
         Name of the reports containing the energetic data of all the simulation.
+    - column : int
+        Column where the interesting metric is located inside the report.
     - T : float
         Temperature to perform the Boltzmann weights with.
     - pele_steps : int
@@ -111,6 +113,8 @@ def statistics(input_folder,
             Total energies of all the simulation.
         - step : list
             Steps associated to poses for all the simulation.
+        - column_be : int
+            Column where the Binding energy is located.
         """
 
         def file_reader(files,
@@ -434,8 +438,6 @@ def statistics(input_folder,
 
             Returns
             ----------
-            - column_be : int 
-                Column where the binding energy data is located. 
             - column_te : int 
                 Column where the total energy data is located. 
             """
@@ -476,6 +478,8 @@ def statistics(input_folder,
                 Name of the reports to obtain the data from
             - column : int 
                 Column where the interesting data is located. 
+            - column_te : int 
+                Column where the total energy is located in the report.
             - folderpath : str
                 Path where the different epochs of the simulation are located.
             - step : int
@@ -485,10 +489,12 @@ def statistics(input_folder,
 
             Returns
             ----------
-            - step : int
-                Accepted step next iteration is going to retrieve data from.
             - step_data : list
                 List with all the accumulated data of previous steps.
+            - step : int
+                Accepted step next iteration is going to retrieve data from.
+            - te : list
+                List with all the total energies obtained.
             """
 
             for file in files:
@@ -635,15 +641,13 @@ def statistics(input_folder,
 
         Parameters
         ----------
+        - step_dict :dict
+            Dictionary with the number of maximum accepted steps per epoch.
         - bz_dict : dict
             Dictionary with the acummulated boltzmann weighted values of the chosen metric 
             per epoch.
         - min_dict : dict
             Dictionary with the accumulated minium values of the chosen metric per epoch.
-        - step_dict :dict
-            Dictionary with the number of maximum accepted steps per epoch.
-        - folderpath : str
-            Path where the different epochs of the simulation are located.
         - path : str
             Path to the working directory.
         - input_folder : str
