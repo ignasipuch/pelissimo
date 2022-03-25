@@ -324,7 +324,7 @@ def rmsd_preparation(input_folder,
 
                 fileout.writelines(
                     '#!/bin/bash\n'
-                    '#SBATCH -J rmsd\n'
+                    '#SBATCH -J ' + pdb_rmsd + '\n'
                     '#SBATCH --output=rmsd.out\n'
                     '#SBATCH --error=rmsd.err\n'
                     '#SBATCH --ntasks=48\n'
@@ -364,7 +364,7 @@ def rmsd_preparation(input_folder,
                     'module load boost/1.64.0\n'
                     '\n'
                     'eval \"$(conda shell.bash hook)\"\n'
-                    'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
+                    'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.3\n'
                     '\n'
                     'for i in {0..' + str(iterations - 1) + '}\n'
                     '   do python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output/$i -pdbr ' +
