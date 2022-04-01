@@ -340,7 +340,7 @@ def linen_prepare(input_folder,
                 '        "sideChainPredictionRegionRadius": 6,\n'
                 '        "activateProximityDetection": true,\n'
                 '        "temperature": 1500,\n'
-                '        "numberOfPeleSteps": 1000\n'
+                '        "numberOfPeleSteps": 2000\n'
                 '      },\n'
                 '\n'
                 '      "constraints":[\n'

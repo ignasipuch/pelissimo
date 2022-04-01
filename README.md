@@ -39,7 +39,7 @@ of all of them with the Trapezoidal rule.
 > ### 6. strain: 
 > #### Directory with the code related to the calculation of the Ligand Internal Energy LInEn. Contains:
 > 
-> - **6.1. linen_cry.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
+> - **6.1. linen.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
 
 > ### 7. structural:
 > #### Directory with the code related to the rmsd calculation of the protein-ligand induced fit simulation. Contains:
