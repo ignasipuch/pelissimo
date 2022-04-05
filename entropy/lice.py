@@ -102,7 +102,7 @@ def lice_results(input_folder,
         path_pl_dihedrals = os.path.join(
             path_pl_simulation, 'dihedrals')
 
-        path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
+        path_l_simulation = os.path.join(path, residue_name + '_linen')
         path_l_dihedrals = os.path.join(
             path_l_simulation, 'dihedrals')
         path_entropy = os.path.join(path_pl_simulation,'entropy')

@@ -61,7 +61,7 @@ def ensambler(input_folder,
 
     path = str(pathlib.Path().absolute())
     path_pl_simulation = os.path.join(path, input_folder)
-    path_l_simulation = os.path.join(path, residue_name + '_linen_cry')
+    path_l_simulation = os.path.join(path, residue_name + '_linen')
 
     os.chdir(path_pl_simulation)
     os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
