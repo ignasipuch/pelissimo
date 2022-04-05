@@ -17,6 +17,7 @@ import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from seaborn import displot
 from collections import OrderedDict
 from collections import defaultdict
 
@@ -895,12 +896,17 @@ def corrector(input_folder,
                     str(average_ene) + ',' + str(max_ene) + ',' + str(strain_bz) + '\n')
 
             # Plot
+            displot(strain_energy_vector, kind="kde", color='black', label='KDE plot')
             plt.title('Strain distribution')
             plt.hist(strain_energy_vector, bins=bin_edges,
-                     density=True, color="blue")
+                     density=True, color="blue", alpha=0.3)
+            plt.axvline(x=hist_ene, color = 'red', label='Hist max = ' + str("{:.3f}".format(hist_ene)))
+            plt.axvline(x=average_ene, color = 'green', label='Average = ' + str("{:.3f}".format(average_ene)))
+            plt.legend(loc="best")
             plt.xlabel('Strain (kcal/mol)')
             plt.ylabel('Density')
-            plt.savefig(os.path.join(path, 'density_strain.png'), format='png')
+            plt.tight_layout
+            plt.savefig(os.path.join(path, 'density_strain.png'), format='png', bbox_inches = "tight")
 
         else:
 
