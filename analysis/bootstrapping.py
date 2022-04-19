@@ -15,6 +15,8 @@ import argparse
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+from seaborn import displot
 
 # Constants
 R = 1.985e-3
@@ -42,7 +44,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
-                        default='LIG_Pele', help="Name of the output directory where the simulation\
+                        default='output', help="Name of the output directory where the simulation\
         is located.")
     parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report', help="Name of the report files used for the simulation.")
@@ -93,6 +95,8 @@ def bootstrapping(input_folder,
         ----------
         - path_output : str
             Path to the output folder of the simulation.
+        - path_results : str 
+            Path to the results folder of the bootstrap analysis.
         """
 
         path = str(pathlib.Path().absolute())
@@ -601,6 +605,8 @@ def bootstrapping(input_folder,
             average_list.append(average)
             boltzmann_list.append(boltzmann)
 
+        
+
         return minimum_list, maximum_list, average_list, boltzmann_list
 
     def statistics(metric_list):
@@ -628,6 +634,42 @@ def bootstrapping(input_folder,
         standard_dev = np.std(vector)
 
         return average, standard_dev
+
+    def plotter(path_results,
+                data,
+                average,
+                error,
+                scoring):
+
+        """
+        Function
+        ----------
+        Plots results obtained with bootstrap.
+
+        Parameters
+        ----------
+        - path_results : str 
+            Path to the results folder of the bootstrap analysis.
+        - data : list 
+            List of data points calculated from bootstrap we want to plot.
+        - average : float
+            Avergage of the inputed list.
+        - error : float
+            Standard deviation of the inputed list.
+        - scoring : string 
+            Name of the scoring function used.
+        """
+
+        displot(data, kind="kde", color='black', label='KDE plot')
+        plt.title( scoring + ' Distribution')
+        plt.axvline(x=average, color = 'red', label='Average = ' + str("{:.3f}".format(average)))
+        plt.axvline(x=average + error, color = 'green', label='Error = ' + str("{:.3f}".format(error)))
+        plt.axvline(x=average - error, color = 'green')
+        plt.legend(loc="best")
+        plt.xlabel(scoring)
+        plt.ylabel('Density')
+        plt.tight_layout
+        plt.savefig(os.path.join(path_results, scoring + '_distribution.png'), format='png', bbox_inches = "tight")
 
     #
     print(' ')
@@ -675,6 +717,30 @@ def bootstrapping(input_folder,
 
     results_df = pd.DataFrame(data, index=['average','error'])
     results_df.to_csv(os.path.join(path_results, 'results.csv'))
+
+    plotter(path_results,
+            minimum_list,
+            average_minimum,
+            standard_dev_minimum,
+            'Minimum')
+
+    plotter(path_results,
+            maximum_list,
+            average_maximum,
+            standard_dev_maximum,
+            'Maximum')
+
+    plotter(path_results,
+            average_list,
+            average_average,
+            standard_dev_average,
+            'Average')
+
+    plotter(path_results,
+            boltzmann_list,
+            average_boltzmann,
+            standard_dev_boltzmann,
+            'Boltzmann')
 
 
 def main(args):
