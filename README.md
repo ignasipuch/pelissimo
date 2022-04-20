@@ -14,7 +14,7 @@ of all of them with the Trapezoidal rule.
 > - **2.1. disc.py**: Script to: (1) Read all the information about a metric in a simulation and calculating different scoring functions.
 > (2) Make plots of the evolution of the Boltzmann weighted average or minimum of a certain metric throughout a simulation.
 >
-> - **2.2. kTr.py**: Script to test whether PELE introduces bias to the energies calculated in the simulations. 
+> - **2.2. bootstrapping.py**: Script to generate bootstrap datasets and have statistics.
 
 > ### 3. corrector:
 > #### Directory containing the code involved in the correction of the energies of a simulation.
