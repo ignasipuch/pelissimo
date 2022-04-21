@@ -103,7 +103,7 @@ def bootstrapping(input_folder,
         path_output = os.path.join(path, input_folder)
         path_results = os.path.join(path, 'bootstrap')
 
-        if os.path.isdir(path_results) == False:
+        if os.path.isdir(path_results) is False:
             os.mkdir(path_results)
 
         return path_output, path_results
@@ -121,12 +121,6 @@ def bootstrapping(input_folder,
             Name of the report files where the results are located
         - path_output : str
             Path to the output directory.
-
-        Functions
-        ----------
-        - metric_retriever
-        - epoch_retriever
-        - dict_to_dataframe
 
         Return
         ----------
@@ -605,8 +599,6 @@ def bootstrapping(input_folder,
             average_list.append(average)
             boltzmann_list.append(boltzmann)
 
-        
-
         return minimum_list, maximum_list, average_list, boltzmann_list
 
     def statistics(metric_list):
@@ -661,15 +653,15 @@ def bootstrapping(input_folder,
         """
 
         displot(data, kind="kde", color='black', label='KDE plot')
-        plt.title( scoring + ' Distribution')
-        plt.axvline(x=average, color = 'red', label='Average = ' + str("{:.3f}".format(average)))
-        plt.axvline(x=average + error, color = 'green', label='Error = ' + str("{:.3f}".format(error)))
-        plt.axvline(x=average - error, color = 'green')
+        plt.title(scoring + ' Distribution')
+        plt.axvline(x=average, color='red', label='Average = ' + str("{:.3f}".format(average)))
+        plt.axvline(x=average + error, color='green', label='Error = ' + str("{:.3f}".format(error)))
+        plt.axvline(x=average - error, color='green')
         plt.legend(loc="best")
         plt.xlabel(scoring)
         plt.ylabel('Density')
-        plt.tight_layout
-        plt.savefig(os.path.join(path_results, scoring + '_distribution.png'), format='png', bbox_inches = "tight")
+        plt.tight_layout()
+        plt.savefig(os.path.join(path_results, scoring + '_distribution.png'), format='png', bbox_inches="tight")
 
     #
     print(' ')
@@ -715,7 +707,7 @@ def bootstrapping(input_folder,
     print(' -   Writing files\n')
     #
 
-    results_df = pd.DataFrame(data, index=['average','error'])
+    results_df = pd.DataFrame(data, index=['average', 'error'])
     results_df.to_csv(os.path.join(path_results, 'results.csv'))
 
     plotter(path_results,
