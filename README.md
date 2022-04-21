@@ -1,6 +1,7 @@
 # Pelissimo
 
-This repository contains certain python scripts to automatize specific [PELE](https://pele.bsc.es/pele.wt) simulations and some others to analyze PELE simulations.
+This repository contains certain python scripts to automatize specific [PELE](https://pele.bsc.es/pele.wt) simulations: **protocol**.
+Some others are meant to analyze PELE simulations in different ways: **analysis**.
 
 ## Contents
 
@@ -14,28 +15,29 @@ This repository contains certain python scripts to automatize specific [PELE](ht
 
    * **1.3. pele_fetcher.py**: Script that fetches specific snapshot of a simulation.
 
- * <b> 2. corrector:</b> Directory containing the code involved in the correction of the energies of a simulation.
+   * **1.4. rmsd.py**: Script that prepares all to run an rmsd calculation in MN4.
 
-   * **2.1. correction.py**: Script that retrieves entropy and strain corrections and implements them in the reports of the  induced fit simulation.
 
- * <b> 3. entropy:</b> Directory with the code related to the Ligand Conformational Entropy (LiCE) calculation
+ * <b> 2. protocol:</b> Directory with code related to the pelissimo protocol that is being assembled.
 
-   * **3.1 lice.py**: Script that reads the results from dihedral clustering and further processes information to obtain an entropy change.
+   * <b> 2.1 corrector:</b> Directory containing the code involved in the correction of the energies of a simulation.
+
+     * **2.1.1 correction.py**: Script that retrieves entropy and strain corrections and implements them in the reports of the  induced fit simulation.
+
+   * <b> 2.2 entropy:</b> Directory with the code related to the Ligand Conformational Entropy (LiCE) calculation
+
+     * **2.2.1 lice.py**: Script that reads the results from dihedral clustering and further processes information to obtain an entropy change.
  
-   * **3.2. dihedral_clustering.py**: Script that calculates dihedral angles for all the rotatable bonds in all the conformations reached 
+     * **2.2.2 dihedral_clustering.py**: Script that calculates dihedral angles for all the rotatable bonds in all the conformations reached 
  by the ligand in a simulation. This information will be used to cluster conformations. 
 
-   * **3.3. entropy.py**: Script that ensembles the other two to make a complete entropy analysis of a simulation.
+     * **2.2.3 entropy.py**: Script that ensembles the other two to make a complete entropy analysis of a simulation.
 
- * <b> 4. initial_files:</b> Directory with an example of the necessary files to perform a full simulation of the protocol.
+   * <b> 2.3 initial_files:</b> Directory with an example of the necessary files to perform a full simulation of the protocol.
 
- * <b> 5. strain:</b> Directory with the code related to the calculation of the Ligand Internal Energy (LInEn).
+   * <b> 2.4 strain:</b> Directory with the code related to the calculation of the Ligand Internal Energy (LInEn).
  
-   * **5.1. linen.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
-
- * <b> 6. structural:</b> Directory with the code related to the rmsd calculation of the protein-ligand induced fit simulation. 
-
-   * **6.1. rmsd.py**: Script that prepares all to run an rmsd calculation in MN4.
+     * **2.4.1. linen.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
 
 
 ## Examples
@@ -68,7 +70,14 @@ python path/to/code/bootstrapping.py -d ouput_2 -ns 50 -m sasa
 python path/to/code/pele_fetcher.py -e 4 -t 33 -m 7 -s 1MTS_min
 ```
 
-## entropy
+4. _rmsd.py_: We will require the ligand structure that we will base our RMSD upon (i.e. 1HPV_lig.pdb). :
+
+```
+python path/to/code/rmsd.py -pdbr 1HPV_lig.pdb
+```
+
+
+## protocol
 
 1. _dihedralclustering.py_: If we want to calculates the 1A28's ligand dihedrals of all the simulation stored in the folder called output_original
 and cluster them with bins:
