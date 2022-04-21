@@ -398,6 +398,8 @@ def rmsd_preparation(input_folder,
 
         print(' -   RMSD calculation skipped.')
 
+
+
     #
     print(' ')
     print('------------------------------ INFO -------------------------------')
