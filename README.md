@@ -43,11 +43,12 @@ Some others are meant to analyze PELE simulations in different ways: **analysis*
 ## Examples
 
 In all cases the usage of the flag _-h_ is recommended in order to understand the possibilities offered by the script.
-In case of doubt all functions are commented. For example
 
 ```
 python path/to/code/bootstrapping.py -h
 ```
+
+In case of doubt the code can be read since all the functions are commented and explained.
 
 ### analysis 
 
