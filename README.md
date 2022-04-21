@@ -78,6 +78,7 @@ python path/to/code/rmsd.py -pdbr 1HPV_lig.pdb
 
 
 ## protocol
+### entropy
 
 1. _dihedralclustering.py_: If we want to calculates the 1A28's ligand dihedrals of all the simulation stored in the folder called output_original
 and cluster them with bins:
