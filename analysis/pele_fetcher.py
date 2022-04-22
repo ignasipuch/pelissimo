@@ -40,11 +40,11 @@ def parse_args(args):
                         default=None, help="Name of the pdb that is saved.")
 
     parser.add_argument("-e", "--epoch", required=True, type=str, dest="epoch",
-                        default='report', help="Epoch where the snapshot is located.")
+                        help="Epoch where the snapshot is located.")
     parser.add_argument("-t", "--trajectory", required=True, type=str, dest="trajectory",
-                        default=10, help="Trajectory where the snapshot is located.")
+                        help="Trajectory where the snapshot is located.")
     parser.add_argument("-m", "--model", required=True, type=str,  dest="model",
-                        default='BindingEnergy', help="Model of the snapshot.")
+                        help="Model of the snapshot.")
 
     parsed_args = parser.parse_args(args)
 
@@ -141,23 +141,56 @@ def fetcher(output_folder,
             output_file = open(os.path.join(path_results, save_name + '.pdb'), 'w')
             output_file.writelines(text[begin_of_pdb:end_of_pdb])
 
+
+    print('\n* pele fetcher\n')
+
     path_output, path_results = path_definer(output_folder)
 
-    if save_name is not None:
-        retriever(path_output,
-                  path_results,
-                  epoch,
-                  trajectory,
-                  model,
-                  save_name)
+    if epoch.isnumeric() and trajectory.isnumeric() and model.isnumeric():
+
+        if save_name is not None:
+            retriever(path_output,
+                      path_results,
+                      epoch,
+                      trajectory,
+                      model,
+                      save_name)
+        else:
+            save_name = epoch + '_' + trajectory + '_' + model
+            retriever(path_output,
+                      path_results,
+                      epoch,
+                      trajectory,
+                      model,
+                      save_name)
+
     else:
-        save_name = epoch + '_' + trajectory + '_' + model
-        retriever(path_output,
-                  path_results,
-                  epoch,
-                  trajectory,
-                  model,
-                  save_name)
+
+        epoch = epoch.strip('][').split(',')
+        trajectory = trajectory.strip('][').split(',')
+        model = model.strip('][').split(',')
+
+        if save_name is not None:
+            print(' -   Avoiding save name introduced due to overwriting problems')
+
+        if len(epoch) == len(trajectory) and len(trajectory) == len(model):
+
+            for i in range(len(epoch)):
+
+                save_name = str(epoch[i]) + '_' + str(trajectory[i]) + '_' + str(model[i])
+                retriever(path_output,
+                          path_results,
+                          epoch[i],
+                          trajectory[i],
+                          model[i],
+                          save_name)
+        
+        else:
+            raise Exception('LengthMismatch: Length mismatch between epoch, trajectory and model lists.')
+
+    print(' -   Snapshot(s) stored in /fetched\n')
+
+
 
 
 def main(args):
