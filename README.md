@@ -1,7 +1,7 @@
 # Pelissimo
 
-This repository contains certain python scripts to automatize specific [PELE](https://pele.bsc.es/pele.wt) simulations: **protocol**.
-Some others are meant to analyze PELE simulations in different ways: **analysis**.
+This repository contains certain python scripts to analyze [PELE](https://pele.bsc.es/pele.wt) simulations: **analyze**.
+Some others are meant to automatize specific PELE simulations in different ways: **protocol**.
 
 ## Contents
 
