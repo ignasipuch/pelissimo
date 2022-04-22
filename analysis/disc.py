@@ -49,8 +49,6 @@ def parse_args(args):
                         default=None, help="Column of the metric to consider.")
     parser.add_argument("-T", "--temperature", type=float, dest="temperature",
                         default=298., help="Temperature of the experiment.")
-    parser.add_argument("-pS", "--pele_Steps", type=int, dest="pele_steps",
-                        default=None, help="Number of Pele Steps in the simulation.")
     parser.add_argument("-a", "--action", type=str, dest="action",
                         default='all', help="Function the user wants the script to do: all or evolution.")
 
@@ -63,7 +61,6 @@ def statistics(input_folder,
                report_name,
                column,
                T,
-               pele_steps,
                action):
     """
     Function
@@ -81,14 +78,39 @@ def statistics(input_folder,
         Column where the interesting metric is located inside the report.
     - T : float
         Temperature to perform the Boltzmann weights with.
-    - pele_steps : int
-        Number of pele_steps in the simulation.
     - action : str 
         Functionality of the script we want to use.
     """
 
-    def reader(files,
-               folderpath,
+    def path_definer(input_folder):
+        """
+        Function
+        ----------
+        Defines the important paths that are going to be used throughout the simulation.
+
+        Parameters
+        ----------
+        - input_folder : str
+            Name of the folder where the output of the simulation is located.
+
+        Returns
+        ----------
+        - path_output : str
+            Path to the output folder of the simulation.
+        - path_results : str 
+            Path to the results folder of the bootstrap analysis.
+        """
+
+        path = str(pathlib.Path().absolute())
+        path_output = os.path.join(path, input_folder)
+        path_results = os.path.join(path, 'bootstrap')
+
+        if os.path.isdir(path_results) is False:
+            os.mkdir(path_results)
+
+        return path_output, path
+
+    def reader(folderpath,
                report_name):
         """
         Function
@@ -219,11 +241,6 @@ def statistics(input_folder,
 
                             column_be = line.index('BindingEnergy') + 1
 
-                            #
-                            print(
-                                ' -   Picking BindingEnergy column:', column_be - 1)
-                            #
-
                         else:
 
                             column_be = 1
@@ -242,7 +259,8 @@ def statistics(input_folder,
         be = []
         te = []
         step = []
-        numeric_files = [s for s in files if s.isnumeric()]
+        files = os.listdir(folderpath)
+        numeric_files = [s for s in os.listdir(folderpath) if s.isnumeric()]
 
         if len(numeric_files) != 0:
 
@@ -252,23 +270,30 @@ def statistics(input_folder,
 
             for document in numeric_files:
 
-                # Checking if the folder exist
                 new_directory = os.path.join(folderpath, document)
 
                 if os.path.isdir(new_directory) and document.isnumeric():
 
-                    # Listing files inside
                     files = os.listdir(new_directory)
 
                     if report_name in files == False:
                         raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
                         Please check the path to the files and the files name.')
 
-                    be, te, step = file_reader(files,
-                                               new_directory,
-                                               report_name,
-                                               column_be,
-                                               column_te)
+                    if column is None:
+                        be, te, step = file_reader(files,
+                                                   new_directory,
+                                                   report_name,
+                                                   column_be,
+                                                   column_te)
+
+                    else:
+                        be, te, step = file_reader(files,
+                                                   new_directory,
+                                                   report_name,
+                                                   column,
+                                                   column_te)
+
 
         else:
 
@@ -279,18 +304,30 @@ def statistics(input_folder,
             column_file = os.path.join(folderpath, report_name + '_1')
             column_be, column_te = column_retriever(column_file)
 
-            be, te, step = file_reader(files,
-                                       folderpath,
-                                       report_name,
-                                       column_be,
-                                       column_te)
+            if column is None:
+
+                #
+                print(
+                    ' -   Picking BindingEnergy as metric')
+                #
+                
+                be, te, step = file_reader(files,
+                                           folderpath,
+                                           report_name,
+                                           column_be,
+                                           column_te)
+            else:
+                be, te, step = file_reader(files,
+                                           folderpath,
+                                           report_name,
+                                           column,
+                                           column_te)
 
         return be, te, step, column_be
 
     def boltzmann_weighted(be,
                            te,
-                           T,
-                           steps=[]):
+                           T):
         """
         Function
         ----------
@@ -314,19 +351,9 @@ def statistics(input_folder,
         """
 
         exp_bz = np.exp(-te/(R*T))
-
-        if not steps:
-
-            nominator = be.dot(exp_bz)
-            denominator = np.sum(exp_bz)
-            ene_bz = nominator/denominator
-
-        else:
-
-            steps = np.array(steps)
-            nominator = np.sum(np.multiply.reduce((be, steps, exp_bz)))
-            denominator = steps.dot(exp_bz)
-            ene_bz = nominator/denominator
+        nominator = be.dot(exp_bz)
+        denominator = np.sum(exp_bz)
+        ene_bz = nominator/denominator
 
         return ene_bz
 
@@ -390,8 +417,7 @@ def statistics(input_folder,
 
         return pele_steps
 
-    def simulation_evolution(files,
-                             report_name,
+    def simulation_evolution(report_name,
                              pele_steps,
                              column,
                              folderpath):
@@ -526,7 +552,8 @@ def statistics(input_folder,
 
             return step_data, step, te
 
-        numeric_files = [s for s in files if s.isnumeric()]
+        files = os.listdir(folderpath)
+        numeric_files = [s for s in os.listdir(folderpath) if s.isnumeric()]
 
         step_dict = {}
         bz_dict = {}
@@ -609,12 +636,12 @@ def statistics(input_folder,
                     break
 
                 step_list.append(int(step))
-                step_data, step = step_data_reader(files,
-                                                   report_name,
-                                                   column,
-                                                   folderpath,
-                                                   step,
-                                                   step_data)
+                step_data, step, te = step_data_reader(files,
+                                                       report_name,
+                                                       column,
+                                                       folderpath,
+                                                       step,
+                                                       step_data)
 
                 ene_bz = boltzmann_weighted(np.array(step_data), T)
                 minimum_energy = min(np.array(step_data))
@@ -691,68 +718,55 @@ def statistics(input_folder,
         fig2.savefig(os.path.join(
             path_plots, input_folder + '_min_evolution.png'))
 
-    #
-    print(' ')
-    print('**************************************************************')
-    print('*                           DiSC                             *')
-    print('**************************************************************')
-    print(' ')
-    #
+    def ensambler():
 
-    path = str(pathlib.Path().absolute())
-    folderpath = os.path.join(path, input_folder)
+        folderpath, path = path_definer(input_folder)
+        be, te, _, column_be = reader(folderpath,
+                                      report_name)
 
-    files = os.listdir(folderpath)
+        if action == 'all':
 
-    if action == 'all':
+            if column_be != 1:
 
-        be, te, step, column_be = reader(files,
-                                         folderpath,
-                                         report_name)
+                min_energy = min(te)
+                te = np.array(te) - min_energy
 
-        if column_be != 1:
+                minimum_energy = min(be)
+                be = np.array(be)
 
-            min_energy = min(te)
-            te = np.array(te) - min_energy
+                average = np.average(be)
 
-            minimum_energy = min(be)
-            be = np.array(be)
+                ene_bz = boltzmann_weighted(be, te, T)
 
-            average = np.average(be)
+            else:
 
-            ene_bz = boltzmann_weighted(be, te, T)
+                minimum_energy = min(te)
+                te = np.array(te)
 
-        else:
+                average = np.average(te)
 
-            minimum_energy = min(te)
-            te = np.array(te)
-
-            average = np.average(te)
-
-            ene_bz = boltzmann_weighted(te, te, T)
-
-        #
-        print(' ')
-        print(' RESULTS:')
-        print(' -   Minimum Binding Energy:', minimum_energy)
-        print(' -   Average Binding Energy:', average)
-        print(' -   Boltzmann weighted Energy:', ene_bz)
-        print(' ')
-        #
-
-        with open('energy.csv', 'w') as fileout:
-            fileout.writelines(
-                'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
-                '' + str(minimum_energy) + ',' +
-                str(average) + ',' + str(ene_bz) + '\n'
-            )
-
-    elif action == 'evolution':
-
-        if pele_steps == None:
+                ene_bz = boltzmann_weighted(te, te, T)
 
             #
-            print(' -   No information about pele_steps was given.')
+            print(' ')
+            print(' RESULTS:')
+            print(' -   Minimum Binding Energy:', minimum_energy)
+            print(' -   Average Binding Energy:', average)
+            print(' -   Boltzmann weighted Energy:', ene_bz)
+            print(' ')
+            #
+
+            with open('energy.csv', 'w') as fileout:
+                fileout.writelines(
+                    'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
+                    '' + str(minimum_energy) + ',' +
+                    str(average) + ',' + str(ene_bz) + '\n'
+                )
+
+        elif action == 'evolution':
+
+            #
+            print(' -   Retrieving number of pele steps.')
             #
 
             pele_steps = pelesteps_retriever()
@@ -762,22 +776,40 @@ def statistics(input_folder,
             print(' ')
             #
 
-        bz_dict, min_dict, step_dict = simulation_evolution(files,
-                                                            report_name,
-                                                            pele_steps,
-                                                            column,
-                                                            folderpath)
+            if column is None:
 
-        plotter(step_dict, bz_dict, min_dict, path, input_folder)
+                bz_dict, min_dict, step_dict = simulation_evolution(report_name,
+                                                                    pele_steps,
+                                                                    column_be,
+                                                                    folderpath)
 
-        #
-        print(' -   Images have been stored in /evolution directory.')
-        #
+            else: 
 
-    else:
+                bz_dict, min_dict, step_dict = simulation_evolution(report_name,
+                                                                    pele_steps,
+                                                                    column,
+                                                                    folderpath)
 
-        raise Exception(
-            'ActionError: The action you chose is not either all of evolution.')
+            plotter(step_dict, bz_dict, min_dict, path, input_folder)
+
+            #
+            print(' -   Images have been stored in /evolution directory.')
+
+        else:
+
+            raise Exception(
+                'ActionError: The action you chose is not either all of evolution.')
+
+
+    #
+    print(' ')
+    print('**************************************************************')
+    print('*                           DiSC                             *')
+    print('**************************************************************')
+    print(' ')
+    #
+
+    ensambler()
 
 
 def main(args):
@@ -792,19 +824,12 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
-    start_time = time.time()
-
     statistics(input_folder=args.input_folder,
                report_name=args.report_name,
                column=args.column,
                T=args.temperature,
-               pele_steps=args.pele_steps,
                action=args.action)
 
-    print(' ')
-    print('                    --Duration of the execution--                   ')
-    print('                      %s seconds' % (time.time() - start_time))
-    print(' ')
     print('*******************************************************************')
 
 
