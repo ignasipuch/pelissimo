@@ -130,16 +130,31 @@ def fetcher(output_folder,
             Name of the final pdb file.
         """
 
-        with open(os.path.join(path_output, epoch, 'trajectory_' + trajectory + '.pdb'), 'r') as filein:
-            
-            text = filein.readlines()
+        if epoch == '-':
 
-            begin_of_pdb = text.index('MODEL     '  + model + '\n') + 1 
-            len_pdb = text.index('ENDMDL    \n') - 1
-            end_of_pdb = begin_of_pdb + len_pdb
+            with open(os.path.join(path_output, 'trajectory_' + trajectory + '.pdb'), 'r') as filein:
 
-            output_file = open(os.path.join(path_results, save_name + '.pdb'), 'w')
-            output_file.writelines(text[begin_of_pdb:end_of_pdb])
+                text = filein.readlines()
+
+                begin_of_pdb = text.index('MODEL     '  + model + '\n') + 1 
+                len_pdb = text.index('ENDMDL    \n') - 1
+                end_of_pdb = begin_of_pdb + len_pdb
+
+                output_file = open(os.path.join(path_results, save_name + '.pdb'), 'w')
+                output_file.writelines(text[begin_of_pdb:end_of_pdb])
+
+        else:
+
+            with open(os.path.join(path_output, epoch, 'trajectory_' + trajectory + '.pdb'), 'r') as filein:
+
+                text = filein.readlines()
+
+                begin_of_pdb = text.index('MODEL     '  + model + '\n') + 1 
+                len_pdb = text.index('ENDMDL    \n') - 1
+                end_of_pdb = begin_of_pdb + len_pdb
+
+                output_file = open(os.path.join(path_results, save_name + '.pdb'), 'w')
+                output_file.writelines(text[begin_of_pdb:end_of_pdb])
 
 
     print('\n* pele fetcher\n')
@@ -147,6 +162,24 @@ def fetcher(output_folder,
     path_output, path_results = path_definer(output_folder)
 
     if epoch.isnumeric() and trajectory.isnumeric() and model.isnumeric():
+
+        if save_name is not None:
+            retriever(path_output,
+                      path_results,
+                      epoch,
+                      trajectory,
+                      model,
+                      save_name)
+        else:
+            save_name = epoch + '_' + trajectory + '_' + model
+            retriever(path_output,
+                      path_results,
+                      epoch,
+                      trajectory,
+                      model,
+                      save_name)
+
+    elif epoch == '-' and trajectory.isnumeric() and model.isnumeric():
 
         if save_name is not None:
             retriever(path_output,
