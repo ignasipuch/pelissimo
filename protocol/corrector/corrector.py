@@ -631,7 +631,6 @@ def corrector(input_folder,
                     if cont != 0:
 
                         line = line.split(',')
-
                         cluster = line[-1]
 
                         try:
@@ -899,14 +898,14 @@ def corrector(input_folder,
             displot(strain_energy_vector, kind="kde", color='black', label='KDE plot')
             plt.title('Strain distribution')
             plt.hist(strain_energy_vector, bins=bin_edges,
-                     density=True, color="blue", alpha=0.3)
-            plt.axvline(x=hist_ene, color = 'red', label='Hist max = ' + str("{:.3f}".format(hist_ene)))
-            plt.axvline(x=average_ene, color = 'green', label='Average = ' + str("{:.3f}".format(average_ene)))
+                     density=True, color='#B3C6CF')
+            plt.axvline(x=hist_ene, color = '#0B3954', label='Hist max = ' + str("{:.3f}".format(hist_ene)))
+            plt.axvline(x=average_ene, color = '#CE796B', label='Average = ' + str("{:.3f}".format(average_ene)))
             plt.legend(loc="best")
             plt.xlabel('Strain (kcal/mol)')
             plt.ylabel('Density')
-            plt.tight_layout
-            plt.savefig(os.path.join(path, 'density_strain.png'), format='png', bbox_inches = "tight")
+            plt.tight_layout()
+            plt.savefig(os.path.join(path, 'density_strain.svg'), format='svg', bbox_inches = "tight", transparent=True)
 
         else:
 
