@@ -621,6 +621,11 @@ def statistics(input_folder,
             bz_energy_list = []
             step_data = []
             step_list = []
+            te = []
+
+            column_file = os.path.join(
+                folderpath, report_name + '_1')
+            column_te = column_retriever(column_file)
 
             #
             print(' -   Calculating...')
@@ -631,7 +636,7 @@ def statistics(input_folder,
                 if step > 1 and bz_energy_list[-1] == bz_energy_list[-2]:
 
                     print(
-                        ' -   Maximum number of acepted steps in any report:', step - 1)
+                        ' -   Maximum number of accepted steps in any report:', step - 1)
 
                     break
 
@@ -639,11 +644,12 @@ def statistics(input_folder,
                 step_data, step, te = step_data_reader(files,
                                                        report_name,
                                                        column,
+                                                       column_te,
                                                        folderpath,
                                                        step,
                                                        step_data)
 
-                ene_bz = boltzmann_weighted(np.array(step_data), T)
+                ene_bz = boltzmann_weighted(np.array(step_data), np.array(te), T)
                 minimum_energy = min(np.array(step_data))
 
                 bz_energy_list.append(ene_bz)
@@ -793,7 +799,7 @@ def statistics(input_folder,
             plotter(step_dict, bz_dict, min_dict, path, input_folder)
 
             #
-            print(' -   Images have been stored in /evolution directory.')
+            print(' -   Images have been stored in /evolution directory.\n')
 
         else:
 
