@@ -419,7 +419,7 @@ def statistics(input_folder,
 
     def simulation_evolution(report_name,
                              pele_steps,
-                             column,
+                             column_be,
                              folderpath):
         """
         Function
@@ -643,7 +643,7 @@ def statistics(input_folder,
                 step_list.append(int(step))
                 step_data, step, te = step_data_reader(files,
                                                        report_name,
-                                                       column,
+                                                       column_te,
                                                        column_te,
                                                        folderpath,
                                                        step,
@@ -654,6 +654,8 @@ def statistics(input_folder,
 
                 bz_energy_list.append(ene_bz)
                 minimum_energy_list.append(minimum_energy)
+
+                print(minimum_energy,ene_bz)
 
             step_dict[0] = step_list
             bz_dict[0] = bz_energy_list
