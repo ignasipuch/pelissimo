@@ -768,15 +768,17 @@ def clustering(n_cluster,
                 np.sum(np.array([p*np.log(p) for p in dense_bins])))
 
             # Plot
-            plt.title('Dihedral ' + str(rot_bond) + ' distribution')
+            #plt.title('Dihedral ' + str(rot_bond) + ' distribution')
+            plt.title('Rotatable Bond 1 distribution in Protein')
             plt.hist(values,
-                     bins=bin_edges, density=True)
+                     bins=bin_edges, density=True, color='#0B3954')
             plt.xlabel('Dihedral angle (º)')
             plt.ylabel('Density')
             plt.xlim(-180, 180)
+            plt.ylim(0, 0.03)
             plt.xticks(list(np.arange(-180, 190, 30)))
             plt.savefig(os.path.join(path_results,'images', 'dihedral_' +
-                                     str(rot_bond) + '_strain.png'), format='png')
+                                     str(rot_bond) + '_strain.svg'), format='svg', transparent=True)
             plt.close()
 
         entropy_contributions = np.array(entropy_contribution)
