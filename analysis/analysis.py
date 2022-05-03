@@ -43,10 +43,10 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
 
     # Analysis flags
-    parser.add_argument("--bootstrap", dest='bootstrap_bool', default=False, action='store_true', 
-                        help="Flag to choose if bootstrap analysis is required.")  
-    parser.add_argument("--filter", dest='filter_bool', default=False, action='store_true', 
-                        help="Flag to choose if filter analysis is required.")  
+    parser.add_argument("--bootstrap", dest='bootstrap_bool', default=False, action='store_true',
+                        help="Flag to choose if bootstrap analysis is required.")
+    parser.add_argument("--filter", dest='filter_bool', default=False, action='store_true',
+                        help="Flag to choose if filter analysis is required.")
 
     # General flags
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
@@ -57,13 +57,13 @@ def parse_args(args):
 
     # Filter flags
     parser.add_argument("-es", "--equilibration_steps", type=int, dest="equilibration_steps",
-                        help="Number of steps from first reports we want to omit.") 
-    parser.add_argument("-mt", "--metric_threshold", type=list, dest="metric_threshold",
-                        help="List of [metric,[min,max]] where metric is str and min and max, float") 
+                        default=None, help="Number of steps from first reports we want to omit.")
+    parser.add_argument("-mt", "--metric_threshold", type=str, dest="metric_threshold",
+                        default=None, help="List of [metric,[min,max]] where metric is str and min and max, float")
     parser.add_argument("-q", "--quantile", type=str, dest="quantile_flag",
-                        help="Quantile we are interested in. List of [metric,value] where metric is\
+                        default=None, help="Quantile we are interested in. List of [metric,value] where metric is\
                          str and values is float")
-    
+
     # Bootstrap flags
     parser.add_argument("-ns", "--number_of_samples", type=int, dest="number_of_samples",
                         default=10, help="Number of bootstrap datasets to generate.")
@@ -77,7 +77,6 @@ def parse_args(args):
 
 def data(input_folder,
          report_name):
-
     """
     Function
     ----------
@@ -205,7 +204,7 @@ def data(input_folder,
 
             for report_path in report_paths:
 
-                trajectory = report_path.split('/')[-1].split('_')[1]
+                trajectory = report_path.split('/')[-1].split('_')[-1]
                 trajectory_dict = {}
 
                 with open(report_path) as filein:
@@ -298,15 +297,15 @@ def data(input_folder,
 
                 epoch = epoch_path.split('/')[-1]
                 data_dict[epoch] = epoch_retriever(report_name,
-                                                         epoch_path,
-                                                         metrics_dict)
+                                                   epoch_path,
+                                                   metrics_dict)
 
         else:
 
             metrics_dict = metric_retirever(path_output)
             data_dict[0] = epoch_retriever(report_name,
-                                                 path_output,
-                                                 metrics_dict)
+                                           path_output,
+                                           metrics_dict)
 
         original_df = dict_to_dataframe(data_dict)
         snapshots = int(len(original_df)/6)
@@ -348,18 +347,24 @@ def filter(original_df,
         Parameters
         ----------
         - original_df : pd.DataFrame
-            Data frame with current energies and strain information.
+            Data frame with reports' information.
         - equilibration_steps : int
             Number of steps we want to omit.
 
         Returns
         ----------
         - original_df : list
-            Data frame with quantile filtered.
+            Data frame with equilibration steps omited filtered.
         """
 
-        print('     -   Deleting ' + str(equilibration_steps) + ' equilibration steps')
-        equilibration_df = original_df.drop(original_df[original_df.epoch == 0][original_df[original_df.epoch == 0].model <= equilibration_steps].index)
+        if equilibration_steps > 5:
+            raise Exception(
+                'TooManyEquilibrationSteps: Maximum equilibration steps are 5.')
+
+        print('     -   Deleting ' +
+              str(equilibration_steps) + ' equilibration steps')
+        equilibration_df = original_df.drop(
+            original_df[original_df.epoch == 0][original_df[original_df.epoch == 0].model <= equilibration_steps].index)
 
         return equilibration_df
 
@@ -368,54 +373,129 @@ def filter(original_df,
         """
         Function
         ----------
-        Obtain a list of strain energies corresponding to those conformations
-        with energies below a certain quantile.
+        Obtain reports' metrics for reports with metric below a certain quantile.
 
         Parameters
         ----------
         - original_df : pd.DataFrame
-            Data frame with current energies and strain information.
-        - quantile_flag : list
-            List with metric we want to apply the quantile on and value of quantile.
+            Data frame with reports' information.
+        - quantile_flag : str
+            Flag with metric and quantile information. Syntax: [metric,quantile]
 
         Returns
         ----------
-        - original_df : list
+        - quantile_df : list
             Data frame with quantile filtered.
         """
 
         quantile_flag = quantile_flag.strip('][').split(',')
-        modified_df = original_df.loc[original_df['metric'] == quantile_flag[0]]
+        modified_df = original_df.loc[original_df['metric']
+                                      == quantile_flag[0]]
         quantile_value = modified_df['value'].quantile(float(quantile_flag[1]))
-
         deletion_df = modified_df[modified_df['value'] > quantile_value]
 
-        print('     -   Deleting all values above ' + str(quantile_value)\
-             + ' of the ' + quantile_flag[0] + '.\n')
+        print('     -   Deleting all values above ' + str(quantile_value)
+              + ' of the ' + quantile_flag[0] + '.\n')
 
         for _, row in deletion_df.iterrows():
 
             indexes = original_df[
-                (original_df['epoch'] == row[0]) & 
-                (original_df['trajectory'] == row[1]) & 
+                (original_df['epoch'] == row[0]) &
+                (original_df['trajectory'] == row[1]) &
                 (original_df['model'] == row[2])].index
-            
+
             original_df = original_df.drop(indexes)
 
         quantile_df = original_df
 
         return quantile_df
-            
+
+    def metric_remover(original_df,
+                       metric_threshold):
+        """
+        Function
+        ----------
+        Obtain reports' metrics for reports with metric withina range of a metric.
+
+        Parameters
+        ----------
+        - original_df : pd.DataFrame
+            Data frame with reports' information.
+        - metric_threshold : str
+            List with metric we want to apply the metric and threshold on and value 
+            of quantile.
+
+        Returns
+        ----------
+        - original_df : list
+            Data frame with metric filtered.
+        """
+
+        metric_flag = metric_threshold.strip('][').split(',')
+        modified_df = original_df.loc[original_df['metric']
+                                      == metric_flag[0]]
+        modified_df = modified_df[modified_df['value'] <= float(metric_flag[1])]
+        deletion_df = modified_df[modified_df['value'] > float(metric_flag[2])]
+
+        print('     -   Deleting all values not belonging to [' \
+            + metric_flag[1] + ',' + metric_flag[2] + ') of the ' + metric_flag[0] + '.\n')
+
+        for _, row in deletion_df.iterrows():
+
+            indexes = original_df[
+                (original_df['epoch'] == row[0]) &
+                (original_df['trajectory'] == row[1]) &
+                (original_df['model'] == row[2])].index
+
+            original_df = original_df.drop(indexes)
+
+        metric_df = original_df
+
+        return metric_df
+
     print(' *   Filtering data.\n')
 
-    equilibration_df = equilibration_steps_remover(original_df,
-                                              equilibration_steps)
+    cont = 0
 
-    quantile_df = quantile_retriever(equilibration_df,
-                                     quantile_flag)
+    if equilibration_steps is None:
 
+        cont += 1
+        pass
 
-    return original_df, snapshots
+    else:
+        
+        equilibration_df = equilibration_steps_remover(original_df,
+                                                       equilibration_steps)
+
+    if quantile_flag is not None and metric_threshold is not None:
+
+        quantile_df = quantile_retriever(equilibration_df,
+                                         quantile_flag)
+
+        output_df = metric_remover(quantile_df,
+                                   metric_threshold)
+    
+    elif quantile_flag is not None and metric_threshold is None:
+
+        output_df = quantile_retriever(equilibration_df,
+                                       quantile_flag)
+
+    elif quantile_flag is None and metric_threshold is not None:
+
+        output_df = metric_remover(original_df,
+                                   metric_threshold)
+
+    else:
+
+        cont += 1
+        pass
+
+    if cont == 2:
+
+        raise Exception('NoCorrectionImplemented: The --filter flag has been written but no condition to filter\
+        has been chosen.')
+
+    return output_df
 
 
 def bootstrapping(number_of_samples,
@@ -798,7 +878,6 @@ def bootstrapping(number_of_samples,
                 average,
                 error,
                 scoring):
-
         """
         Function
         ----------
@@ -822,15 +901,17 @@ def bootstrapping(number_of_samples,
 
         displot(data, kind="kde", color='black', label='KDE plot')
         plt.title(scoring + ' Distribution')
-        plt.axvline(x=average, color='red', label='Average = ' + str("{:.3f}".format(average)))
-        plt.axvline(x=average + error, color='green', label='Error = ' + str("{:.3f}".format(error)))
+        plt.axvline(x=average, color='red', label='Average = ' +
+                    str("{:.3f}".format(average)))
+        plt.axvline(x=average + error, color='green',
+                    label='Error = ' + str("{:.3f}".format(error)))
         plt.axvline(x=average - error, color='green')
         plt.legend(loc="best")
         plt.xlabel(scoring)
         plt.ylabel('Density')
         plt.tight_layout()
-        plt.savefig(os.path.join(path_results, scoring + '_distribution.png'), format='png', bbox_inches="tight")
-
+        plt.savefig(os.path.join(path_results, scoring +
+                    '_distribution.png'), format='png', bbox_inches="tight")
 
     path_results = path_definer()
 
@@ -890,6 +971,17 @@ def bootstrapping(number_of_samples,
             standard_dev_boltzmann,
             'Boltzmann')
 
+def plot_function(output_df):
+
+    output_df = output_df[['metric','value']]
+    output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
+    output_df['new_col'] = output_df.groupby(level='metric').cumcount()
+    output_df = output_df.pivot(columns='new_col', values=0)
+    output_df = output_df.reset_index().rename_axis(None, 1)
+    output_df = output_df.T
+    
+    ####################
+    output_df.plot(x='col_name_1', y='col_name_2', style='o')
 
 def ensambler(bootstrap_bool,
               filter_bool,
@@ -913,11 +1005,11 @@ def ensambler(bootstrap_bool,
 
     elif not bootstrap_bool and filter_bool:
 
-        filter(original_df,
-               snapshots,
-               equilibration_steps,
-               metric_threshold,
-               quantile_flag)
+        output_df = filter(original_df,
+                           snapshots,
+                           equilibration_steps,
+                           metric_threshold,
+                           quantile_flag)
 
     elif bootstrap_bool and filter_bool:
 
@@ -926,17 +1018,19 @@ def ensambler(bootstrap_bool,
                       original_df,
                       snapshots)
 
-        filter(original_df,
-               snapshots,
-               equilibration_steps,
-               metric_threshold,
-               quantile_flag)
+        output_df = filter(original_df,
+                           snapshots,
+                           equilibration_steps,
+                           metric_threshold,
+                           quantile_flag)
 
     else:
 
         print(' -   No action chosen. Either: filter or/and bootstrap.\n')
-        raise Exception('NoActionError: An action must be chosen: filter or/and bootstrap.')
+        raise Exception(
+            'NoActionError: An action must be chosen: filter or/and bootstrap.')
 
+    plot_function(output_df)
 
 def main(args):
     """
