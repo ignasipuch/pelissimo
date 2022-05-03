@@ -16,7 +16,6 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from seaborn import displot
 
 # Constants
 R = 1.985e-3
@@ -43,11 +42,29 @@ def parse_args(args):
 
     parser = argparse.ArgumentParser()
 
+    # Analysis flags
+    parser.add_argument("--bootstrap", dest='bootstrap_bool', default=False, action='store_true', 
+                        help="Flag to choose if bootstrap analysis is required.")  
+    parser.add_argument("--filter", dest='filter_bool', default=False, action='store_true', 
+                        help="Flag to choose if filter analysis is required.")  
+
+    # General flags
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
                         default='output', help="Name of the output directory where the simulation\
         is located.")
     parser.add_argument("-rn", "--report_name", type=str, dest="report_name",
                         default='report', help="Name of the report files used for the simulation.")
+
+    # Filter flags
+    parser.add_argument("-es", "--equilibration_steps", type=int, dest="equilibration_steps",
+                        help="Number of steps from first reports we want to omit.") 
+    parser.add_argument("-mt", "--metric_threshold", type=list, dest="metric_threshold",
+                        help="List of [metric,[min,max]] where metric is str and min and max, float") 
+    parser.add_argument("-q", "--quantile", type=str, dest="quantile_flag",
+                        help="Quantile we are interested in. List of [metric,value] where metric is\
+                         str and values is float")
+    
+    # Bootstrap flags
     parser.add_argument("-ns", "--number_of_samples", type=int, dest="number_of_samples",
                         default=10, help="Number of bootstrap datasets to generate.")
     parser.add_argument("-m", "--metric", type=str, dest="metric",
@@ -58,10 +75,9 @@ def parse_args(args):
     return parsed_args
 
 
-def bootstrapping(input_folder,
-                  report_name,
-                  number_of_samples,
-                  metric):
+def data(input_folder,
+         report_name):
+
     """
     Function
     ----------
@@ -101,12 +117,8 @@ def bootstrapping(input_folder,
 
         path = str(pathlib.Path().absolute())
         path_output = os.path.join(path, input_folder)
-        path_results = os.path.join(path, 'bootstrap')
 
-        if os.path.isdir(path_results) is False:
-            os.mkdir(path_results)
-
-        return path_output, path_results
+        return path_output
 
     def data_retriever(report_name,
                        path_output):
@@ -286,20 +298,174 @@ def bootstrapping(input_folder,
 
                 epoch = epoch_path.split('/')[-1]
                 data_dict[epoch] = epoch_retriever(report_name,
-                                                   epoch_path,
-                                                   metrics_dict)
+                                                         epoch_path,
+                                                         metrics_dict)
 
         else:
 
             metrics_dict = metric_retirever(path_output)
             data_dict[0] = epoch_retriever(report_name,
-                                           path_output,
-                                           metrics_dict)
+                                                 path_output,
+                                                 metrics_dict)
 
         original_df = dict_to_dataframe(data_dict)
         snapshots = int(len(original_df)/6)
 
         return original_df, snapshots
+
+    #
+    print(' ')
+    print('*******************************************************************')
+    print('*                        peleBootstrap                            *')
+    print('*******************************************************************')
+    print(' ')
+    #
+
+    path_output = path_definer(input_folder)
+
+    #
+    print(' *   Retrieving data')
+    #
+
+    original_df, snapshots = data_retriever(report_name, path_output)
+
+    return original_df, snapshots
+
+
+def filter(original_df,
+           snapshots,
+           equilibration_steps,
+           metric_threshold,
+           quantile_flag):
+
+    def equilibration_steps_remover(original_df,
+                                    equilibration_steps):
+        """
+        Function
+        ----------
+        Obtain a data frame without equilibration steps.
+
+        Parameters
+        ----------
+        - original_df : pd.DataFrame
+            Data frame with current energies and strain information.
+        - equilibration_steps : int
+            Number of steps we want to omit.
+
+        Returns
+        ----------
+        - original_df : list
+            Data frame with quantile filtered.
+        """
+
+        print('     -   Deleting ' + str(equilibration_steps) + ' equilibration steps')
+        equilibration_df = original_df.drop(original_df[original_df.epoch == 0][original_df[original_df.epoch == 0].model <= equilibration_steps].index)
+
+        return equilibration_df
+
+    def quantile_retriever(original_df,
+                           quantile_flag):
+        """
+        Function
+        ----------
+        Obtain a list of strain energies corresponding to those conformations
+        with energies below a certain quantile.
+
+        Parameters
+        ----------
+        - original_df : pd.DataFrame
+            Data frame with current energies and strain information.
+        - quantile_flag : list
+            List with metric we want to apply the quantile on and value of quantile.
+
+        Returns
+        ----------
+        - original_df : list
+            Data frame with quantile filtered.
+        """
+
+        quantile_flag = quantile_flag.strip('][').split(',')
+        modified_df = original_df.loc[original_df['metric'] == quantile_flag[0]]
+        quantile_value = modified_df['value'].quantile(float(quantile_flag[1]))
+
+        deletion_df = modified_df[modified_df['value'] > quantile_value]
+
+        print('     -   Deleting all values above ' + str(quantile_value)\
+             + ' of the ' + quantile_flag[0] + '.\n')
+
+        for _, row in deletion_df.iterrows():
+
+            indexes = original_df[
+                (original_df['epoch'] == row[0]) & 
+                (original_df['trajectory'] == row[1]) & 
+                (original_df['model'] == row[2])].index
+            
+            original_df = original_df.drop(indexes)
+
+        quantile_df = original_df
+
+        return quantile_df
+            
+    print(' *   Filtering data.\n')
+
+    equilibration_df = equilibration_steps_remover(original_df,
+                                              equilibration_steps)
+
+    quantile_df = quantile_retriever(equilibration_df,
+                                     quantile_flag)
+
+
+    return original_df, snapshots
+
+
+def bootstrapping(number_of_samples,
+                  metric,
+                  original_df,
+                  snapshots):
+    """
+    Function
+    ----------
+    Bootstrap function that performs all the calculations.
+
+    Parameters
+    ----------
+    - input_folder : str
+        Name of the output directory where the simulation
+        is located.
+    - report_name : str
+        Name of the report files used for the simulation.
+    - number_of_samples : int
+        Number of bootstrap datasets to generate.
+    - metric : str
+        Name of the metric you are interested in.
+    """
+
+    def path_definer():
+        """
+        Function
+        ----------
+        Defines the important paths that are going to be used throughout the simulation.
+
+        Parameters
+        ----------
+        - input_folder : str
+            Name of the folder where the output of the simulation is located.
+
+        Returns
+        ----------
+        - path_output : str
+            Path to the output folder of the simulation.
+        - path_results : str 
+            Path to the results folder of the bootstrap analysis.
+        """
+
+        path = str(pathlib.Path().absolute())
+        path_results = os.path.join(path, 'bootstrap')
+
+        if os.path.isdir(path_results) is False:
+            os.mkdir(path_results)
+
+        return path_results
 
     def bootstrap_dataset(original_df,
                           snapshots):
@@ -652,6 +818,8 @@ def bootstrapping(input_folder,
             Name of the scoring function used.
         """
 
+        from seaborn import displot
+
         displot(data, kind="kde", color='black', label='KDE plot')
         plt.title(scoring + ' Distribution')
         plt.axvline(x=average, color='red', label='Average = ' + str("{:.3f}".format(average)))
@@ -663,23 +831,11 @@ def bootstrapping(input_folder,
         plt.tight_layout()
         plt.savefig(os.path.join(path_results, scoring + '_distribution.png'), format='png', bbox_inches="tight")
 
-    #
-    print(' ')
-    print('*******************************************************************')
-    print('*                        peleBootstrap                            *')
-    print('*******************************************************************')
-    print(' ')
-    #
 
-    path_output, path_results = path_definer(input_folder)
+    path_results = path_definer()
 
     #
-    print(' -   Retrieving data')
-    #
-
-    original_df, snapshots = data_retriever(report_name, path_output)
-
-    #
+    print(' *   Bootstrapping')
     print(' -   Generating ' + str(number_of_samples) + ' datasets...')
     #
 
@@ -735,6 +891,53 @@ def bootstrapping(input_folder,
             'Boltzmann')
 
 
+def ensambler(bootstrap_bool,
+              filter_bool,
+              input_folder,
+              report_name,
+              equilibration_steps,
+              metric_threshold,
+              quantile_flag,
+              number_of_samples,
+              metric):
+
+    original_df, snapshots = data(input_folder,
+                                  report_name)
+
+    if bootstrap_bool and not filter_bool:
+
+        bootstrapping(number_of_samples,
+                      metric,
+                      original_df,
+                      snapshots)
+
+    elif not bootstrap_bool and filter_bool:
+
+        filter(original_df,
+               snapshots,
+               equilibration_steps,
+               metric_threshold,
+               quantile_flag)
+
+    elif bootstrap_bool and filter_bool:
+
+        bootstrapping(number_of_samples,
+                      metric,
+                      original_df,
+                      snapshots)
+
+        filter(original_df,
+               snapshots,
+               equilibration_steps,
+               metric_threshold,
+               quantile_flag)
+
+    else:
+
+        print(' -   No action chosen. Either: filter or/and bootstrap.\n')
+        raise Exception('NoActionError: An action must be chosen: filter or/and bootstrap.')
+
+
 def main(args):
     """
     Function
@@ -747,10 +950,15 @@ def main(args):
         It contains the command-line arguments that are supplied by the user
     """
 
-    bootstrapping(input_folder=args.input_folder,
-                  report_name=args.report_name,
-                  number_of_samples=args.number_of_samples,
-                  metric=args.metric)
+    ensambler(args.bootstrap_bool,
+              args.filter_bool,
+              args.input_folder,
+              args.report_name,
+              args.equilibration_steps,
+              args.metric_threshold,
+              args.quantile_flag,
+              args.number_of_samples,
+              args.metric)
 
 
 if __name__ == '__main__':
