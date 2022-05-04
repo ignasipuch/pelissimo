@@ -726,7 +726,16 @@ def statistics(input_folder,
         fig2.savefig(os.path.join(
             path_plots, input_folder + '_min_evolution.png'))
 
-    def ensambler():
+    def ensambler(input_folder,
+                  report_name,
+                  column,
+                  T,
+                  action):
+        """
+        Function
+        ----------
+        Function that joins all the other functions.
+        """
 
         folderpath, path = path_definer(input_folder)
         be, te, _, column_be = reader(folderpath,
@@ -817,7 +826,11 @@ def statistics(input_folder,
     print(' ')
     #
 
-    ensambler()
+    ensambler(input_folder,
+              report_name,
+              column,
+              T,
+              action)
 
 
 def main(args):
