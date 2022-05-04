@@ -99,7 +99,7 @@ def data(input_folder,
         """
         Function
         ----------
-        Defines the important paths that are going to be used throughout the simulation.
+        Defines the important paths that are going to be used in this function.
 
         Parameters
         ----------
@@ -110,8 +110,6 @@ def data(input_folder,
         ----------
         - path_output : str
             Path to the output folder of the simulation.
-        - path_results : str 
-            Path to the results folder of the bootstrap analysis.
         """
 
         path = str(pathlib.Path().absolute())
@@ -395,7 +393,7 @@ def filter(original_df,
         deletion_df = modified_df[modified_df['value'] > quantile_value]
 
         print('     -   Deleting all values above ' + str(quantile_value)
-              + ' of the ' + quantile_flag[0] + '.\n')
+              + ' of the ' + quantile_flag[0] + '.')
 
         for _, row in deletion_df.iterrows():
 
@@ -525,19 +523,15 @@ def bootstrapping(number_of_samples,
         """
         Function
         ----------
-        Defines the important paths that are going to be used throughout the simulation.
+        Defines the important paths that are going to be used in this function.
 
         Parameters
         ----------
-        - input_folder : str
-            Name of the folder where the output of the simulation is located.
 
         Returns
         ----------
-        - path_output : str
-            Path to the output folder of the simulation.
         - path_results : str 
-            Path to the results folder of the bootstrap analysis.
+            Path to the results folder of the analysis.
         """
 
         path = str(pathlib.Path().absolute())
@@ -646,7 +640,7 @@ def bootstrapping(number_of_samples,
 
         Return
         ----------
-        - average : float
+        - minimum : float
             The dataframe's minimum value for the specific metric.
         - maximum : float
             The dataframe's maximum value for the specific metric.
@@ -974,24 +968,27 @@ def bootstrapping(number_of_samples,
 
 
 def plot_function(output_df):
+    """
+    Function
+    ----------
+    Plot all the metrics vs all the metrics.
+
+    Parameters
+    ----------
+    output_df : pd.DataFrame
+        Dataframe with all the information once it has been filtered.
+    """
 
     def path_definer():
         """
         Function
         ----------
-        Defines the important paths that are going to be used throughout the simulation.
-
-        Parameters
-        ----------
-        - input_folder : str
-            Name of the folder where the output of the simulation is located.
+        Defines the important paths that are going to be used in this function.
 
         Returns
         ----------
-        - path_output : str
-            Path to the output folder of the simulation.
         - path_results : str 
-            Path to the results folder of the bootstrap analysis.
+            Path to the results folder of the analysis.
         """
 
         path = str(pathlib.Path().absolute())
@@ -1003,6 +1000,21 @@ def plot_function(output_df):
         return path_results
 
     def dataframe_trimming(output_df):
+        """
+        Function
+        ----------
+        Trims non-important columns out of the dataframe.
+
+        Parameters
+        ----------
+        output_df : pd.DataFrame
+            Dataframe with all the information once it has been filtered.
+
+        Returns
+        ----------
+        - output_df : pd.DataFrame 
+            Dataframe without columns: Steps and nonAcceptedSteps
+        """
 
         output_df = output_df[['metric','value']]
         output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
@@ -1039,6 +1051,97 @@ def plot_function(output_df):
                 plt.close()
 
 
+def analyzer(df,
+             metric_analyze):
+    """
+    Function
+    ----------
+    Calculate different scores fot the metric we want to analyze.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Dataframe with all the information once it has been filtered.
+    metric_analyze : str
+        Metric we want to obtain information of.
+    """
+    def path_definer():
+        """
+        Function
+        ----------
+        Defines the important paths that are going to be used in this function.
+
+        Parameters
+        ----------
+
+        Returns
+        ----------
+        - path_results : str 
+            Path to the results folder of the analysis.
+        """
+
+        path = str(pathlib.Path().absolute())
+        path_results = os.path.join(path, 'analysis')
+
+        if os.path.isdir(path_results) is False:
+            os.mkdir(path_results)
+
+        return path_results
+
+    def boltzmann_weighted(be,
+                           te,
+                           T):
+        """
+        Function
+        ----------
+        Calculates boltzmann weighted energy.
+
+        Parameters
+        ----------
+        - be : list
+            Binding energies of all the simulation.
+        - te : list
+            Total energies of all the simulation.
+        - T : float
+            Temperature to perform the Boltzmann weights with.
+        - steps : list
+            Steps associated to poses for all the simulation.
+
+        Returns
+        ----------
+        - ene_bz : float
+            Value of the boltzmann weighted energy.
+        """
+
+        exp_bz = np.exp(-te/(R*T))
+        nominator = be.dot(exp_bz)
+        denominator = np.sum(exp_bz)
+        ene_bz = nominator/denominator
+
+        return ene_bz
+
+
+    path_results = path_definer()
+    vector = np.array(df[metric_analyze])
+
+    te = np.array(df['currentEnergy'])
+    min_energy = np.min(te)
+    te = np.array(te) - min_energy
+
+    min = np.min(vector)
+    ave = np.average(vector)
+    bz = boltzmann_weighted(vector, te, T)
+
+    with open(os.path.join(path_results,'energy.csv'), 'w') as fileout:
+        fileout.writelines(
+            'Minimum,Average,Boltzmann weighted\n'
+            '' + str(min) + ',' +
+            str(ave) + ',' + str(bz) + '\n'
+        )
+
+    return min, ave, bz
+
+
 def ensambler(bootstrap_bool,
               filter_bool,
               input_folder,
@@ -1048,6 +1151,32 @@ def ensambler(bootstrap_bool,
               quantile_flag,
               number_of_samples,
               metric):
+    """
+    Function
+    ----------
+    Function that joins all the other functions.
+
+    Parameters
+    ----------
+    bootstrap_bool : bool
+        Boolean to know whether bootstrap analysis is wanted.
+    filter_bool : bool
+        Boolean to know whether filter analysis is wanted.
+    input_folder : str
+        Name of the output directory where the simulation is located.
+    report_name : str
+        Name of the report files used for the simulation.
+    equilibration_steps : int
+        Number of steps from first reports we want to omit.
+    metric_threshold : str
+        List of [metric,[min,max]] where metric is str and min and max, float.
+    quantile_flag : str
+        Quantile we are interested in. List of [metric,value] where metric is str and values is float
+    number_of_samples : int
+        Number of bootstrap datasets to generate.
+    metric : str
+        Name of the metric you are interested in.
+    """
 
     original_df, snapshots = data(input_folder,
                                   report_name)
