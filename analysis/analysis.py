@@ -434,8 +434,9 @@ def filter(original_df,
         metric_flag = metric_threshold.strip('][').split(',')
         modified_df = original_df.loc[original_df['metric']
                                       == metric_flag[0]]
-        modified_df = modified_df[modified_df['value'] <= float(metric_flag[1])]
-        deletion_df = modified_df[modified_df['value'] > float(metric_flag[2])]
+        modified_df_1 = modified_df[modified_df['value'] > float(metric_flag[2])]
+        modified_df_2 = modified_df[modified_df['value'] <= float(metric_flag[1])]
+        deletion_df = pd.concat([modified_df_1, modified_df_2])
 
         print('     -   Deleting all values not belonging to [' \
             + metric_flag[1] + ',' + metric_flag[2] + ') of the ' + metric_flag[0] + '.\n')
@@ -453,7 +454,7 @@ def filter(original_df,
 
         return metric_df
 
-    print(' *   Filtering data.\n')
+    print(' *   Filtering data.')
 
     cont = 0
 
@@ -482,7 +483,7 @@ def filter(original_df,
 
     elif quantile_flag is None and metric_threshold is not None:
 
-        output_df = metric_remover(original_df,
+        output_df = metric_remover(equilibration_df,
                                    metric_threshold)
 
     else:
@@ -540,7 +541,7 @@ def bootstrapping(number_of_samples,
         """
 
         path = str(pathlib.Path().absolute())
-        path_results = os.path.join(path, 'bootstrap')
+        path_results = os.path.join(path, 'analysis','bootstrap')
 
         if os.path.isdir(path_results) is False:
             os.mkdir(path_results)
@@ -971,17 +972,72 @@ def bootstrapping(number_of_samples,
             standard_dev_boltzmann,
             'Boltzmann')
 
+
 def plot_function(output_df):
 
-    output_df = output_df[['metric','value']]
-    output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
-    output_df['new_col'] = output_df.groupby(level='metric').cumcount()
-    output_df = output_df.pivot(columns='new_col', values=0)
-    output_df = output_df.reset_index().rename_axis(None, 1)
-    output_df = output_df.T
+    def path_definer():
+        """
+        Function
+        ----------
+        Defines the important paths that are going to be used throughout the simulation.
+
+        Parameters
+        ----------
+        - input_folder : str
+            Name of the folder where the output of the simulation is located.
+
+        Returns
+        ----------
+        - path_output : str
+            Path to the output folder of the simulation.
+        - path_results : str 
+            Path to the results folder of the bootstrap analysis.
+        """
+
+        path = str(pathlib.Path().absolute())
+        path_results = os.path.join(path, 'analysis', 'images')
+
+        if os.path.isdir(path_results) is False:
+            os.mkdir(path_results)
+
+        return path_results
+
+    def dataframe_trimming(output_df):
+
+        output_df = output_df[['metric','value']]
+        output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
+        output_df['new_col'] = output_df.groupby(level='metric').cumcount()
+        output_df = output_df.pivot(columns='new_col', values=0)
+        output_df = output_df.reset_index().rename_axis(None, 1)
+        output_df = output_df.T
+        output_df.columns = output_df.iloc[0] 
+        output_df = output_df[1:]
+        output_df.head()
+        output_df.drop('Step', inplace=True, axis=1)
+        output_df.drop('numberOfAcceptedPeleSteps', inplace=True, axis=1)
     
-    ####################
-    output_df.plot(x='col_name_1', y='col_name_2', style='o')
+        return output_df
+
+    path_results = path_definer()
+    output_df = dataframe_trimming(output_df)
+
+    metrics = list(output_df.columns.values.tolist())
+
+    for metric_x in metrics:
+        for metric_y in metrics:
+            if metrics.index(metric_y) != metrics.index(metric_x):
+
+                x = np.array(output_df[metric_x])
+                y = np.array(output_df[metric_y])
+
+                plt.scatter(x,y,marker = 'o')
+                plt.xlabel(str(metric_x))
+                plt.ylabel(str(metric_y))
+                plt.margins()
+                plt.title(str(metric_y) + ' vs ' + str(metric_x))
+                plt.savefig(os.path.join(path_results,metric_x + '_' + metric_y + '.png'))
+                plt.close()
+
 
 def ensambler(bootstrap_bool,
               filter_bool,
@@ -1031,6 +1087,7 @@ def ensambler(bootstrap_bool,
             'NoActionError: An action must be chosen: filter or/and bootstrap.')
 
     plot_function(output_df)
+
 
 def main(args):
     """
