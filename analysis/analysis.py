@@ -47,6 +47,9 @@ def parse_args(args):
                         help="Flag to choose if bootstrap analysis is required.")
     parser.add_argument("--filter", dest='filter_bool', default=False, action='store_true',
                         help="Flag to choose if filter analysis is required.")
+    parser.add_argument("--analyze", dest='analyzer_bool', default=False, action='store_true',
+                        help="Flag to choose if analysis is required.")
+
 
     # General flags
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
@@ -67,6 +70,8 @@ def parse_args(args):
     # Bootstrap flags
     parser.add_argument("-ns", "--number_of_samples", type=int, dest="number_of_samples",
                         default=10, help="Number of bootstrap datasets to generate.")
+
+    # Bootstrap and Analyzer flag                   
     parser.add_argument("-m", "--metric", type=str, dest="metric",
                         default='BindingEnergy', help="Name of the metric you are interested in.")
 
@@ -313,7 +318,7 @@ def data(input_folder,
     #
     print(' ')
     print('*******************************************************************')
-    print('*                        peleBootstrap                            *')
+    print('*                        peleAnalysis                             *')
     print('*******************************************************************')
     print(' ')
     #
@@ -330,7 +335,6 @@ def data(input_folder,
 
 
 def filter(original_df,
-           snapshots,
            equilibration_steps,
            metric_threshold,
            quantile_flag):
@@ -437,7 +441,7 @@ def filter(original_df,
         deletion_df = pd.concat([modified_df_1, modified_df_2])
 
         print('     -   Deleting all values not belonging to [' \
-            + metric_flag[1] + ',' + metric_flag[2] + ') of the ' + metric_flag[0] + '.\n')
+            + metric_flag[1] + ',' + metric_flag[2] + ') of the ' + metric_flag[0] + '.')
 
         for _, row in deletion_df.iterrows():
 
@@ -452,7 +456,7 @@ def filter(original_df,
 
         return metric_df
 
-    print(' *   Filtering data.')
+    print('\n *   Filtering data.')
 
     cont = 0
 
@@ -535,7 +539,7 @@ def bootstrapping(number_of_samples,
         """
 
         path = str(pathlib.Path().absolute())
-        path_results = os.path.join(path, 'analysis','bootstrap')
+        path_results = os.path.join(path, 'analyzer','bootstrap')
 
         if os.path.isdir(path_results) is False:
             os.mkdir(path_results)
@@ -911,7 +915,7 @@ def bootstrapping(number_of_samples,
     path_results = path_definer()
 
     #
-    print(' *   Bootstrapping')
+    print('\n *   Bootstrapping')
     print(' -   Generating ' + str(number_of_samples) + ' datasets...')
     #
 
@@ -936,7 +940,7 @@ def bootstrapping(number_of_samples,
     }
 
     #
-    print(' -   Writing files\n')
+    print(' -   Writing files')
     #
 
     results_df = pd.DataFrame(data, index=['average', 'error'])
@@ -967,6 +971,35 @@ def bootstrapping(number_of_samples,
             'Boltzmann')
 
 
+def dataframe_trimming(output_df):
+    """
+    Function
+    ----------
+    Trims non-important columns out of the dataframe and reshapes it.
+    Parameters
+    ----------
+    output_df : pd.DataFrame
+        Dataframe with all the information once it has been filtered.
+    Returns
+    ----------
+    - output_df : pd.DataFrame 
+        Dataframe without columns: Steps and nonAcceptedSteps
+    """
+    output_df = output_df[['metric','value']]
+    output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
+    output_df['new_col'] = output_df.groupby(level='metric').cumcount()
+    output_df = output_df.pivot(columns='new_col', values=0)
+    output_df = output_df.reset_index().rename_axis(None, 1)
+    output_df = output_df.T
+    output_df.columns = output_df.iloc[0] 
+    output_df = output_df[1:]
+    output_df.head()
+    output_df.drop('Step', inplace=True, axis=1)
+    output_df.drop('numberOfAcceptedPeleSteps', inplace=True, axis=1)
+
+    return output_df
+
+
 def plot_function(output_df):
     """
     Function
@@ -992,46 +1025,14 @@ def plot_function(output_df):
         """
 
         path = str(pathlib.Path().absolute())
-        path_results = os.path.join(path, 'analysis', 'images')
+        path_results = os.path.join(path, 'analyzer', 'images')
 
         if os.path.isdir(path_results) is False:
             os.mkdir(path_results)
 
         return path_results
 
-    def dataframe_trimming(output_df):
-        """
-        Function
-        ----------
-        Trims non-important columns out of the dataframe.
-
-        Parameters
-        ----------
-        output_df : pd.DataFrame
-            Dataframe with all the information once it has been filtered.
-
-        Returns
-        ----------
-        - output_df : pd.DataFrame 
-            Dataframe without columns: Steps and nonAcceptedSteps
-        """
-
-        output_df = output_df[['metric','value']]
-        output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
-        output_df['new_col'] = output_df.groupby(level='metric').cumcount()
-        output_df = output_df.pivot(columns='new_col', values=0)
-        output_df = output_df.reset_index().rename_axis(None, 1)
-        output_df = output_df.T
-        output_df.columns = output_df.iloc[0] 
-        output_df = output_df[1:]
-        output_df.head()
-        output_df.drop('Step', inplace=True, axis=1)
-        output_df.drop('numberOfAcceptedPeleSteps', inplace=True, axis=1)
-    
-        return output_df
-
     path_results = path_definer()
-    output_df = dataframe_trimming(output_df)
 
     metrics = list(output_df.columns.values.tolist())
 
@@ -1081,7 +1082,7 @@ def analyzer(df,
         """
 
         path = str(pathlib.Path().absolute())
-        path_results = os.path.join(path, 'analysis')
+        path_results = os.path.join(path, 'analyzer')
 
         if os.path.isdir(path_results) is False:
             os.mkdir(path_results)
@@ -1120,11 +1121,12 @@ def analyzer(df,
 
         return ene_bz
 
+    print('\n *   Data analyzer.')
 
     path_results = path_definer()
-    vector = np.array(df[metric_analyze])
+    vector = np.array(df[metric_analyze]).astype(float)
 
-    te = np.array(df['currentEnergy'])
+    te = np.array(df['currentEnergy']).astype(float)
     min_energy = np.min(te)
     te = np.array(te) - min_energy
 
@@ -1144,6 +1146,7 @@ def analyzer(df,
 
 def ensambler(bootstrap_bool,
               filter_bool,
+              analyzer_bool,
               input_folder,
               report_name,
               equilibration_steps,
@@ -1175,11 +1178,13 @@ def ensambler(bootstrap_bool,
     number_of_samples : int
         Number of bootstrap datasets to generate.
     metric : str
-        Name of the metric you are interested in.
+        Name of the metric you are interested in both for analyzer and bootstrap.
     """
 
     original_df, snapshots = data(input_folder,
                                   report_name)
+
+    cont = 0
 
     if bootstrap_bool and not filter_bool:
 
@@ -1191,7 +1196,6 @@ def ensambler(bootstrap_bool,
     elif not bootstrap_bool and filter_bool:
 
         output_df = filter(original_df,
-                           snapshots,
                            equilibration_steps,
                            metric_threshold,
                            quantile_flag)
@@ -1204,18 +1208,32 @@ def ensambler(bootstrap_bool,
                       snapshots)
 
         output_df = filter(original_df,
-                           snapshots,
                            equilibration_steps,
                            metric_threshold,
                            quantile_flag)
+    
+    else: 
+
+        cont += 1
+
+    output_df = dataframe_trimming(output_df)
+
+    if analyzer_bool:
+
+        analyzer(output_df,
+                 metric)
 
     else:
 
-        print(' -   No action chosen. Either: filter or/and bootstrap.\n')
-        raise Exception(
-            'NoActionError: An action must be chosen: filter or/and bootstrap.')
+        cont += 1
+
+        if cont == 2:
+
+            raise Exception('NoActionError: No action has been chosen: --bootstrap and/or --filter and/or --analyze')
 
     plot_function(output_df)
+
+    print('\n -   All results stored inside analyzer.\n')
 
 
 def main(args):
@@ -1232,6 +1250,7 @@ def main(args):
 
     ensambler(args.bootstrap_bool,
               args.filter_bool,
+              args.analyzer_bool,
               args.input_folder,
               args.report_name,
               args.equilibration_steps,
