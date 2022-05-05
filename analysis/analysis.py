@@ -989,7 +989,7 @@ def dataframe_trimming(output_df):
     output_df = output_df.set_index('metric').stack().reset_index(level=1, drop=True).to_frame()
     output_df['new_col'] = output_df.groupby(level='metric').cumcount()
     output_df = output_df.pivot(columns='new_col', values=0)
-    output_df = output_df.reset_index().rename_axis(None, 1)
+    output_df = output_df.reset_index().rename_axis(None, axis=1)
     output_df = output_df.T
     output_df.columns = output_df.iloc[0] 
     output_df = output_df[1:]
