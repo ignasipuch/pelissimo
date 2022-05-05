@@ -11,7 +11,7 @@ Some others are meant to automatize specific PELE simulations in different ways:
    * **1.1. disc.py**: Script to: (1) Read all the information about a metric in a simulation and calculating different scoring functions.
  (2) Make plots of the evolution of the Boltzmann weighted average or minimum of a certain metric throughout a simulation.
 
-   * **1.2. bootstrapping.py**: Script to generate bootstrap datasets and have statistics.
+   * **1.2. analysis.py**: Script to generate analyze simulations.
 
    * **1.3. pele_fetcher.py**: Script that fetches specific snapshot of a simulation.
 
@@ -60,11 +60,17 @@ All the analysis scripts are designed to be run from the father directory of the
 python path/to/code/disc.py -d ouput_1 -c 5
 ```
 
-2. _bootstrapping.py_: If we want to make 50 bootstrap datasets from the results in output_2 regarding the sasa:
+2. _analysis.py_: If we want to make 50 bootstrap datasets from the results in output_2 regarding the sasa:
 
 ```
-python path/to/code/bootstrapping.py -d ouput_2 -ns 50 -m sasa
+python path/to/code/analysis.py -d ouput_2 -ns 50 -m sasa --bootstrap
 ```
+
+If we want to select the snapshots the first quantile of the BindingEnergy and analyze the energetic results of the BindingEnergy:
+```
+python path/to/code/analysis.py -rn rmsd_report -es 3 -q ['BindingEnergy',0.25] --filter --analyze -m BindingEnergy
+```
+
 
 3. _pelefetcher.py_: If we want to extract the pose in epoch 4, trajectory 33, model 7 and save it as 1MTS_min.pdb:
 
