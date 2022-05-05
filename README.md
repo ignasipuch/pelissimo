@@ -11,7 +11,7 @@ Some others are meant to automatize specific PELE simulations in different ways:
    * **1.1. disc.py**: Script to: (1) Read all the information about a metric in a simulation and calculating different scoring functions.
  (2) Make plots of the evolution of the Boltzmann weighted average or minimum of a certain metric throughout a simulation.
 
-   * **1.2. analysis.py**: Script to generate analyze simulations.
+   * **1.2. analysis.py**: Script to analyze simulations.
 
    * **1.3. pele_fetcher.py**: Script that fetches specific snapshot of a simulation.
 
