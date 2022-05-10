@@ -463,7 +463,10 @@ def corrector(input_folder,
 
                             if cont == 0:
 
-                                fileout.write(line)
+                                line = line.split()
+                                line.append('strainEnergy')
+                                fileout.write(
+                                            "     ".join(str(v) for v in line) + '\n')
 
                             else:
 
@@ -475,10 +478,11 @@ def corrector(input_folder,
                                         strain_energy = float(
                                             line[column_internal_energy-1]) - ligand_min_energy
                                         line[column_binding_energy-1] = \
-                                            str(float(
-                                                line[column_binding_energy-1]) + strain_energy + entropy_change)
+                                            str("{:.4f}".format(float(
+                                                line[column_binding_energy-1]) + strain_energy + entropy_change))
+                                        line.append("{:.4f}".format(strain_energy))
                                         fileout.write(
-                                            "     ".join(line) + '\n')
+                                            "     ".join(str(v) for v in line) + '\n')
 
                                     else:
 
@@ -490,10 +494,11 @@ def corrector(input_folder,
                                             line[column_internal_energy-1]) - ligand_min_energy
 
                                         line[column_binding_energy-1] = \
-                                            str(float(
-                                                line[column_binding_energy-1]) + strain_energy + entropy_change)
+                                            str("{:.4f}".format(float(
+                                                line[column_binding_energy-1]) + strain_energy + entropy_change))
+                                        line.append("{:.4f}".format(strain_energy))
                                         fileout.write(
-                                            "     ".join(line) + '\n')
+                                            "     ".join(str(v) for v in line) + '\n')
 
                                         epochs.append(int(epoch))
                                         trajectories.append(int(trajectory))
@@ -513,9 +518,10 @@ def corrector(input_folder,
                                         line[column_internal_energy-1]) - ligand_min_energy
 
                                     line[column_binding_energy-1] = \
-                                        str(float(
-                                            line[column_binding_energy-1]) + strain_energy + entropy_change)
-                                    fileout.write("     ".join(line) + '\n')
+                                        str("{:.4f}".format(float(
+                                            line[column_binding_energy-1]) + strain_energy + entropy_change))
+                                    line.append("{:.4f}".format(strain_energy))
+                                    fileout.write("     ".join(str(v) for v in line) + '\n')
 
                                     epochs.append(int(epoch))
                                     trajectories.append(int(trajectory))
