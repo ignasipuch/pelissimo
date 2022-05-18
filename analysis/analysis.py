@@ -338,6 +338,23 @@ def filter(original_df,
            equilibration_steps,
            metric_threshold,
            quantile_flag):
+    """
+    Function
+    ----------
+    Filtering function that enables the user to filter the data depending on metrics.
+
+    Parameters
+    ----------
+        - original_df : pd.DataFrame
+            Data frame with all the information of the simulation.
+        - equilibration_steps : int
+            Number of steps we want to omit.
+        - metric_threshold : str
+            List with metric we want to apply the filtering and thresholds.
+            Syntax: [metric,quantile]
+        - quantile_flag : str
+            Flag with metric and quantile information. Syntax: [metric,quantile]
+    """
 
     def equilibration_steps_remover(original_df,
                                     equilibration_steps):
@@ -359,9 +376,9 @@ def filter(original_df,
             Data frame with equilibration steps omited filtered.
         """
 
-        if equilibration_steps > 5:
+        if equilibration_steps > 10:
             raise Exception(
-                'TooManyEquilibrationSteps: Maximum equilibration steps are 5.')
+                'TooManyEquilibrationSteps: Maximum equilibration steps are 10.')
 
         print('     -   Deleting ' +
               str(equilibration_steps) + ' equilibration steps')
@@ -424,8 +441,8 @@ def filter(original_df,
         - original_df : pd.DataFrame
             Data frame with reports' information.
         - metric_threshold : str
-            List with metric we want to apply the metric and threshold on and value 
-            of quantile.
+            List with metric we want to apply the filtering and thresholds.
+            Syntax: [metric,quantile]
 
         Returns
         ----------
