@@ -111,6 +111,9 @@ def lice_results(input_folder,
             raise Exception('PathError: There is no folder with this name: ' +
                             path_pl_simulation + '. Please check the path and the folder name.')
 
+        if os.path.exists(path_entropy) == False:
+            os.mkdir(path_entropy)
+
         return path_pl_simulation, path_pl_dihedrals, path_l_dihedrals, path_entropy
 
     def entropy_retriever(path):
