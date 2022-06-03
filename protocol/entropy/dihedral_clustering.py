@@ -121,7 +121,186 @@ def dihedral_angles_retriever_main(input_folder,
         if os.path.exists(os.path.join(path_results,'images')) == False:
             os.mkdir(os.path.join(path_results,'images'))
 
-        return path_template, path_output, path_results
+        return path, path_template, path_output, path_results
+
+    def residency_function(path_output,
+                           path):
+        """
+        Function
+        ----------
+        Retrieve the information about residency of each conformation. 
+
+        Parameters
+        ----------
+        - path_output : str
+            Path to the output folder of the simulation.
+
+        Returns
+        ----------
+        - residency_df : pd.DataFrame
+            Data Frame with the residency information of each model in the simulation.
+        """
+
+        def pelesteps_retriever(path):
+            """
+            Function
+            ----------
+            Reads the pelesteps from adaptive.conf or pele.conf.
+
+            Returns
+            ----------
+            - pele_steps : int
+                Number of pele steps of the simulation(s).
+            """
+
+            adaptive_path = os.path.join(path, 'adaptive.conf')
+
+            if os.path.isfile(adaptive_path) == True:
+
+                #
+                print('     -   Retrieving information from adaptive.conf.')
+                #
+
+                with open(adaptive_path) as filein:
+
+                    for line in filein:
+
+                        if "peleSteps" in line:
+
+                            peleSteps_string = line.split()[2]
+                            pele_steps = int(peleSteps_string.split(',')[0])
+
+            else:
+
+                peleconf_path = os.path.join(path, 'pele.conf')
+
+                #
+                print('     -   Retrieving information from pele.conf.')
+                #
+
+                if os.path.isfile(peleconf_path) == True:
+
+                    with open(peleconf_path) as filein:
+
+                        for line in filein:
+
+                            if "numberOfPeleSteps" in line:
+
+                                pele_steps = int(line.split()[-1])
+
+                else:
+
+                    pele_steps = None
+
+                    #
+                    print('     -   No .conf was found.')
+                    print('     -   The step weighted scoring function will not \n'
+                          '         be taken into account.')
+                    #
+
+            return pele_steps
+
+        def residency_retriever(path,
+                                file_list,
+                                pele_steps):
+            """
+            Function
+            ----------
+            Calculate the dihedral bond angles for an epoch.
+
+            Parameters
+            ----------
+            - path : str
+                Path to an epoch of the simulation.
+            - file_list : list 
+                List of all the files in directory.
+            - atom_list : list
+                List with all the atoms without repetition that have to be tracked.
+            - dihedral_bond_dict : dict
+                Dictionary with the atoms involved in the calculation of the dihedrals.
+
+            Returns
+            ----------
+            - dihedral_angles_epoch : dict
+                Dictionary with dihedral angles information of that epoch.
+            """
+
+            residency_epoch = {}
+            file_list = [k for k in file_list if k.startswith('report')]
+            initial_step_list = []
+            final_step = []
+            model = []
+
+            for file in file_list:
+
+                if 'report' in file:
+
+                    trajectory_number = int(file.split('_')[-1])
+
+                    with open(os.path.join(path,file)) as filein:
+
+                        cont = 0 
+
+                        for line in filein:
+
+                            if cont != 0:
+
+                                line = line.split()
+                                model.append(cont)
+                                initial_step_list.append(int(line[1]))
+
+                            cont += 1
+
+                    final_step = np.array(initial_step_list[1:])
+                    final_step = np.append(final_step,pele_steps)
+                    initial_step = np.array(initial_step_list)
+                    residency = final_step - initial_step
+                    residency = residency.astype(int)
+
+                    if residency[-1] == 0: residency[-1] = 1
+
+                    zip_iterator = zip(model, residency)
+                    residency_epoch[trajectory_number] = dict(zip_iterator)  
+
+                return residency_epoch
+
+        pele_steps = pelesteps_retriever(path)
+        files = os.listdir(path_output)
+        numeric_files = [s for s in files if s.isnumeric()]
+
+        residency_dict = {}
+
+        if len(numeric_files) != 0:
+
+            for epoch in numeric_files:
+
+                new_directory = os.path.join(path_output, epoch)
+
+                if os.path.isdir(new_directory) and epoch.isnumeric():
+
+                    files = os.listdir(new_directory)
+                    residency_dict[int(epoch)] = residency_retriever(new_directory,
+                                                                     files,
+                                                                     pele_steps)
+
+        else:
+
+            residency_dict[0] = residency_retriever(path_output,
+                                                    files,
+                                                    pele_steps)
+
+        residency_df = pd.DataFrame([(epoch, trajectory, model, residency)
+                                      for epoch, traj_mod_residency in residency_dict.items()
+                                      for trajectory, mod_residency in traj_mod_residency.items()
+                                      for model, residency in mod_residency.items()])
+
+        residency_df.columns = ['epoch', 'trajectory',
+                                 'model', 'residency']
+
+        residency_df.pivot(index=['epoch', 'trajectory', 'model'],
+                            columns='residency')
+
+        return residency_df        
 
     def template_info_retriever(path_template,
                                 residue_name):
@@ -464,7 +643,45 @@ def dihedral_angles_retriever_main(input_folder,
 
         return simulation_df
 
-    path_template, path_output, path_results = path_definer(input_folder)
+    def residency_to_simulation(residency_df,
+                                simulation_df):
+        """
+        Function
+        ----------
+        Add the residency information to the simulation data frame.
+
+        Parameters
+        ----------
+        - residency_df : pd.DataFrame
+            Data Frame with the residency information of each model in the simulation.
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of the 
+            all the simulation with corresponding model, trajectory and epoch.
+
+        Returns
+        ----------
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values with residency
+            information.
+        """
+
+        for _, row in residency_df.iterrows():
+            epoch = row['epoch']
+            trajectory = row['trajectory']
+            model = row['model']
+            residency = row['residency']
+
+            epoch_df = simulation_df.loc[(simulation_df['epoch'] == epoch)]
+            trajectory_df = epoch_df.loc[(epoch_df['trajectory'] == trajectory)]
+            row_df = trajectory_df.loc[(trajectory_df['model'] == model)]
+            
+            if residency - 1 >= 1:  
+                for i in range(residency-1):
+                    simulation_df = simulation_df.append(row_df,ignore_index=True)
+
+        return simulation_df
+
+    path, path_template, path_output, path_results = path_definer(input_folder)
 
     #
     print('     -   Retrieving information about rotatable bonds.')
@@ -480,9 +697,15 @@ def dihedral_angles_retriever_main(input_folder,
     print('     -   Calculating dihedral angles of all the conformations...')
     #
 
+    residency_df = residency_function(path_output,
+                                      path)
+
     simulation_df = trajectory_positions(path_output,
                                          atom_list,
                                          dihedral_bond_dict)
+    
+    simulation_df = residency_to_simulation(residency_df,
+                                            simulation_df)
 
     return dihedral_bond_df, simulation_df, path_results
 
@@ -749,6 +972,7 @@ def clustering(n_cluster,
 
         rotatable_bonds = simulation_df['rotatable bond'].to_numpy()
         values = simulation_df['value'].to_numpy()
+
         results = defaultdict(list)
 
         for rot_bond, value in zip(rotatable_bonds, values):
@@ -758,8 +982,7 @@ def clustering(n_cluster,
      
         for rot_bond, values in rot_bond_values:
 
-            bin_edges = np.histogram_bin_edges(
-                values, bins='fd')
+            bin_edges = np.histogram_bin_edges(values, bins='fd')
             density, _ = np.histogram(
                 values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]
@@ -768,17 +991,15 @@ def clustering(n_cluster,
                 np.sum(np.array([p*np.log(p) for p in dense_bins])))
 
             # Plot
-            #plt.title('Dihedral ' + str(rot_bond) + ' distribution')
-            plt.title('Rotatable Bond 1 distribution in Protein')
+            plt.title('Dihedral ' + str(rot_bond) + ' distribution')
             plt.hist(values,
-                     bins=bin_edges, density=True, color='#0B3954')
+                     bins=bin_edges, density=True)
             plt.xlabel('Dihedral angle (º)')
             plt.ylabel('Density')
             plt.xlim(-180, 180)
-            plt.ylim(0, 0.03)
             plt.xticks(list(np.arange(-180, 190, 30)))
             plt.savefig(os.path.join(path_results,'images', 'dihedral_' +
-                                     str(rot_bond) + '_strain.svg'), format='svg', transparent=True)
+                                     str(rot_bond) + '_strain.png'), format='png', transparent=True)
             plt.close()
 
         entropy_contributions = np.array(entropy_contribution)
