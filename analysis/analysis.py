@@ -376,7 +376,7 @@ def filter(original_df,
             Data frame with equilibration steps omited filtered.
         """
 
-        if equilibration_steps > 10:
+        if equilibration_steps > 20:
             raise Exception(
                 'TooManyEquilibrationSteps: Maximum equilibration steps are 10.')
 
@@ -506,6 +506,8 @@ def filter(original_df,
                                    metric_threshold)
 
     else:
+
+        output_df = equilibration_df
 
         cont += 1
         pass
@@ -1138,27 +1140,54 @@ def analyzer(df,
 
         return ene_bz
 
+    def linear_score(be,
+                     te):
+
+        from scipy.optimize import curve_fit
+
+        min_te = np.min(te)
+
+        def function(x,m,n):
+            return m*x + n
+
+        popt, pcov = curve_fit(function, te, be)
+        te_err = np.sqrt(np.diag(pcov))
+
+        te_slope, te_intercept = popt 
+
+        linear_te = min_te*te_slope + te_intercept
+        error_te = np.sqrt((min_te*te_err[0])**2 + (te_err[1])**2)
+
+        plt.scatter(te, be, marker='x', color='#05565F', s=50)
+        plt.plot(np.array(te), np.array(te)*te_slope + te_intercept, c='black')
+        plt.title('Linear regression')
+        plt.xlabel('$E_{tot}$ (kcal/mol)')
+        plt.ylabel('Metric')
+        plt.savefig('analyzer/linear.png', format ='png', transparent=True)
+
+        return linear_te, error_te
+        
     print('\n *   Data analyzer.')
 
     path_results = path_definer()
     vector = np.array(df[metric_analyze]).astype(float)
-
     te = np.array(df['currentEnergy']).astype(float)
     min_energy = np.min(te)
-    te = np.array(te) - min_energy
+    te_original = np.array(te)
+    te = te_original - min_energy
 
     min = np.min(vector)
     ave = np.average(vector)
     bz = boltzmann_weighted(vector, te, T)
 
+    linear_te, error_te = linear_score(vector,te_original)
+
     with open(os.path.join(path_results,'energy.csv'), 'w') as fileout:
         fileout.writelines(
-            'Minimum,Average,Boltzmann weighted\n'
+            'Minimum,Average,Boltzmann weighted,Linear,Linear Error\n'
             '' + str(min) + ',' +
-            str(ave) + ',' + str(bz) + '\n'
+            str(ave) + ',' + str(bz) + ','  + str(linear_te) + ',' + str(error_te) +'\n'
         )
-
-    return min, ave, bz
 
 
 def ensambler(bootstrap_bool,
