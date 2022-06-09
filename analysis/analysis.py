@@ -85,7 +85,7 @@ def data(input_folder,
     """
     Function
     ----------
-    Bootstrap function that performs all the calculations.
+    Function that retrieves all data from pele simulations.
 
     Parameters
     ----------
@@ -94,10 +94,6 @@ def data(input_folder,
         is located.
     - report_name : str
         Name of the report files used for the simulation.
-    - number_of_samples : int
-        Number of bootstrap datasets to generate.
-    - metric : str
-        Name of the metric you are interested in.
     """
 
     def path_definer(input_folder):
@@ -311,7 +307,7 @@ def data(input_folder,
                                            metrics_dict)
 
         original_df = dict_to_dataframe(data_dict)
-        snapshots = int(len(original_df)/6)
+        snapshots = int(len(original_df)/len(metrics_dict))
 
         return original_df, snapshots
 
