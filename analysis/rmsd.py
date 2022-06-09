@@ -64,6 +64,8 @@ def rmsd_preparation(input_folder,
         Residue name of the ligand in the pdb of each cluster.
     - pdb_rmsd : str
         Name of the pdb structure to calculate rmsd.
+    - simulation_bool : bool
+        Boolean to determine if the simulation will be automatically performed.
     """
 
     def path_definer(input_folder):
