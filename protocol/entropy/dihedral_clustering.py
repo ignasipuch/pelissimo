@@ -55,6 +55,9 @@ def parse_args(args):
     parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
                         default=0, help="Number of clusters to cluster the data.")
 
+    parser.add_argument("--evolution", dest="evolution_bool",
+                        default=False, action='store_true', help="Flag to choose if dihedral evolution is wanted.")
+
     parsed_args = parser.parse_args(args)
 
     return parsed_args
@@ -62,7 +65,8 @@ def parse_args(args):
 
 def dihedral_angles_retriever_main(input_folder,
                                    residue_name,
-                                   input_file):
+                                   input_file,
+                                   evolution_bool):
     """
     Function
     ----------
@@ -114,14 +118,15 @@ def dihedral_angles_retriever_main(input_folder,
         path_template = os.path.join(path, 'DataLocal', 'LigandRotamerLibs')
         path_output = os.path.join(path, input_folder)
         path_results = os.path.join(path, 'dihedrals')
+        path_images = os.path.join(path_results,'images')
 
         if os.path.exists(path_results) == False:
             os.mkdir(path_results)
 
-        if os.path.exists(os.path.join(path_results,'images')) == False:
-            os.mkdir(os.path.join(path_results,'images'))
+        if os.path.exists(path_images) == False:
+            os.mkdir(path_images)
 
-        return path, path_template, path_output, path_results
+        return path, path_template, path_output, path_results, path_images
 
     def residency_function(path_output,
                            path):
@@ -227,16 +232,18 @@ def dihedral_angles_retriever_main(input_folder,
 
             residency_epoch = {}
             file_list = [k for k in file_list if k.startswith('report')]
-            initial_step_list = []
-            final_step = []
-            model = []
 
             for file in file_list:
 
-                if 'report' in file:
+                initial_step_list = []
+                final_step = []
+                model = []
+
+                if file.startswith('report'):
 
                     trajectory_number = int(file.split('_')[-1])
-
+                    print(trajectory_number)
+     
                     with open(os.path.join(path,file)) as filein:
 
                         cont = 0 
@@ -262,7 +269,7 @@ def dihedral_angles_retriever_main(input_folder,
                     zip_iterator = zip(model, residency)
                     residency_epoch[trajectory_number] = dict(zip_iterator)  
 
-                return residency_epoch
+            return residency_epoch
 
         pele_steps = pelesteps_retriever(path)
         files = os.listdir(path_output)
@@ -681,7 +688,46 @@ def dihedral_angles_retriever_main(input_folder,
 
         return simulation_df
 
-    path, path_template, path_output, path_results = path_definer(input_folder)
+    def dihedrals_evolution(simulation_df,
+                            path_images):
+        """
+        Function
+        ----------
+        Plot the evolution of the dihedral angles throughout the simulation.
+
+        Parameters
+        ----------
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of the 
+            all the simulation with corresponding model, trajectory and epoch.
+        - path_images : str
+            Path to the directory where images are stored.
+
+        """
+
+        number_of_trajectories = simulation_df['trajectory'].max()
+        number_of_dihedrals = simulation_df['rotatable bond'].max()
+
+        for dihedral in range(1,number_of_dihedrals + 1):
+
+            dihedral_df = simulation_df[simulation_df['rotatable bond'] == dihedral]
+            _, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+
+            for trajectory in range(1, number_of_trajectories + 1):
+
+                dihedral_trajectory_df = dihedral_df[dihedral_df['trajectory'] == trajectory].reset_index(drop=True)
+                r = dihedral_trajectory_df.index.to_numpy()
+                theta = dihedral_trajectory_df['value'].to_numpy()
+                
+                ax.scatter(theta, r, c=r, marker='x')
+
+            ax.grid(True)
+            ax.set_title("Dihedral " + str(dihedral), va='bottom')
+            plt.savefig(os.path.join(path_images, 'dihedral_' +
+                                    str(dihedral) + '_evolution.png'), format='png', transparent=True)
+            plt.close()
+
+    path, path_template, path_output, path_results, path_images = path_definer(input_folder)
 
     #
     print('     -   Retrieving information about rotatable bonds.')
@@ -704,17 +750,28 @@ def dihedral_angles_retriever_main(input_folder,
                                          atom_list,
                                          dihedral_bond_dict)
     
-    simulation_df = residency_to_simulation(residency_df,
+    full_df = residency_to_simulation(residency_df,
                                             simulation_df)
 
-    return dihedral_bond_df, simulation_df, path_results
+    if evolution_bool: 
+
+        #
+        print('     -   Calculating dihedral\'s evolution...')
+        #
+
+        dihedrals_evolution(full_df,
+                            path_images)
+
+
+    return dihedral_bond_df, simulation_df, path_results, path_images
 
 
 def clustering(n_cluster,
                clustering_method,
                simulation_df,
                dihedral_bond_df,
-               path_results):
+               path_results,
+               path_images):
     """
     Function
     ----------
@@ -952,7 +1009,7 @@ def clustering(n_cluster,
         dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
 
     def binning(simulation_df,
-                path_results):
+                path_images):
         """
         Function
         ----------
@@ -964,7 +1021,7 @@ def clustering(n_cluster,
         - simulation_df : pd.DataFrame
             Data frame with all the rotatable bonds' dihedral angle values of all the simulation
             with corresponding model, trajectory and epoch.
-        - path_results : str 
+        - path_images : str 
             Path to the directory where the results will be stored. 
         """
 
@@ -982,7 +1039,7 @@ def clustering(n_cluster,
      
         for rot_bond, values in rot_bond_values:
 
-            bin_edges = np.histogram_bin_edges(values, bins='fd')
+            bin_edges = np.histogram_bin_edges(values, bins=36)
             density, _ = np.histogram(
                 values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]
@@ -998,8 +1055,8 @@ def clustering(n_cluster,
             plt.ylabel('Density')
             plt.xlim(-180, 180)
             plt.xticks(list(np.arange(-180, 190, 30)))
-            plt.savefig(os.path.join(path_results,'images', 'dihedral_' +
-                                     str(rot_bond) + '_strain.png'), format='png', transparent=True)
+            plt.savefig(os.path.join(path_images, 'dihedral_' +
+                                     str(rot_bond) + '_distribution.png'), format='png', transparent=True)
             plt.close()
 
         entropy_contributions = np.array(entropy_contribution)
@@ -1028,7 +1085,7 @@ def clustering(n_cluster,
     elif clustering_method == 'bin':
 
         binning(simulation_df,
-                path_results)
+                path_images)
 
         simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
         dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
@@ -1052,9 +1109,13 @@ def main(args):
     print(' -   Gathering information')
     #
 
-    dihedral_bond_df, simulation_df, path_results = dihedral_angles_retriever_main(input_folder=args.input_folder,
-                                                                                   residue_name=args.residue_name,
-                                                                                   input_file=args.input_file)
+    dihedral_bond_df, \
+    simulation_df,    \
+    path_results,     \
+    path_images = dihedral_angles_retriever_main(input_folder=args.input_folder,
+                                                 residue_name=args.residue_name,
+                                                 input_file=args.input_file,
+                                                 evolution_bool=args.evolution_bool)
 
     #
     print(' ')
@@ -1065,7 +1126,8 @@ def main(args):
                args.clustering_method,
                simulation_df,
                dihedral_bond_df,
-               path_results)
+               path_results,
+               path_images)
 
     #
     print(' ')
