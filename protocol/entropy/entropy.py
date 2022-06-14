@@ -47,6 +47,9 @@ def parse_args(args):
     parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
                         default=0, help="Number of clusters to cluster the data.")
 
+    parser.add_argument("--evolution", dest="evolution_bool",
+                        default=False, action='store_true', help="Flag to choose if dihedral evolution is wanted.")
+
     parsed_args = parser.parse_args(args)
 
     return parsed_args
@@ -57,7 +60,8 @@ def ensambler(input_folder,
               input_file,
               output_folder,
               clustering_method,
-              n_clusters):
+              n_clusters,
+              evolution_bool):
 
     path = str(pathlib.Path().absolute())
     path_pl_simulation = os.path.join(path, input_folder)
@@ -67,8 +71,14 @@ def ensambler(input_folder,
     os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
               output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
     os.chdir(path_l_simulation)
-    os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
+
+    if evolution_bool:
+        os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
+              output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters) + ' --evolution')
+    else: 
+        os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
               output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
+
     os.chdir(path)
     os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
               input_folder + ' -r ' + residue_name)
@@ -81,7 +91,8 @@ def main(args):
               input_file=args.input_file,
               output_folder=args.output_folder,
               clustering_method=args.clustering_method,
-              n_clusters=args.n_clusters)
+              n_clusters=args.n_clusters,
+              evolution_bool=args.evolution_bool)
 
 
 if __name__ == '__main__':
