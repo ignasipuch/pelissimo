@@ -16,6 +16,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ----------------------------------------------------------------------- #
 # Constants:
@@ -242,7 +243,6 @@ def dihedral_angles_retriever_main(input_folder,
                 if file.startswith('report'):
 
                     trajectory_number = int(file.split('_')[-1])
-                    print(trajectory_number)
      
                     with open(os.path.join(path,file)) as filein:
 
@@ -274,6 +274,10 @@ def dihedral_angles_retriever_main(input_folder,
         pele_steps = pelesteps_retriever(path)
         files = os.listdir(path_output)
         numeric_files = [s for s in files if s.isnumeric()]
+
+        #
+        print('     -   Calculating residency.')
+        #        
 
         residency_dict = {}
 
@@ -711,21 +715,42 @@ def dihedral_angles_retriever_main(input_folder,
         for dihedral in range(1,number_of_dihedrals + 1):
 
             dihedral_df = simulation_df[simulation_df['rotatable bond'] == dihedral]
-            _, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+            #fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+            angles = []
+            distance = []
 
             for trajectory in range(1, number_of_trajectories + 1):
 
-                dihedral_trajectory_df = dihedral_df[dihedral_df['trajectory'] == trajectory].reset_index(drop=True)
-                r = dihedral_trajectory_df.index.to_numpy()
-                theta = dihedral_trajectory_df['value'].to_numpy()
-                
-                ax.scatter(theta, r, c=r, marker='x')
 
-            ax.grid(True)
-            ax.set_title("Dihedral " + str(dihedral), va='bottom')
-            plt.savefig(os.path.join(path_images, 'dihedral_' +
+                # Maybe it is not necessary to extract values to an array to then put them again in
+                # a dataframe (?)
+                dihedral_trajectory_df = dihedral_df[dihedral_df['trajectory'] == trajectory].reset_index(drop=True)
+
+                r = dihedral_trajectory_df.index.to_numpy()
+                distance.extend(list(r))  
+
+                theta = dihedral_trajectory_df['value'].to_numpy() 
+                angles.extend(list(theta))       
+
+            df = pd.DataFrame({
+                'radii': r,
+                'angles': theta
+                })
+
+            g = sns.JointGrid(data=df, x='radii',y='angles')
+            x, y = df.radii, df.angles
+
+            sns.scatterplot(x=x, y=y, ax=g.ax_joint)
+            sns.kdeplot(y=y, ax = g.ax_marg_y)
+            g.fig.suptitle('Dihedral ' + str(dihedral) + ' evolution')
+            g.set_axis_labels(xlabel='Pele Steps', ylabel='Angles (º)')
+            g.ax_marg_x.set_xlim(0,1000)
+            g.ax_marg_y.set_ylim(-180,180)
+            plt.yticks(list(np.arange(-180, 190, 30)))
+            g.savefig(os.path.join(path_images, 'dihedral_' +
                                     str(dihedral) + '_evolution.png'), format='png', transparent=True)
             plt.close()
+
 
     path, path_template, path_output, path_results, path_images = path_definer(input_folder)
 
@@ -1039,7 +1064,7 @@ def clustering(n_cluster,
      
         for rot_bond, values in rot_bond_values:
 
-            bin_edges = np.histogram_bin_edges(values, bins=36)
+            bin_edges = np.histogram_bin_edges(values, bins=8)
             density, _ = np.histogram(
                 values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]
