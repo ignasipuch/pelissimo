@@ -776,7 +776,7 @@ def dihedral_angles_retriever_main(input_folder,
                                          dihedral_bond_dict)
     
     full_df = residency_to_simulation(residency_df,
-                                            simulation_df)
+                                      simulation_df)
 
     if evolution_bool: 
 
@@ -1064,7 +1064,7 @@ def clustering(n_cluster,
      
         for rot_bond, values in rot_bond_values:
 
-            bin_edges = np.histogram_bin_edges(values, bins=8)
+            bin_edges = np.histogram_bin_edges(values, bins=15)
             density, _ = np.histogram(
                 values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]
