@@ -62,7 +62,7 @@ def parse_args(args):
     parser.add_argument("-es", "--equilibration_steps", type=int, dest="equilibration_steps",
                         default=None, help="Number of steps from first reports we want to omit.")
     parser.add_argument("-mt", "--metric_threshold", type=str, dest="metric_threshold",
-                        default=None, help="List of [metric,[min,max]] where metric is str and min and max, float")
+                        default=None, help="List of [metric,min,max] where metric is str and min and max, float")
     parser.add_argument("-q", "--quantile", type=str, dest="quantile_flag",
                         default=None, help="Quantile we are interested in. List of [metric,value] where metric is\
                          str and values is float")
@@ -1146,6 +1146,8 @@ def analyzer(df,
         def function(x,m,n):
             return m*x + n
 
+        print(te,len(te))
+        print(be,len(be))
         popt, pcov = curve_fit(function, te, be)
         te_err = np.sqrt(np.diag(pcov))
 
