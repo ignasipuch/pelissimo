@@ -200,9 +200,9 @@ def statistics(input_folder,
 
                                 step.append(int(line[1]))
                                 be.extend([float(line[column_be-1])
-                                          for i in range(repeat)])
+                                          for _ in range(repeat)])
                                 te.extend([float(line[column_te-1])
-                                          for i in range(repeat)])
+                                          for _ in range(repeat)])
 
                             cont += 1
 
@@ -306,17 +306,34 @@ def statistics(input_folder,
 
             if column is None:
 
-                #
-                print(
-                    ' -   Picking BindingEnergy as metric')
-                #
-                
-                be, te, step = file_reader(files,
-                                           folderpath,
-                                           report_name,
-                                           column_be,
-                                           column_te)
+                if column_be == 1:
+
+                    #
+                    print(
+                        ' -   Picking currentEnergy as metric')
+                    #
+
+                    be, te, step = file_reader(files,
+                                               folderpath,
+                                               report_name,
+                                               column_be,
+                                               column_te)
+
+                else:
+                    
+                    #
+                    print(
+                        ' -   Picking BindingEnergy as metric')
+                    #
+
+                    be, te, step = file_reader(files,
+                                               folderpath,
+                                               report_name,
+                                               column_be,
+                                               column_te)
+
             else:
+
                 be, te, step = file_reader(files,
                                            folderpath,
                                            report_name,
@@ -655,8 +672,6 @@ def statistics(input_folder,
                 bz_energy_list.append(ene_bz)
                 minimum_energy_list.append(minimum_energy)
 
-                print(minimum_energy,ene_bz)
-
             step_dict[0] = step_list
             bz_dict[0] = bz_energy_list
             min_dict[0] = minimum_energy_list
@@ -816,7 +831,6 @@ def statistics(input_folder,
 
             raise Exception(
                 'ActionError: The action you chose is not either all of evolution.')
-
 
     #
     print(' ')
