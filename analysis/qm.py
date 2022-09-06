@@ -57,6 +57,7 @@ def multiplicity(input_file):
 
     outfile = input_file.split('.')[0] + '_qm_charges.out'
     electrons = 0
+    job_finished = False
 
     if os.path.isfile(outfile):
 
@@ -81,7 +82,12 @@ def multiplicity(input_file):
                 parity_bool = True
             else: parity_bool = False
 
-    else:
+        else:
+
+            job_finished = True
+            parity_bool = False
+
+    elif job_finished == False and not os.path.isfile(outfile):
 
         from rdkit import Chem
 
@@ -97,7 +103,7 @@ def multiplicity(input_file):
             parity_bool = True
         else: parity_bool = False
 
-    return electrons, parity_bool
+    return electrons, parity_bool, job_finished
 
 def jaguar_input(input_file,
                  electrons,
@@ -208,6 +214,12 @@ def jaguar_charges(optimization_file,
     job = launch_job(run_command)
     job.wait()
 
+def protein_preparation(input_file,
+                        prep_file):
+
+    print('\n -   Preparing ligand to have connectivity.')
+    os.system('$SCHRODINGER/utilities/prepwizard -nohtreat -noepik -noprotassign -noimpref -noccd -delwater_hbond_cutoff 0 -NOJOBID ' + input_file + ' ' +  prep_file)
+
 def jaguar_output(output_file):
     """
     Function
@@ -222,7 +234,7 @@ def jaguar_output(output_file):
 
     def file_generation(system,
                         pdb_file,
-                        output_file):
+                        mae_file):
         """
         Function
         ----------
@@ -232,11 +244,9 @@ def jaguar_output(output_file):
         ----------
         - system : str
             Name of the PDB the ligand is extracted from.
-
         - pdb_file : str
             Name of the PDB we are going to use to parametrize the ligand.
-
-        - output_file : str
+        - mae_file : str
             Name of the outputfile we are going to be using for the charges.
 
         """
@@ -259,27 +269,91 @@ def jaguar_output(output_file):
                 '\n'
                 'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.3\n'
                 '\n'
-                'python -m peleffy.main ' + pdb_file + ' -f OPLS2005 --charges_from_file ' + output_file + '\n'
+                'python -m peleffy.main ' + pdb_file + ' -f OPLS2005 --charges_from_file ' + mae_file + ' --with_solvent --as_datalocal\n'
             )
 
-    system = output_file.split('_qm_charges_POP.out')[0]
-    pdb_file = output_file.split('.out')[0] + '.01.pdb'
-    mae_file = output_file.split('.out')[0] + '.01.mae'
+    def file_copying(system,
+                     output_file,
+                     pdb_file,
+                     mae_file):
+        """
+        Function
+        ----------
+        Copies all the important files into input anfd output.
+
+        Parameters
+        ----------
+        - system : str
+            Name of the PDB the ligand is extracted from.
+        - output_file : str 
+            Name of the output file of the schrödinger optimization.
+        - pdb_file : str
+            Name of the PDB we are going to use to parametrize the ligand.
+        - mae_file : str
+            Name of the outputfile we are going to be using for the charges.
+
+        Returns
+        -----------
+        
+        - path_results : str
+            Path where alla the results are kept
+        """
+
+        system = output_file.split('_qm_charges_POP.01.mae')[0]
+
+        path_results = system + '_jag'
+        path_parametrization = os.path.join(path_results,system + '_param')
+
+        if os.path.exists(path_results) == False:
+            os.mkdir(path_results)
+        if os.path.exists(path_parametrization) == False:
+            os.mkdir(path_parametrization)
+
+        shutil.copyfile('run', os.path.join(path_parametrization,'run'))    
+        shutil.copyfile(pdb_file, os.path.join(path_parametrization,pdb_file))
+        shutil.copyfile(mae_file, os.path.join(path_parametrization,mae_file))
+
+        path_input = os.path.join(path_results,'input')
+        optimization_input = system + '_qm_charges.in'
+        charges_input = system + '_qm_charges_POP.in'
+        original_pdb = system + '.pdb'
+        mae_optimization = output_file.split('_POP.01.mae')[0] + '.mae'
+        mae_charges = output_file.split('_POP.01.mae')[0] + '.01.mae'
+
+        if os.path.exists(path_input) == False:
+            os.mkdir(path_input)
+
+        shutil.copyfile(optimization_input, os.path.join(path_input,optimization_input))    
+        shutil.copyfile(charges_input, os.path.join(path_input,charges_input))
+        shutil.copyfile(original_pdb, os.path.join(path_input,original_pdb))
+        shutil.copyfile(mae_charges, os.path.join(path_input,mae_charges))
+        shutil.copyfile(mae_optimization, os.path.join(path_input,mae_optimization))
+
+    def deletion():
+        """
+        Function
+        ----------
+
+        Deletes all files in the working directory.
+        """
+
+        for file in os.listdir():
+            if os.path.isfile(file):
+                os.remove(file)
+            else:
+                continue
+
+    system = output_file.split('_qm_charges_POP.01.mae')[0]
     path_results = system + '_jag'
+    pdb_file = system + '_prep.pdb'
+    mae_file = output_file
 
-    print(' ')
-    os.system('$SCHRODINGER/utilities/structconvert -imae ' + mae_file + ' -opdb ' + pdb_file)
+    print('\n -     Preparing job in ' + str(path_results) + '.')
+    print(' -     Cleaning directory.\n')
 
-    file_generation(system,pdb_file,output_file)
-
-    if os.path.exists(path_results) == False:
-        os.mkdir(path_results)
-
-    print('\n -     Job prepared in ' + str(path_results) + '.\n')
-
-    shutil.copyfile(output_file, os.path.join(path_results,output_file))    
-    shutil.copyfile('run', os.path.join(path_results,'run'))    
-    shutil.copyfile(pdb_file, os.path.join(path_results,pdb_file))
+    file_generation(system,pdb_file,mae_file)
+    file_copying(system,output_file,pdb_file,mae_file)
+    deletion()
 
 def assemble(input_file):
     """
@@ -293,22 +367,30 @@ def assemble(input_file):
         Ligand file in pdb format.
     """
 
+    prep_file = input_file.split('.pdb')[0] + '_prep.pdb'
     optimization_file = input_file.split('.')[0] + '_qm_charges.01.in'
     charges_file = input_file.split('.')[0] + '_qm_charges_POP.in'
-    output_file = input_file.split('.')[0] + '_qm_charges_POP.out'
+    output_file = input_file.split('.')[0] + '_qm_charges_POP.01.mae'
 
     if not os.path.isfile(optimization_file):
 
-        electrons, parity_bool = multiplicity(input_file)
-        jaguar_input_file = jaguar_input(input_file = input_file,
-                                     electrons = electrons,
-                                     parity_bool = parity_bool)
-        jaguar_job(jaguar_input_file)
+        electrons, parity_bool, job_finished = multiplicity(input_file)
+
+        if not job_finished:
+
+            jaguar_input_file = jaguar_input(input_file,
+                                         electrons,
+                                         parity_bool)
+            jaguar_job(jaguar_input_file)
 
     if not os.path.isfile(output_file):
 
         jaguar_charges(optimization_file,
                        charges_file)
+
+    if not os.path.isfile(prep_file):
+
+        protein_preparation(input_file,prep_file)
 
     jaguar_output(output_file)
 
