@@ -33,7 +33,7 @@ def parse_args(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-f", "--file", type=str, dest="input_file",
-                        default=None, required=True, help="Name of the file corresponding to the isolated ligand with connectivity.")
+                        default=None, help="Name of the file corresponding to the isolated ligand with connectivity.")
     parser.add_argument("-d", "--directory", type=str, dest="input_folder",
                         default='LIG_Pele', help="Name of the directory where the simulation\
         is located.")
@@ -46,6 +46,10 @@ def parse_args(args):
                         default='bin', help="Method to cluster data: bin or kmeans.")
     parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
                         default=0, help="Number of clusters to cluster the data.")
+    parser.add_argument("-d2", "--second_directory", type=str, dest="second_directory",
+                        default='linen', help="Name of the second folder you want the entropic information from.")
+    parser.add_argument("--cpus", type=int, dest="cpus",
+                        help="Flag to choose number of cpus.")
 
     parser.add_argument("--evolution", dest="evolution_bool",
                         default=False, action='store_true', help="Flag to choose if dihedral evolution is wanted.")
@@ -56,43 +60,64 @@ def parse_args(args):
 
 
 def ensambler(input_folder,
+              second_directory,
               residue_name,
               input_file,
               output_folder,
               clustering_method,
               n_clusters,
-              evolution_bool):
+              evolution_bool,
+              cpus):
 
     path = str(pathlib.Path().absolute())
     path_pl_simulation = os.path.join(path, input_folder)
-    path_l_simulation = os.path.join(path, residue_name + '_linen')
+    path_l_simulation = os.path.join(path, residue_name + f'_{second_directory}')
 
-    os.chdir(path_pl_simulation)
-    os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
-              output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
-    os.chdir(path_l_simulation)
+    if second_directory == 'linen':
 
-    if evolution_bool:
+        os.chdir(path_pl_simulation)
         os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
-              output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters) + ' --evolution')
-    else: 
-        os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
-              output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
+                  output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
+        os.chdir(path_l_simulation)
 
-    os.chdir(path)
-    os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
-              input_folder + ' -r ' + residue_name)
+        if evolution_bool:
+            os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
+                  output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters) + ' --evolution')
+        else: 
+            os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
+                  output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
+
+        os.chdir(path)
+        os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
+                  input_folder + ' -r ' + residue_name + f'-d2 LIG_{second_directory}')
+
+
+    if second_directory == 'prot':
+
+        os.chdir(path_pl_simulation)
+        os.system('python /home/bsc72/bsc72825/projects/code/propy.py -d ' +
+                  output_folder + ' -r ' + residue_name + f' --cpus {cpus}')
+
+        os.chdir(path_l_simulation)
+        os.system('python /home/bsc72/bsc72825/projects/code/propy.py -d ' +
+                  output_folder + ' -r ' + residue_name + f' --cpus {cpus}')
+
+        os.chdir(path)
+        os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
+                  input_folder + ' -r ' + residue_name + f' -d2 LIG_{second_directory}')
 
 
 def main(args):
 
     ensambler(input_folder=args.input_folder,
+              second_directory=args.second_directory,
               residue_name=args.residue_name,
               input_file=args.input_file,
               output_folder=args.output_folder,
               clustering_method=args.clustering_method,
               n_clusters=args.n_clusters,
-              evolution_bool=args.evolution_bool)
+              evolution_bool=args.evolution_bool,
+              cpus=args.cpus)
 
 
 if __name__ == '__main__':

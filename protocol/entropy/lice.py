@@ -47,6 +47,8 @@ def parse_args(args):
         is located.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
+    parser.add_argument("-d2", "--second_directory", type=str, dest="second_directory",
+                        default='linen', help="Name of the second folder you want the entropic information from.")
 
     parsed_args = parser.parse_args(args)
 
@@ -54,6 +56,7 @@ def parse_args(args):
 
 
 def lice_results(input_folder,
+                 second_directory,
                  residue_name):
     """
     Function
@@ -70,6 +73,7 @@ def lice_results(input_folder,
     """
 
     def path_definer(input_folder,
+                     second_directory,
                      residue_name):
         """
         Function
@@ -102,7 +106,7 @@ def lice_results(input_folder,
         path_pl_dihedrals = os.path.join(
             path_pl_simulation, 'dihedrals')
 
-        path_l_simulation = os.path.join(path, residue_name + '_linen')
+        path_l_simulation = os.path.join(path, second_directory)
         path_l_dihedrals = os.path.join(
             path_l_simulation, 'dihedrals')
         path_entropy = os.path.join(path_pl_simulation,'entropy')
@@ -158,7 +162,7 @@ def lice_results(input_folder,
         path_pl_dihedrals,\
         path_l_dihedrals,\
         path_entropy = path_definer(
-            input_folder, residue_name)
+            input_folder, second_directory, residue_name)
 
     if os.path.isdir(path_pl_dihedrals) == False:
         raise Exception('dihedralsFolderNotFound: ' +
@@ -214,7 +218,8 @@ def main(args):
     """
 
     lice_results(input_folder=args.input_folder,
-                 residue_name=args.residue_name)
+                 residue_name=args.residue_name,
+                 second_directory=args.second_directory)
 
 
 if __name__ == '__main__':
