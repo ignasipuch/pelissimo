@@ -64,6 +64,28 @@ def parse_args(args):
 
 
 def trajectory_processer(path,file,atom_list):
+    """
+    Function
+    ----------
+    Main loop to retrieve the positions of the important atoms to calculate
+    the dihedral angles of psi and phi.
+
+    Parameters
+    ----------
+    - path : str
+        Dictionary with the atoms involved in the calculation of the dihedrals.
+    - file : str
+        PDB file of the trajectory from which to extract the data.
+    - atom_list : list
+        List of atoms that that are necessary to calculate both dihedral angles.
+
+    Returns
+    ----------
+    - trajectory_number : int
+        Number of trajectory that is analyzed.
+    - dihedral_angles_trajectory : dict
+        Dictionary with dihedral angles information of that trajectory.
+    """
 
     def dihedral_angle_calculator(coordinates_atom_a,
                                   coordinates_atom_b,
@@ -73,12 +95,14 @@ def trajectory_processer(path,file,atom_list):
         Function
         ----------
         Calculate the dihedral angles of a conformation.
+
         Parameters
         ----------
         - dihedral_bond_dict : dict
             Dictionary with the atoms involved in the calculation of the dihedrals.
         - atoms_positions_dict : dict
             Dictionary with all the atoms of interest and their x, y, z positions.
+
         Returns
         ----------
         - dihedral_angle_dict : dict
@@ -191,10 +215,8 @@ def dihedral_angles_retriever_main(input_folder,
     ----------
     - input_folder : str
         Name of the folder where the output of the simulation is located.
-    - residue_name : str
-        Residue name of the ligand.
-    - input_file : str
-        Name of the file corresponding to the isolated ligand with connectivity.
+    - cpus : int
+        Number of cpus we want to retrieve the data.
 
     Returns
     ----------
@@ -224,16 +246,17 @@ def dihedral_angles_retriever_main(input_folder,
 
         Returns
         ----------
-        - path_template : str
-            Path to the rotatable bonds file.
+        - path: str
+            Path to the working directory.
         - path_output : str
             Path to the output folder of the simulation.
         - path_results : str 
             Path to the directory where the results will be stored.
+        - path images : str
+            Path to the directory where the images are going to be stored.
         """
 
         path = str(pathlib.Path().absolute())
-        path_template = os.path.join(path, 'DataLocal', 'LigandRotamerLibs')
         path_output = os.path.join(path, input_folder)
         path_results = os.path.join(path, 'dihedrals')
         path_images = os.path.join(path_results,'images')
@@ -244,7 +267,7 @@ def dihedral_angles_retriever_main(input_folder,
         if os.path.exists(path_images) == False:
             os.mkdir(path_images)
 
-        return path, path_template, path_output, path_results, path_images
+        return path, path_output, path_results, path_images
 
     def residency_function(path_output,
                            path):
@@ -257,6 +280,8 @@ def dihedral_angles_retriever_main(input_folder,
         ----------
         - path_output : str
             Path to the output folder of the simulation.
+        - path : str
+            Path to the working directory.
 
         Returns
         ----------
@@ -269,6 +294,11 @@ def dihedral_angles_retriever_main(input_folder,
             Function
             ----------
             Reads the pelesteps from adaptive.conf or pele.conf.
+
+            Parameters
+            ----------
+            - path : str
+                Path to the working directory.
 
             Returns
             ----------
@@ -337,15 +367,13 @@ def dihedral_angles_retriever_main(input_folder,
                 Path to an epoch of the simulation.
             - file_list : list 
                 List of all the files in directory.
-            - atom_list : list
-                List with all the atoms without repetition that have to be tracked.
-            - dihedral_bond_dict : dict
-                Dictionary with the atoms involved in the calculation of the dihedrals.
+            - pele_steps : int
+                Number of pele steps in the pele.conf.
 
             Returns
             ----------
-            - dihedral_angles_epoch : dict
-                Dictionary with dihedral angles information of that epoch.
+            - residency_epoch : dict
+                Dictionary with the information of residency of all the models.
             """
 
             residency_epoch = {}
@@ -445,8 +473,8 @@ def dihedral_angles_retriever_main(input_folder,
             Path to the output folder of the simulation.
         - atom_list : list
             List with all the atoms without repetition that have to be tracked.
-        - dihedral_bond_dict : dict
-            Dictionary with the atoms involved in the calculation of the dihedrals.
+        - cpus : int
+            Number of cpus to retrieve the information from trajectories.
 
         Returns
         ----------
@@ -471,8 +499,6 @@ def dihedral_angles_retriever_main(input_folder,
                 List of all the files in directory.
             - atom_list : list
                 List with all the atoms without repetition that have to be tracked.
-            - dihedral_bond_dict : dict
-                Dictionary with the atoms involved in the calculation of the dihedrals.
 
             Returns
             ----------
@@ -580,21 +606,21 @@ def dihedral_angles_retriever_main(input_folder,
 
         return weight_vector, psi_vector, phi_vector
 
-    path, _, path_output, path_results, path_images = path_definer(input_folder)
+    path, path_output, path_results, path_images = path_definer(input_folder)       # Define paths
 
-    residency_df = residency_function(path_output,
+    residency_df = residency_function(path_output,                                  # Store residency of models
                                       path)
                                     
     atom_list = ['  N   ','  CA  ','  C   ']
 
-    simulation_df = trajectory_positions(path_output,
+    simulation_df = trajectory_positions(path_output,                               # Store dihedral angles calculated
                                          atom_list,
                                          cpus)
 
-    weight_vector, psi_vector, phi_vector = dataframes_to_vectors(simulation_df,
+    weight_vector, psi_vector, phi_vector = dataframes_to_vectors(simulation_df,    # Tranforming data for the clustering 
                                                                   residency_df)
 
-    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
+    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)       # Writing all the information into a csv
 
     return weight_vector, psi_vector, phi_vector, path_results, path_images
 
@@ -704,10 +730,11 @@ def clustering(weight_vector,
 
     print(' -   Clustering data obteined...')
 
-    binning(weight_vector, 
+    binning(weight_vector,  # Clustering results to calculate entropy and generate image.
             psi_vector, 
             phi_vector,
             path_images)
+
 
 def main(args):
     """
@@ -731,8 +758,8 @@ def main(args):
     psi_vector, \
     phi_vector, \
     path_results, \
-    path_images = dihedral_angles_retriever_main(input_folder=args.input_folder,
-                                                 cpus = args.cpus)
+    path_images = dihedral_angles_retriever_main(input_folder=args.input_folder,    # Retrieve data from the simulation 
+                                                 cpus = args.cpus)                  # and process it
 
     #
     print(' ')
@@ -740,11 +767,13 @@ def main(args):
     #
 
     start_time = time.perf_counter()
-    clustering(weight_vector,
-               psi_vector,
-               phi_vector,
+
+    clustering(weight_vector,                                                       # Clustering data to calculate entropic 
+               psi_vector,                                                          # contribution and generating image
+               phi_vector,                                                          # of the simulation.
                path_results,
                path_images)
+
     final_time = time.perf_counter()
     print(' -   Clustering time: ', final_time - start_time)
 
