@@ -39,9 +39,10 @@ def parse_args(args):
                         default='LIG', help="Ligand's residue name.")
     parser.add_argument("-pdbr", "--pdb_rmsd", type=str, dest="pdb_rmsd",
                         default=None, help="Original PDB with which the RMSD will be calculated.")
+    parser.add_argument("-q", "--queue", dest="queue",
+                        default='normal', help="Queue wanted for the simulation, either: normal or debug.")
     parser.add_argument("--skip_simulation", dest="simulation_bool",
-                        default=False, action='store_true', help="Flag to choose if the PELE simulation is performed automatically or not.")
-
+                            default=False, action='store_true', help="Flag to choose if the PELE simulation is performed automatically or not.")
     parsed_args = parser.parse_args(args)
 
     return parsed_args
@@ -50,6 +51,7 @@ def parse_args(args):
 def rmsd_preparation(input_folder,
                      residue_name,
                      pdb_rmsd,
+                     queue,
                      simulation_bool):
     """
     Function
@@ -281,6 +283,7 @@ def rmsd_preparation(input_folder,
     def write_files(residue_name,
                     iterations,
                     pdb_rmsd,
+                    queue,
                     path_pl_simulation):
         """
         Function
@@ -311,60 +314,109 @@ def rmsd_preparation(input_folder,
 
         path_to_run = os.path.join(path_pl_simulation, 'run_rmsd')
 
-        if iterations == 0:
+        if queue == 'debug':
+            if iterations == 0:
+                with open(path_to_run, 'w') as fileout:
 
-            with open(path_to_run, 'w') as fileout:
+                    fileout.writelines(
+                        '#!/bin/bash\n'
+                        '#SBATCH -J ' + pdb_rmsd + '\n'
+                        '#SBATCH --output=rmsd.out\n'
+                        '#SBATCH --error=rmsd.err\n'
+                        '#SBATCH --ntasks=48\n'
+                        '#SBATCH --qos=debug\n'
+                        '#SBATCH --time=00:30:00\n'
+                        '\n'
+                        'module purge\n'
+                        'module load ANACONDA/2019.10\n'
+                        'module load intel mkl impi gcc\n'
+                        'module load impi\n'
+                        'module load boost/1.64.0\n'
+                        '\n'
+                        'eval \"$(conda shell.bash hook)\"\n'
+                        'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
+                        '\n'
+                        'python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output -pdbr ' +
+                        pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
+                    )
 
-                fileout.writelines(
-                    '#!/bin/bash\n'
-                    '#SBATCH -J ' + pdb_rmsd + '\n'
-                    '#SBATCH --output=rmsd.out\n'
-                    '#SBATCH --error=rmsd.err\n'
-                    '#SBATCH --ntasks=48\n'
-                    '#SBATCH --qos=debug\n'
-                    '#SBATCH --time=00:30:00\n'
-                    '\n'
-                    'module purge\n'
-                    'module load ANACONDA/2019.10\n'
-                    'module load intel mkl impi gcc\n'
-                    'module load impi\n'
-                    'module load boost/1.64.0\n'
-                    '\n'
-                    'eval \"$(conda shell.bash hook)\"\n'
-                    'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
-                    '\n'
-                    'python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output -pdbr ' +
-                    pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
-                )
+            else:
+                with open(path_to_run, 'w') as fileout:
 
-        else:
+                    fileout.writelines(
+                        '#!/bin/bash\n'
+                        '#SBATCH -J rmsd\n'
+                        '#SBATCH --output=rmsd.out\n'
+                        '#SBATCH --error=rmsd.err\n'
+                        '#SBATCH --ntasks=48\n'
+                        '#SBATCH --qos=debug\n'
+                        '#SBATCH --time=00:30:00\n'
+                        '\n'
+                        'module purge\n'
+                        'module load ANACONDA/2019.10\n'
+                        'module load intel mkl impi gcc\n'
+                        'module load impi\n'
+                        'module load boost/1.64.0\n'
+                        '\n'
+                        'eval \"$(conda shell.bash hook)\"\n'
+                        'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.3\n'
+                        '\n'
+                        'for i in {0..' + str(iterations - 1) + '}\n'
+                        '   do python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output/$i -pdbr ' +
+                        pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
+                        'done\n'
+                    )
+        elif queue == 'normal':
+            if iterations == 0:
+                with open(path_to_run, 'w') as fileout:
 
-            with open(path_to_run, 'w') as fileout:
+                    fileout.writelines(
+                        '#!/bin/bash\n'
+                        '#SBATCH -J ' + pdb_rmsd + '\n'
+                        '#SBATCH --output=rmsd.out\n'
+                        '#SBATCH --error=rmsd.err\n'
+                        '#SBATCH --ntasks=48\n'
+                        '#SBATCH --time=00:30:00\n'
+                        '\n'
+                        'module purge\n'
+                        'module load ANACONDA/2019.10\n'
+                        'module load intel mkl impi gcc\n'
+                        'module load impi\n'
+                        'module load boost/1.64.0\n'
+                        '\n'
+                        'eval \"$(conda shell.bash hook)\"\n'
+                        'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.2\n'
+                        '\n'
+                        'python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output -pdbr ' +
+                        pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
+                    )
 
-                fileout.writelines(
-                    '#!/bin/bash\n'
-                    '#SBATCH -J rmsd\n'
-                    '#SBATCH --output=rmsd.out\n'
-                    '#SBATCH --error=rmsd.err\n'
-                    '#SBATCH --ntasks=48\n'
-                    '#SBATCH --qos=debug\n'
-                    '#SBATCH --time=00:30:00\n'
-                    '\n'
-                    'module purge\n'
-                    'module load ANACONDA/2019.10\n'
-                    'module load intel mkl impi gcc\n'
-                    'module load impi\n'
-                    'module load boost/1.64.0\n'
-                    '\n'
-                    'eval \"$(conda shell.bash hook)\"\n'
-                    'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.3\n'
-                    '\n'
-                    'for i in {0..' + str(iterations - 1) + '}\n'
-                    '   do python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output/$i -pdbr ' +
-                    pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
-                    'done\n'
-                )
+            else:
+                with open(path_to_run, 'w') as fileout:
 
+                    fileout.writelines(
+                        '#!/bin/bash\n'
+                        '#SBATCH -J rmsd\n'
+                        '#SBATCH --output=rmsd.out\n'
+                        '#SBATCH --error=rmsd.err\n'
+                        '#SBATCH --ntasks=48\n'
+                        '#SBATCH --time=00:30:00\n'
+                        '\n'
+                        'module purge\n'
+                        'module load ANACONDA/2019.10\n'
+                        'module load intel mkl impi gcc\n'
+                        'module load impi\n'
+                        'module load boost/1.64.0\n'
+                        '\n'
+                        'eval \"$(conda shell.bash hook)\"\n'
+                        'conda activate /gpfs/projects/bsc72/conda_envs/platform/1.6.3\n'
+                        '\n'
+                        'for i in {0..' + str(iterations - 1) + '}\n'
+                        '   do python /gpfs/projects/bsc72/FragPELE/v3.1.0-beta/frag_pele/frag_pele/Analysis/rmsd_computer.py -p output/$i -pdbr ' +
+                        pdb_rmsd + ' -np 48 -rp report_ --resname ' + residue_name + '\n'
+                        'done\n'
+                    )
+        
         return path_to_run
 
     #
@@ -387,6 +439,7 @@ def rmsd_preparation(input_folder,
     path_to_run = write_files(residue_name,
                               iterations,
                               pdb_rmsd,
+                              queue,
                               path_pl_simulation)
 
     if not simulation_bool:
@@ -429,6 +482,7 @@ def main(args):
     rmsd_preparation(input_folder=args.input_folder,
                      residue_name=args.residue_name,
                      pdb_rmsd=args.pdb_rmsd,
+                     queue=args.queue,
                      simulation_bool=args.simulation_bool)
 
 
