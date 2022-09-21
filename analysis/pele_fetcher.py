@@ -224,8 +224,6 @@ def fetcher(output_folder,
     print(' -   Snapshot(s) stored in /fetched\n')
 
 
-
-
 def main(args):
     """
     Function
