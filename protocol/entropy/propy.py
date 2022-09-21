@@ -49,13 +49,6 @@ def parse_args(args):
         is located.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
-    parser.add_argument("-cm", "--clustering_method", type=str, dest="clustering_method",
-                        default='bin', help="Method to cluster data: bin or kmeans.")
-    parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
-                        default=0, help="Number of clusters to cluster the data.")
-
-    parser.add_argument("--evolution", dest="evolution_bool",
-                        default=False, action='store_true', help="Flag to choose if dihedral evolution is wanted.")
     parser.add_argument("--cpus", type=int, dest="cpus",
                         help="Flag to choose number of cpus.")
 
@@ -600,7 +593,7 @@ def dihedral_angles_retriever_main(input_folder,
         """
 
         len_protein = simulation_df.loc[simulation_df['rotatable bond'].idxmax(
-        )]['rotatable bond'] + 1  # Length of the proin's backbone
+        )]['rotatable bond'] + 1  # Length of the protein's backbone
 
         residency = residency_df['residency'].to_numpy()
         weight_vector = np.repeat(residency, len_protein)  # Repeat residency
@@ -613,8 +606,7 @@ def dihedral_angles_retriever_main(input_folder,
 
         return weight_vector, psi_vector, phi_vector
 
-    path, path_output, path_results, path_images = path_definer(
-        input_folder)       # Define paths
+    path, path_output, path_results, path_images = path_definer(input_folder)       # Define paths
 
     residency_df = residency_function(path_output,                                  # Store residency of models
                                       path)
@@ -628,8 +620,7 @@ def dihedral_angles_retriever_main(input_folder,
     weight_vector, psi_vector, phi_vector = dataframes_to_vectors(simulation_df,    # Tranforming data for the clustering
                                                                   residency_df)
 
-    # Writing all the information into a csv
-    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
+    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)       # Writing all the information into a csv
 
     return weight_vector, psi_vector, phi_vector, path_results, path_images
 
@@ -684,22 +675,22 @@ def clustering(weight_vector,
         """
 
         bin_edges_psi = np.histogram_bin_edges(
-            psi_vector, bins=10)  # Entropy calculation psi
+            psi_vector, bins=10)                                # Entropy calculation psi
         density_psi, _ = np.histogram(
             psi_vector, bins=bin_edges_psi, density=True, weights=weight_vector)
         dense_bins_psi = density_psi[density_psi != 0]
 
         entropy_contribution_psi = np.sum(
-            np.array([p*np.log(p) for p in dense_bins_psi]))  # Entropy psi
+            np.array([p*np.log(p) for p in dense_bins_psi]))    # Entropy psi
 
         bin_edges_phi = np.histogram_bin_edges(
-            phi_vector, bins=10)  # Entropy calculation phi
+            phi_vector, bins=10)                                # Entropy calculation phi
         density_phi, _ = np.histogram(
             phi_vector, bins=bin_edges_phi, density=True)
         dense_bins_phi = density_phi[density_phi != 0]
 
         entropy_contribution_phi = np.sum(
-            np.array([p*np.log(p) for p in dense_bins_phi]))  # Entropy phi
+            np.array([p*np.log(p) for p in dense_bins_phi]))    # Entropy phi
 
         # Plot
         fig, axs = plt.subplots(1, 2, figsize=(15, 5))
@@ -733,9 +724,10 @@ def clustering(weight_vector,
         entropy_percentage_psi = 100.*entropy_contribution_psi/entropy_contribution
         entropy_percentage_phi = 100.*entropy_contribution_phi/entropy_contribution
 
-        entropy_df = pd.DataFrame({'percentage phi': [entropy_percentage_phi],
-                                   'percentage psi': [entropy_percentage_psi],
-                                   'entropy (kcal/mol)': [S]})
+        entropy_df = pd.DataFrame({'entropy (kcal/mol)': [S],
+                                   'percentage phi': [entropy_percentage_phi],
+                                   'percentage psi': [entropy_percentage_psi]}
+                                   )
 
         entropy_df.to_csv(os.path.join(
             path_results, 'entropy.csv'), index=False)
@@ -783,10 +775,8 @@ def main(args):
     start_time = time.perf_counter()
 
     clustering(weight_vector,                                                       # Clustering data to calculate entropic
-               # contribution and generating image
-               psi_vector,
-               # of the simulation.
-               phi_vector,
+               psi_vector,                                                          # contribution and generating image
+               phi_vector,                                                          # of the simulation.
                path_results,
                path_images)
 
@@ -801,7 +791,9 @@ def main(args):
 if __name__ == '__main__':
 
     args = parse_args(sys.argv[1:])
+
     start_time = time.perf_counter()
     main(args)
     final_time = time.perf_counter()
+
     print(' -   Total time: ', final_time - start_time, '\n')
