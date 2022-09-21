@@ -218,8 +218,9 @@ def main(args):
     """
 
     lice_results(input_folder=args.input_folder,
-                 residue_name=args.residue_name,
-                 second_directory=args.second_directory)
+                 second_directory=args.second_directory,
+                 residue_name=args.residue_name
+                 )
 
 
 if __name__ == '__main__':
