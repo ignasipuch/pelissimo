@@ -89,7 +89,7 @@ def ensambler(input_folder,
 
         os.chdir(path)
         os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
-                  input_folder + ' -r ' + residue_name + f'-d2 LIG_{second_directory}')
+                  input_folder + ' -r ' + residue_name + f' -d2 LIG_{second_directory}')
 
 
     if second_directory == 'prot':
