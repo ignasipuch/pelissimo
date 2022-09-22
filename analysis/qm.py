@@ -8,6 +8,8 @@ import sys
 import os
 import shutil
 
+# 1. Optimization -> 2. Charges calculation -> 3. Ligand preparation -> 4. Generation of folder with needed files
+
 def parse_args(args):
     """
     Function
@@ -91,7 +93,7 @@ def multiplicity(input_file):
 
         from rdkit import Chem
 
-        print("\n -   This code assumes there are no double bonds.\n If that is not the case, please re-run this code.")
+        print("\n -   This code assumes there are no double bonds.\n     If that is not the case, please re-run this code.")
 
         m = Chem.MolFromPDBFile(input_file)
         m1 = Chem.AddHs(m)
@@ -136,13 +138,13 @@ def jaguar_input(input_file,
 
         options = {
                "igeopt": "1",        
-               "isolv" : "2",
-               "maxitg" : "10",
-               "basis" : "6-31g**",
-               "igeopt" : "1",
-               "dftname" : "B3LYP-D3",
-               "icfit" : "1",
-               "nogas" : "1"   
+               "isolv" : "2",                # With Poisson-Boltzmann solvation model
+               "maxitg" : "10",              # Optimization number of steps
+               "basis" : "6-31g**",          # QM basis set
+               "igeopt" : "1",               # Indicating an optimization
+               "dftname" : "B3LYP-D3",       # Density Functional Method 
+               "icfit" : "1",                # Monopoles centered at the atomic center
+               "nogas" : "1"                 # Skip gas phase geometry optimization
               }
 
     else: 
@@ -158,7 +160,7 @@ def jaguar_input(input_file,
                "dftname" : "B3LYP-D3",
                "icfit" : "1",
                "nogas" : "1",
-               "multip" : "2"
+               "multip" : "2"                # Multiplicity of the ligand singlet/doublet
               }
 
     jaguar_input_file = str(input_file.split('.')[0] + "_qm_charges.in")
@@ -182,7 +184,7 @@ def jaguar_job(jaguar_input):
     """
 
     run_command = ["jaguar", "run", jaguar_input]
-    print(" -     Running Jaguar optimization under jobcontrol...")
+    print("\n -     Running Jaguar optimization under jobcontrol...")
     job = launch_job(run_command)
     job.wait()
 
@@ -217,7 +219,7 @@ def jaguar_charges(optimization_file,
 def protein_preparation(input_file,
                         prep_file):
 
-    print('\n -   Preparing ligand to have connectivity.')
+    print('\n -   Preparing ligand to have connectivity.\n')
     os.system('$SCHRODINGER/utilities/prepwizard -nohtreat -noepik -noprotassign -noimpref -noccd -delwater_hbond_cutoff 0 -NOJOBID ' + input_file + ' ' +  prep_file)
 
 def jaguar_output(output_file):
@@ -329,7 +331,7 @@ def jaguar_output(output_file):
         shutil.copyfile(mae_charges, os.path.join(path_input,mae_charges))
         shutil.copyfile(mae_optimization, os.path.join(path_input,mae_optimization))
 
-    def deletion():
+    def deletion(system):
         """
         Function
         ----------
@@ -340,6 +342,8 @@ def jaguar_output(output_file):
         for file in os.listdir():
             if os.path.isfile(file):
                 os.remove(file)
+            elif os.path.isdir('{file}-001'.format(file=system)):
+                os.rmdir('{file}-001'.format(file=system))
             else:
                 continue
 
