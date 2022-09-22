@@ -88,8 +88,10 @@ def ensambler(input_folder,
                   output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
 
         os.chdir(path)
+        print('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
+                  input_folder + ' -r ' + residue_name + f' -d2 {second_directory}')
         os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
-                  input_folder + ' -r ' + residue_name + f' -d2 LIG_{second_directory}')
+                  input_folder + ' -r ' + residue_name + f' -d2 {second_directory}')
 
 
     if second_directory == 'prot':
