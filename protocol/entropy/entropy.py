@@ -42,10 +42,6 @@ def parse_args(args):
         is located.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
-    parser.add_argument("-cm", "--clustering_method", type=str, dest="clustering_method",
-                        default='bin', help="Method to cluster data: bin or kmeans.")
-    parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
-                        default=0, help="Number of clusters to cluster the data.")
     parser.add_argument("-d2", "--second_directory", type=str, dest="second_directory",
                         default='linen', help="Name of the second folder you want the entropic information from.")
     parser.add_argument("--cpus", type=int, dest="cpus",
@@ -64,8 +60,6 @@ def ensambler(input_folder,
               residue_name,
               input_file,
               output_folder,
-              clustering_method,
-              n_clusters,
               evolution_bool,
               cpus):
 
@@ -76,20 +70,15 @@ def ensambler(input_folder,
     if second_directory == 'linen':
 
         os.chdir(path_pl_simulation)
-        os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
-                  output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
-        os.chdir(path_l_simulation)
 
         if evolution_bool:
             os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
-                  output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters) + ' --evolution')
+                  output_folder + ' -r ' + residue_name + ' --evolution')
         else: 
             os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
-                  output_folder + ' -r ' + residue_name + ' -cm ' + clustering_method + ' -nc ' + str(n_clusters))
+                  output_folder + ' -r ' + residue_name)
 
         os.chdir(path)
-        print('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
-                  input_folder + ' -r ' + residue_name + f' -d2 {second_directory}')
         os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
                   input_folder + ' -r ' + residue_name + f' -d2 {second_directory}')
 
@@ -116,8 +105,6 @@ def main(args):
               residue_name=args.residue_name,
               input_file=args.input_file,
               output_folder=args.output_folder,
-              clustering_method=args.clustering_method,
-              n_clusters=args.n_clusters,
               evolution_bool=args.evolution_bool,
               cpus=args.cpus)
 

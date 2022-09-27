@@ -184,7 +184,7 @@ def jaguar_job(jaguar_input):
     """
 
     run_command = ["jaguar", "run", jaguar_input]
-    print("\n -     Running Jaguar optimization under jobcontrol...")
+    print("\n -   Running Jaguar optimization under jobcontrol...")
     job = launch_job(run_command)
     job.wait()
 
@@ -212,7 +212,7 @@ def jaguar_charges(optimization_file,
                     fileout.write(line)
 
     run_command = ["jaguar", "run", charges_file]
-    print("\n -     Running Jaguar charges under jobcontrol...")
+    print("\n -   Running Jaguar charges under jobcontrol...")
     job = launch_job(run_command)
     job.wait()
 
@@ -343,7 +343,7 @@ def jaguar_output(output_file):
             if os.path.isfile(file):
                 os.remove(file)
             elif os.path.isdir('{file}-001'.format(file=system)):
-                os.rmdir('{file}-001'.format(file=system))
+                shutil.rmtree('{file}-001'.format(file=system))
             else:
                 continue
 
@@ -357,7 +357,7 @@ def jaguar_output(output_file):
 
     file_generation(system,pdb_file,mae_file)
     file_copying(system,output_file,pdb_file,mae_file)
-    deletion()
+    deletion(system)
 
 def assemble(input_file):
     """
