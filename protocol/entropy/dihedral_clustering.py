@@ -328,6 +328,10 @@ def dihedral_angles_retriever_main(input_folder,
             Dictionary with the rotatable bonds of the ligand.
         """
 
+        #
+        print('     -   Retrieving information about rotatable bonds.')
+        #
+
         rotatable_bonds_dict = {}
 
         with open(os.path.join(path_template, residue_name + '.rot.assign')) as filein:
@@ -612,6 +616,8 @@ def dihedral_angles_retriever_main(input_folder,
 
         simulation_dict = {}
 
+        print('     -   Retrieving data from simulation')
+
         if len(numeric_files) != 0:
 
             for epoch in numeric_files:
@@ -670,6 +676,8 @@ def dihedral_angles_retriever_main(input_folder,
             Data frame with all the rotatable bonds' dihedral angle values with residency
             information.
         """
+
+        print('     -   Adding residency to the data.')
 
         for _, row in residency_df.iterrows():
             epoch = row['epoch']
@@ -749,19 +757,11 @@ def dihedral_angles_retriever_main(input_folder,
 
     path, path_template, path_output, path_results, path_images = path_definer(input_folder)
 
-    #
-    print('     -   Retrieving information about rotatable bonds.')
-    #
-
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
 
     dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(rotatable_bonds_dict,
                                                                      input_file)
-
-    #
-    print('     -   Calculating dihedral angles of all the conformations...')
-    #
 
     residency_df = residency_function(path_output,
                                       path)
