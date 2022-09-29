@@ -9,13 +9,16 @@ Some others are meant to automatize specific PELE simulations in different ways:
  * <b> 1. analysis:</b> Directory with the code related to analyze PELE simulations: 
 
    * **1.1. disc.py**: Script to: (1) Read all the information about a metric in a simulation and calculating different scoring functions.
- (2) Make plots of the evolution of the Boltzmann weighted average or minimum of a certain metric throughout a simulation.
+   (2) Make plots of the evolution of the Boltzmann weighted average or minimum of a certain metric throughout a simulation.
 
    * **1.2. analysis.py**: Script to analyze simulations.
 
    * **1.3. pele_fetcher.py**: Script that fetches specific snapshot of a simulation.
 
    * **1.4. rmsd.py**: Script that prepares all to run an rmsd calculation in MN4.
+
+   * **1.5. qm.py**: Script to optimize ligand, calculate charges and prepare ligand to put results in a folder ready to make peleffy 
+   parametrize the ligand.
 
 
  * <b> 2. protocol:</b> Directory with code related to the pelissimo protocol that is being assembled.
@@ -29,9 +32,12 @@ Some others are meant to automatize specific PELE simulations in different ways:
      * **2.2.1 lice.py**: Script that reads the results from dihedral clustering and further processes information to obtain an entropy change.
  
      * **2.2.2 dihedral_clustering.py**: Script that calculates dihedral angles for all the rotatable bonds in all the conformations reached 
- by the ligand in a simulation. This information will be used to cluster conformations. 
+     by the ligand in a simulation. This information will be used to cluster conformations. 
+  
+     * **2.2.2 propy.py**: Script that calculates dihedral angles for all peptidic bonds phi and psi of the backbone in all the conformations reached 
+     by the ligand in a simulation. This information will be used to cluster conformations. 
 
-     * **2.2.3 entropy.py**: Script that ensembles the other two to make a complete entropy analysis of a simulation.
+     * **2.2.4 entropy.py**: Script that ensembles the other three to make a complete entropy analysis of a simulation.
 
    * <b> 2.3 initial_files:</b> Directory with an example of the necessary files to perform a full simulation of the protocol.
 
