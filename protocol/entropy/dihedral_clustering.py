@@ -17,6 +17,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import time
 
 # ----------------------------------------------------------------------- #
 # Constants:
@@ -51,6 +52,11 @@ def parse_args(args):
         is located.")
     parser.add_argument("-r", "--residue_name", type=str, dest="residue_name",
                         default='LIG', help="Ligand's residue name.")
+    parser.add_argument("-cm", "--clustering_method", type=str, dest="clustering_method",
+                        default='bin', help="Method to cluster data: bin or kmeans.")
+    parser.add_argument("-nc", "--n_clusters", type=int, dest="n_clusters",
+                        default=0, help="Number of clusters to cluster the data.")
+
     parser.add_argument("--evolution", dest="evolution_bool",
                         default=False, action='store_true', help="Flag to choose if dihedral evolution is wanted.")
 
@@ -195,8 +201,6 @@ def dihedral_angles_retriever_main(input_folder,
 
                     #
                     print('     -   No .conf was found.')
-                    print('     -   The step weighted scoring function will not \n'
-                          '         be taken into account.')
                     #
 
             return pele_steps
@@ -655,28 +659,34 @@ def dihedral_angles_retriever_main(input_folder,
 
         return simulation_df
 
-    def residency_to_simulation(residency_df,
-                                simulation_df):
+    def dataframes_to_vectors(simulation_df,
+                              residency_df):
         """
         Function
         ----------
-        Add the residency information to the simulation data frame.
+        From the data frames extract the vector that we are going to use for 
+        the histogram generation.
 
         Parameters
         ----------
-        - residency_df : pd.DataFrame
-            Data Frame with the residency information of each model in the simulation.
         - simulation_df : pd.DataFrame
-            Data frame with all the rotatable bonds' dihedral angle values of the 
-            all the simulation with corresponding model, trajectory and epoch.
+            Dataframe with psi and phi information for all rotatable bonds in the 
+            protein's back bone in all the models.
+        - residency_df : pd.DataFrame
+            Dataframe with residency information for all models in all trajectories.
 
         Returns
         ----------
-        - simulation_df : pd.DataFrame
-            Data frame with all the rotatable bonds' dihedral angle values with residency
-            information.
+        - weight_vector : np.array
+            Vector with same length as psi_vector and phi_vector that informs about 
+            the angles' weight, which is de residency.
+        - psi_vector : np.array
+            Vector with the psi values reached during the simulation.
+        - phi_vector : np.array
+            Vector with the psi values reached during the simulation.       
         """
 
+<<<<<<< HEAD
         print('     -   Adding residency to the data.')
 
         for _, row in residency_df.iterrows():
@@ -684,16 +694,19 @@ def dihedral_angles_retriever_main(input_folder,
             trajectory = row['trajectory']
             model = row['model']
             residency = row['residency']
+=======
+        len_ligand = simulation_df.loc[simulation_df['rotatable bond'].idxmax(
+        )]['rotatable bond'] + 1  # Length of the protein's backbone
+>>>>>>> develop
 
-            epoch_df = simulation_df.loc[(simulation_df['epoch'] == epoch)]
-            trajectory_df = epoch_df.loc[(epoch_df['trajectory'] == trajectory)]
-            row_df = trajectory_df.loc[(trajectory_df['model'] == model)]
-            
-            if residency - 1 >= 1:  
-                for i in range(residency-1):
-                    simulation_df = simulation_df.append(row_df,ignore_index=True)
+        residency = residency_df['residency'].to_numpy()
+        weight_vector = np.repeat(residency, len_ligand)  # Repeat residency
 
-        return simulation_df
+        # Matrix of [len_prot*number_of_models,2]
+        angles = list(simulation_df['value'].to_numpy())
+        rotatable_bonds = list(simulation_df['rotatable bond'].to_numpy())
+
+        return weight_vector, angles, rotatable_bonds
 
     def dihedrals_evolution(simulation_df,
                             path_images):
@@ -769,9 +782,12 @@ def dihedral_angles_retriever_main(input_folder,
     simulation_df = trajectory_positions(path_output,
                                          atom_list,
                                          dihedral_bond_dict)
+
+    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
+    dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
     
-    full_df = residency_to_simulation(residency_df,
-                                      simulation_df)
+    weight, angles, rotatable_bonds = dataframes_to_vectors(simulation_df,
+                                                            residency_df)
 
     if evolution_bool: 
 
@@ -779,15 +795,16 @@ def dihedral_angles_retriever_main(input_folder,
         print('     -   Calculating dihedral\'s evolution...')
         #
 
-        dihedrals_evolution(full_df,
+        dihedrals_evolution(simulation_df,
                             path_images)
 
 
-    return dihedral_bond_df, simulation_df, path_results, path_images
+    return  weight, angles, rotatable_bonds, path_results, path_images
 
 
-def clustering(simulation_df,
-               dihedral_bond_df,
+def clustering(weight,
+               angles,
+               rotatable_bonds,
                path_results,
                path_images):
     """
@@ -797,6 +814,10 @@ def clustering(simulation_df,
 
     Parameters
     ----------
+    - n_cluster : int
+        Number of clusters to cluster data.
+    - clustering_method : str
+        Method to cluster data: bin or kmeans.
     - simulation_df : pd.DataFrame
         Data frame with all the rotatable bonds' dihedral angle values of all the simulation
         with corresponding model, trajectory and epoch.
@@ -807,7 +828,10 @@ def clustering(simulation_df,
 
     """
 
-    def binning(simulation_df,
+    def binning(weight,
+                angles,
+                rotatable_bonds,
+                path_results,
                 path_images):
         """
         Function
@@ -826,21 +850,22 @@ def clustering(simulation_df,
 
         entropy_contribution = []
 
-        rotatable_bonds = simulation_df['rotatable bond'].to_numpy()
-        values = simulation_df['value'].to_numpy()
-
         results = defaultdict(list)
 
-        for rot_bond, value in zip(rotatable_bonds, values):
-            results[rot_bond].append(value)
+        for rot_bond, value, weight in zip(rotatable_bonds, angles, weight):
+            results[rot_bond].append([value,weight])
 
         rot_bond_values = list(results.items())
      
         for rot_bond, values in rot_bond_values:
 
-            bin_edges = np.histogram_bin_edges(values, bins=15)
+            angles_vector = np.array(np.array(values)[:,0])
+            weights_vector = np.array(np.array(values)[:,1])
+
+            bin_edges = np.histogram_bin_edges(
+                angles_vector, bins=10)                                
             density, _ = np.histogram(
-                values, bins=bin_edges, density=True)
+                angles_vector, bins=bin_edges, density=True, weights=weights_vector)
             dense_bins = density[density != 0]
 
             entropy_contribution.append(
@@ -874,11 +899,11 @@ def clustering(simulation_df,
 
         print(' -   Entropic information written in /dihedrals/entropy.csv.')
 
-    binning(simulation_df,
-                path_images)
-
-    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
-    dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
+    binning(weight,
+            angles,
+            rotatable_bonds,
+            path_results,
+            path_images)
 
 
 def main(args):
@@ -899,23 +924,32 @@ def main(args):
     print(' -   Gathering information')
     #
 
-    dihedral_bond_df, \
-    simulation_df,    \
+    start_time = time.perf_counter()
+    weight,    \
+    angles,     \
+    rotatable_bonds,     \
     path_results,     \
     path_images = dihedral_angles_retriever_main(input_folder=args.input_folder,
                                                  residue_name=args.residue_name,
                                                  input_file=args.input_file,
                                                  evolution_bool=args.evolution_bool)
+    final_time = time.perf_counter()
+    print(' -   Time spent on retrieving data and process: {time}'.format(time=final_time - start_time))
+
 
     #
     print(' ')
     print(' -   Beginning of clustering')
     #
 
-    clustering(simulation_df,
-               dihedral_bond_df,
+    start_time = time.perf_counter()
+    clustering(weight,
+               angles,
+               rotatable_bonds,
                path_results,
                path_images)
+    final_time = time.perf_counter()
+    print('\n -   Time spent on clustering: {time}'.format(time=final_time - start_time))
 
     #
     print(' ')
@@ -926,4 +960,3 @@ if __name__ == '__main__':
 
     args = parse_args(sys.argv[1:])
     main(args)
-
