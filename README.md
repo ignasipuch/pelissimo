@@ -43,7 +43,7 @@ Some others are meant to automatize specific PELE simulations in different ways:
 
    * <b> 2.4 strain:</b> Directory with the code related to the calculation of the Ligand Internal Energy (LInEn).
  
-     * **2.4.1. linen.py**: Script to calculate LInEN with a PELE simulation of the ligand. 
+     * **2.4.1. ligand.py**: Script to calculate strain and entropy with a PELE simulation of the ligand. 
 
 
 ## Examples
@@ -51,7 +51,7 @@ Some others are meant to automatize specific PELE simulations in different ways:
 In all cases the usage of the flag _-h_ is recommended in order to understand the possibilities offered by the script.
 
 ```
-python path/to/code/bootstrapping.py -h
+python path/to/code/analysis.py -h
 ```
 
 In case of doubt the code can be read since all the functions are commented and explained.
