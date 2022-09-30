@@ -686,18 +686,8 @@ def dihedral_angles_retriever_main(input_folder,
             Vector with the psi values reached during the simulation.       
         """
 
-<<<<<<< HEAD
-        print('     -   Adding residency to the data.')
-
-        for _, row in residency_df.iterrows():
-            epoch = row['epoch']
-            trajectory = row['trajectory']
-            model = row['model']
-            residency = row['residency']
-=======
         len_ligand = simulation_df.loc[simulation_df['rotatable bond'].idxmax(
         )]['rotatable bond'] + 1  # Length of the protein's backbone
->>>>>>> develop
 
         residency = residency_df['residency'].to_numpy()
         weight_vector = np.repeat(residency, len_ligand)  # Repeat residency

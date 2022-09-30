@@ -11,6 +11,7 @@ import sys
 import os
 import pathlib
 import argparse
+import time
 
 
 def parse_args(args):
@@ -78,6 +79,10 @@ def ensambler(input_folder,
             os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
                   output_folder + ' -r ' + residue_name)
 
+        os.chdir(path_l_simulation)
+        os.system('python /home/bsc72/bsc72825/projects/code/dihedral_clustering.py -f ' + input_file + ' -d ' +
+                  output_folder + ' -r ' + residue_name)
+
         os.chdir(path)
         os.system('python /home/bsc72/bsc72825/projects/code/lice.py -d ' +
                   input_folder + ' -r ' + residue_name + f' -d2 {second_directory}')
@@ -100,6 +105,7 @@ def ensambler(input_folder,
 
 def main(args):
 
+    start_time = time.perf_counter()
     ensambler(input_folder=args.input_folder,
               second_directory=args.second_directory,
               residue_name=args.residue_name,
@@ -107,6 +113,8 @@ def main(args):
               output_folder=args.output_folder,
               evolution_bool=args.evolution_bool,
               cpus=args.cpus)
+    final_time = time.perf_counter()
+    print('     --- Total time: {time} ---     '.format(time=time.strftime("%H:%M:%S", time.gmtime(final_time-start_time))))
 
 
 if __name__ == '__main__':
