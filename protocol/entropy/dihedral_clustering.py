@@ -332,6 +332,11 @@ def dihedral_angles_retriever_main(input_folder,
             Dictionary with the rotatable bonds of the ligand.
         """
 
+
+        #
+        print('     -   Retrieving information about rotatable bonds.')
+        #
+
         rotatable_bonds_dict = {}
 
         with open(os.path.join(path_template, residue_name + '.rot.assign')) as filein:
@@ -378,6 +383,10 @@ def dihedral_angles_retriever_main(input_folder,
         - dihedral_bond_df : pd.DataFrame
             Data frame with the rotatable bonds' information.
         """
+
+        #
+        print('     -   Calculating dihedral angles of all the conformations...')
+        #
 
         path = str(pathlib.Path().absolute())
 
@@ -611,6 +620,10 @@ def dihedral_angles_retriever_main(input_folder,
 
             return dihedral_angles_epoch
 
+
+        #
+        print('     -   Retrieving information from simulation.')
+        #
         files = os.listdir(path_output)
         numeric_files = [s for s in files if s.isnumeric()]
 
@@ -679,6 +692,10 @@ def dihedral_angles_retriever_main(input_folder,
         - phi_vector : np.array
             Vector with the psi values reached during the simulation.       
         """
+
+        #
+        print('     -   Transforming data cluster it.')
+        #
 
         len_ligand = simulation_df.loc[simulation_df['rotatable bond'].idxmax(
         )]['rotatable bond'] + 1  # Length of the protein's backbone
@@ -754,19 +771,11 @@ def dihedral_angles_retriever_main(input_folder,
 
     path, path_template, path_output, path_results, path_images = path_definer(input_folder)
 
-    #
-    print('     -   Retrieving information about rotatable bonds.')
-    #
-
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
 
     dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(rotatable_bonds_dict,
                                                                      input_file)
-
-    #
-    print('     -   Calculating dihedral angles of all the conformations...')
-    #
 
     residency_df = residency_function(path_output,
                                       path)
@@ -851,6 +860,8 @@ def clustering(weight,
      
         for rot_bond, values in rot_bond_values:
 
+            print('     -   Dihedral angle being clustered {dihedral} out of {num_of_dihedrals}'.format(dihedral=rot_bond, num_of_dihedrals=max(rotatable_bonds)), end="\r")
+            
             angles_vector = np.array(np.array(values)[:,0])
             weights_vector = np.array(np.array(values)[:,1])
 
@@ -926,7 +937,7 @@ def main(args):
                                                  input_file=args.input_file,
                                                  evolution_bool=args.evolution_bool)
     final_time = time.perf_counter()
-    print(' -   Time spent on retrieving data and process: {time}'.format(time=final_time - start_time))
+    print(' -   Time spent on retrieving gathering information: {time}'.format(time=time.strftime("%H:%M:%S", time.gmtime(final_time-start_time))))
 
 
     #
@@ -941,7 +952,7 @@ def main(args):
                path_results,
                path_images)
     final_time = time.perf_counter()
-    print('\n -   Time spent on clustering: {time}'.format(time=final_time - start_time))
+    print('\n -   Time spent on clustering: {time}'.format(time=time.strftime("%H:%M:%S", time.gmtime(final_time-start_time))))
 
     #
     print(' ')
