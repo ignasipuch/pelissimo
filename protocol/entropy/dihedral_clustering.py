@@ -815,18 +815,16 @@ def clustering(weight,
 
     Parameters
     ----------
-    - n_cluster : int
-        Number of clusters to cluster data.
-    - clustering_method : str
-        Method to cluster data: bin or kmeans.
-    - simulation_df : pd.DataFrame
-        Data frame with all the rotatable bonds' dihedral angle values of all the simulation
-        with corresponding model, trajectory and epoch.
-    - dihedral_bond_df : pd.DataFrame
-        Data frame with rotatable bonds, atoms conforming it and the index assigned.
+    - weight : np.array
+        Array with residence of each model.
+    - angles : np.array
+        Array with all the angles reached in the simulation.
+    - rotatable_bonds : np.array
+        Array with the rotatable bonds to which the angles and weights correspond to.
     - path_results : str 
         Path to the directory where the results will be stored. 
-
+    - path_images : str
+        Path to the directory where the images are going to be stored.
     """
 
     def binning(weight,
@@ -842,11 +840,16 @@ def clustering(weight,
 
         Parameters
         ----------
-        - simulation_df : pd.DataFrame
-            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
-            with corresponding model, trajectory and epoch.
-        - path_images : str 
+        - weight : np.array
+            Array with residence of each model.
+        - angles : np.array
+            Array with all the angles reached in the simulation.
+        - rotatable_bonds : np.array
+            Array with the rotatable bonds to which the angles and weights correspond to.
+        - path_results : str 
             Path to the directory where the results will be stored. 
+        - path_images : str
+            Path to the directory where the images are going to be stored.
         """
 
         entropy_contribution = []
