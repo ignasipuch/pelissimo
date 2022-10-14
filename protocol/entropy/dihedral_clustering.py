@@ -17,7 +17,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import time
 
 # ----------------------------------------------------------------------- #
 # Constants:
@@ -201,6 +200,8 @@ def dihedral_angles_retriever_main(input_folder,
 
                     #
                     print('     -   No .conf was found.')
+                    print('     -   The step weighted scoring function will not \n'
+                          '         be taken into account.')
                     #
 
             return pele_steps
@@ -331,10 +332,6 @@ def dihedral_angles_retriever_main(input_folder,
         - rotatable_bonds_dict : dict
             Dictionary with the rotatable bonds of the ligand.
         """
-
-        #
-        print('     -   Retrieving information about rotatable bonds.')
-        #
 
         rotatable_bonds_dict = {}
 
@@ -620,8 +617,6 @@ def dihedral_angles_retriever_main(input_folder,
 
         simulation_dict = {}
 
-        print('     -   Retrieving data from simulation')
-
         if len(numeric_files) != 0:
 
             for epoch in numeric_files:
@@ -659,44 +654,43 @@ def dihedral_angles_retriever_main(input_folder,
 
         return simulation_df
 
-    def dataframes_to_vectors(simulation_df,
-                              residency_df):
+    def residency_to_simulation(residency_df,
+                                simulation_df):
         """
         Function
         ----------
-        From the data frames extract the vector that we are going to use for 
-        the histogram generation.
+        Add the residency information to the simulation data frame.
 
         Parameters
         ----------
-        - simulation_df : pd.DataFrame
-            Dataframe with psi and phi information for all rotatable bonds in the 
-            protein's back bone in all the models.
         - residency_df : pd.DataFrame
-            Dataframe with residency information for all models in all trajectories.
+            Data Frame with the residency information of each model in the simulation.
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of the 
+            all the simulation with corresponding model, trajectory and epoch.
 
         Returns
         ----------
-        - weight_vector : np.array
-            Vector with same length as psi_vector and phi_vector that informs about 
-            the angles' weight, which is de residency.
-        - psi_vector : np.array
-            Vector with the psi values reached during the simulation.
-        - phi_vector : np.array
-            Vector with the psi values reached during the simulation.       
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values with residency
+            information.
         """
 
-        len_ligand = simulation_df.loc[simulation_df['rotatable bond'].idxmax(
-        )]['rotatable bond'] + 1  # Length of the protein's backbone
+        for _, row in residency_df.iterrows():
+            epoch = row['epoch']
+            trajectory = row['trajectory']
+            model = row['model']
+            residency = row['residency']
 
-        residency = residency_df['residency'].to_numpy()
-        weight_vector = np.repeat(residency, len_ligand)  # Repeat residency
+            epoch_df = simulation_df.loc[(simulation_df['epoch'] == epoch)]
+            trajectory_df = epoch_df.loc[(epoch_df['trajectory'] == trajectory)]
+            row_df = trajectory_df.loc[(trajectory_df['model'] == model)]
+            
+            if residency - 1 >= 1:  
+                for i in range(residency-1):
+                    simulation_df = simulation_df.append(row_df,ignore_index=True)
 
-        # Matrix of [len_prot*number_of_models,2]
-        angles = list(simulation_df['value'].to_numpy())
-        rotatable_bonds = list(simulation_df['rotatable bond'].to_numpy())
-
-        return weight_vector, angles, rotatable_bonds
+        return simulation_df
 
     def dihedrals_evolution(simulation_df,
                             path_images):
@@ -760,11 +754,19 @@ def dihedral_angles_retriever_main(input_folder,
 
     path, path_template, path_output, path_results, path_images = path_definer(input_folder)
 
+    #
+    print('     -   Retrieving information about rotatable bonds.')
+    #
+
     rotatable_bonds_dict = template_info_retriever(path_template,
                                                    residue_name)
 
     dihedral_bond_dict, atom_list, dihedral_bond_df = atoms_to_track(rotatable_bonds_dict,
                                                                      input_file)
+
+    #
+    print('     -   Calculating dihedral angles of all the conformations...')
+    #
 
     residency_df = residency_function(path_output,
                                       path)
@@ -772,12 +774,9 @@ def dihedral_angles_retriever_main(input_folder,
     simulation_df = trajectory_positions(path_output,
                                          atom_list,
                                          dihedral_bond_dict)
-
-    simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
-    dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
     
-    weight, angles, rotatable_bonds = dataframes_to_vectors(simulation_df,
-                                                            residency_df)
+    full_df = residency_to_simulation(residency_df,
+                                      simulation_df)
 
     if evolution_bool: 
 
@@ -785,16 +784,17 @@ def dihedral_angles_retriever_main(input_folder,
         print('     -   Calculating dihedral\'s evolution...')
         #
 
-        dihedrals_evolution(simulation_df,
+        dihedrals_evolution(full_df,
                             path_images)
 
 
-    return  weight, angles, rotatable_bonds, path_results, path_images
+    return dihedral_bond_df, simulation_df, path_results, path_images
 
 
-def clustering(weight,
-               angles,
-               rotatable_bonds,
+def clustering(n_cluster,
+               clustering_method,
+               simulation_df,
+               dihedral_bond_df,
                path_results,
                path_images):
     """
@@ -818,10 +818,222 @@ def clustering(weight,
 
     """
 
-    def binning(weight,
-                angles,
-                rotatable_bonds,
-                path_results,
+    def kmeans(simulation_df,
+               dihedral_bond_df,
+               path_results,
+               n_cluster):
+        """
+        Function
+        ----------
+        Cluster the results obtained from simulation using kmeans method. Stores results 
+        in a new results folder /dihedrals.
+
+        Parameters
+        ----------
+        - simulation_df : pd.DataFrame
+            Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+            with corresponding model, trajectory and epoch.
+        - dihedral_bond_df : pd.DataFrame
+            Data frame with rotatable bonds, atoms conforming it and the index assigned.
+        - path_results : str 
+            Path to the directory where the results will be stored. 
+        - n_cluster : int
+            Number of clusters to cluster data.
+        """
+
+        def scaler(simulation_df,
+                   dihedral_bond_df):
+            """
+            Function
+            ----------
+            Scale the data from the data frame.
+
+            Parameters
+            ----------
+            - simulation_df : pd.DataFrame
+                Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+                with corresponding model, trajectory and epoch.
+            - dihedral_bond_df : pd.DataFrame
+                Data frame with rotatable bonds, atoms conforming it and the index assigned.
+
+            Returns
+            ----------
+            - simulation_df : pd.DataFrame
+                Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+                scaled from 0 to 1.
+            """
+
+            from sklearn.preprocessing import MinMaxScaler
+
+            column_list = list(np.arange(1, len(dihedral_bond_df) + 1))
+            scaler = MinMaxScaler()
+            scaler.fit_transform(simulation_df[column_list])
+            simulation_df[column_list] = scaler.transform(
+                simulation_df[column_list])
+
+            return simulation_df
+
+        def elbow_method(path_results,
+                         simulation_df,
+                         dihedral_bond_df):
+            """
+            Function
+            ----------
+            Perform the elbow method to determine the optimal number of clusters to cluster the 
+            data.
+
+            Parameters
+            ----------
+            - path_results : str 
+                Path to the directory where the results will be stored.
+            - simulation_df : pd.DataFrame
+                Data frame with all the rotatable bonds' dihedral angle values of all the simulation
+                with corresponding model, trajectory and epoch.
+
+            Returns
+            ----------
+            - n_cluster : int
+                Optimal number of clusters to cluster the data.
+            """
+
+            def plotter(path_results,
+                        wcss,
+                        derivative,
+                        second_derivative,
+                        n_clusters,
+                        n_cluster):
+                """
+                Function
+                ----------
+                Plost the data obtained from the elbow method.
+
+                Parameters
+                ----------
+                - path_results : str 
+                    Path to the directory where the results will be stored.
+                - wcss : list
+                    List of Within-Cluster Sum of Square values for all the different cluster numbers
+                    tried. 
+                - derivative : list
+                    Numerical derivative of the WCSS values.
+                - second_derivative : list
+                    Numerical second derivative of the WCSS values.
+                - n_clusters : list
+                    List with all the number of clusters tried for the elbow method.
+                - _n_cluster : int
+                    Optimal number of clusters to cluster the data.
+                """
+
+                fig1, ax1 = plt.subplots()
+                fig2, ax2 = plt.subplots()
+                fig3, ax3 = plt.subplots()
+
+                ax1.set_title('WCSS')
+                ax1.plot(n_clusters, wcss)
+                ax1.scatter(n_cluster, wcss[n_cluster - 2],
+                            color='red', marker='x', label='elbow')
+                ax1.legend(loc='best')
+                ax1.set_xlabel('Number of clusters')
+                ax1.set_ylabel('WCSS')
+                fig1.savefig(os.path.join(path_results, 'wcss.png'))
+
+                ax2.set_title('WCSS derivative')
+                ax2.plot(n_clusters[1:-1], derivative)
+                ax2.set_xlabel('Number of clusters')
+                ax2.set_ylabel('WCSS derivative')
+                fig2.savefig(os.path.join(path_results, 'wcss_derivative.png'))
+
+                ax3.set_title('WCSS 2nd derivative')
+                ax3.plot(n_clusters[2:-2], second_derivative)
+                ax3.set_xlabel('Number of clusters')
+                ax3.set_ylabel('WCSS 2nd derivative')
+                fig3.savefig(os.path.join(
+                    path_results, 'wcss_2derivative.png'))
+
+            from scipy.signal import argrelextrema
+
+            wcss = []
+            n_clusters = []
+            column_list = list(np.arange(1, len(dihedral_bond_df) + 1))
+
+            for n_cluster in range(2, 17):
+
+                km = KMeans(init='k-means++',
+                            n_clusters=n_cluster, max_iter=10000)
+                km.fit(simulation_df[column_list])
+
+                wcss.append(km.inertia_)
+                n_clusters.append(n_cluster)
+
+            derivative = list(np.gradient(wcss, 1))[1:-1]
+            second_derivative = np.gradient(derivative, 1)[1:-1]
+
+            maxs_location = list(argrelextrema(
+                second_derivative, np.greater)[0])
+
+            try:
+
+                second_derivative_max = max(
+                    [second_derivative[max_id] for max_id in maxs_location])
+                max_location_array = np.where(
+                    second_derivative == second_derivative_max)[0] + 2
+                max_location = max_location_array[0]
+
+            except ValueError:
+
+                max_location_array = np.where(
+                    second_derivative == max(second_derivative))[0] + 2
+                max_location = max_location_array[0]
+
+            n_cluster = n_clusters[max_location]
+
+            plotter(path_results,
+                    wcss,
+                    derivative,
+                    second_derivative,
+                    n_clusters,
+                    n_cluster)
+
+            return n_cluster
+
+        from sklearn.cluster import KMeans
+
+        simulation_df_copy = simulation_df.copy()
+
+        simulation_df = scaler(simulation_df,
+                               dihedral_bond_df)
+
+        if n_cluster == 0:
+
+            #
+            print('     -   No information about the number of clusters was given.')
+            print('     -   Determining the optimal number of clusters.')
+            #
+
+            n_cluster = elbow_method(path_results,
+                                     simulation_df,
+                                     dihedral_bond_df)
+
+            #
+            print('     -   Optimal number of clusters =', n_cluster)
+            print('     -   Plots have been generated succesfully.')
+
+        else:
+
+            #
+            print('     -   Number of clusters =', n_cluster)
+
+        #
+        print('     -   Clustering...')
+        #
+
+        km = KMeans(init='k-means++', n_clusters=n_cluster, max_iter=10000)
+        y_predicted = km.fit_predict(simulation_df)
+        simulation_df_copy['cluster'] = y_predicted
+        simulation_df_copy.to_csv(os.path.join(path_results, 'data.csv'))
+        dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
+
+    def binning(simulation_df,
                 path_images):
         """
         Function
@@ -840,22 +1052,21 @@ def clustering(weight,
 
         entropy_contribution = []
 
+        rotatable_bonds = simulation_df['rotatable bond'].to_numpy()
+        values = simulation_df['value'].to_numpy()
+
         results = defaultdict(list)
 
-        for rot_bond, value, weight in zip(rotatable_bonds, angles, weight):
-            results[rot_bond].append([value,weight])
+        for rot_bond, value in zip(rotatable_bonds, values):
+            results[rot_bond].append(value)
 
         rot_bond_values = list(results.items())
      
         for rot_bond, values in rot_bond_values:
 
-            angles_vector = np.array(np.array(values)[:,0])
-            weights_vector = np.array(np.array(values)[:,1])
-
-            bin_edges = np.histogram_bin_edges(
-                angles_vector, bins=10)                                
+            bin_edges = np.histogram_bin_edges(values, bins=15)
             density, _ = np.histogram(
-                angles_vector, bins=bin_edges, density=True, weights=weights_vector)
+                values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]
 
             entropy_contribution.append(
@@ -889,11 +1100,20 @@ def clustering(weight,
 
         print(' -   Entropic information written in /dihedrals/entropy.csv.')
 
-    binning(weight,
-            angles,
-            rotatable_bonds,
-            path_results,
-            path_images)
+    if clustering_method == 'kmeans':
+
+        kmeans(simulation_df,
+               dihedral_bond_df,
+               path_results,
+               n_cluster)
+
+    elif clustering_method == 'bin':
+
+        binning(simulation_df,
+                path_images)
+
+        simulation_df.to_csv(os.path.join(path_results, 'data.csv'), index=False)
+        dihedral_bond_df.to_csv(os.path.join(path_results, 'dihedrals.csv'))
 
 
 def main(args):
@@ -914,32 +1134,25 @@ def main(args):
     print(' -   Gathering information')
     #
 
-    start_time = time.perf_counter()
-    weight,    \
-    angles,     \
-    rotatable_bonds,     \
+    dihedral_bond_df, \
+    simulation_df,    \
     path_results,     \
     path_images = dihedral_angles_retriever_main(input_folder=args.input_folder,
                                                  residue_name=args.residue_name,
                                                  input_file=args.input_file,
                                                  evolution_bool=args.evolution_bool)
-    final_time = time.perf_counter()
-    print(' -   Time spent on retrieving data and process: {time}'.format(time=final_time - start_time))
-
 
     #
     print(' ')
     print(' -   Beginning of clustering')
     #
 
-    start_time = time.perf_counter()
-    clustering(weight,
-               angles,
-               rotatable_bonds,
+    clustering(args.n_clusters,
+               args.clustering_method,
+               simulation_df,
+               dihedral_bond_df,
                path_results,
                path_images)
-    final_time = time.perf_counter()
-    print('\n -   Time spent on clustering: {time}'.format(time=final_time - start_time))
 
     #
     print(' ')
@@ -950,3 +1163,4 @@ if __name__ == '__main__':
 
     args = parse_args(sys.argv[1:])
     main(args)
+>>>>>>> develop
