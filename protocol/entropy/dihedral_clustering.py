@@ -847,7 +847,7 @@ def clustering(simulation_df,
      
         for rot_bond, values in rot_bond_values:
 
-            bin_edges = np.histogram_bin_edges(values, bins=15)
+            bin_edges = np.histogram_bin_edges(values, bins=10)
             density, _ = np.histogram(
                 values, bins=bin_edges, density=True)
             dense_bins = density[density != 0]

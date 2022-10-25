@@ -89,8 +89,8 @@ def ligand_prepare(input_folder,
         ----------
         - input_folder : str
             The path to the directory created by the induced fit simulation.
-        - clusters_folder : str
-            Name of the directory where the directory clusters is located (results/analysis).
+        - residue_name : str
+            Residue name of the ligand in the pdb of each cluster.
 
         Returns
         ----------
@@ -212,7 +212,8 @@ def ligand_prepare(input_folder,
             copy_tree(path_previous_DataLocal, path_DataLocal)
 
     def constraint_retriever(pdb_name,
-                             path):
+                             path,
+                             residue_name):
         """
         Function
         ----------
@@ -224,6 +225,9 @@ def ligand_prepare(input_folder,
             Name of the pdb we want to perform the simulation with.
         - path : str
             Absolute path from where the code is being executed.
+        - residue_name : str
+            Residue name of the ligand in the pdb of each cluster.
+
 
         Returns
         ----------
@@ -240,7 +244,7 @@ def ligand_prepare(input_folder,
         with open(os.path.join(path, pdb_name)) as filein:
             for line in filein:
                 if cont != 0:
-                    if 'HETATM' in line:
+                    if residue_name in line:
 
                         line = line.split()
 
@@ -475,7 +479,7 @@ def ligand_prepare(input_folder,
                           path_ligand,
                           path_previous_simulation)
 
-    chain, number, atom = constraint_retriever(pdb_name, path)
+    chain, number, atom = constraint_retriever(pdb_name, path, residue_name)
 
     path_to_run = write_files(force_field,
                               solvent_model,

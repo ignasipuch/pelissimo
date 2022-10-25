@@ -136,8 +136,7 @@ def jaguar_input(input_file,
 
         print("     -     Spin multiplicity set to 1 due to even number of electrons (%a)." %electrons)
 
-        options = {
-               "igeopt": "1",        
+        options = { 
                "isolv" : "2",                # With Poisson-Boltzmann solvation model
                "maxitg" : "10",              # Optimization number of steps
                "basis" : "6-31g**",          # QM basis set
@@ -151,8 +150,7 @@ def jaguar_input(input_file,
 
         print("     -     Spin multiplicity set to 2 due to odd number of electrons (%a)." %electrons)
 
-        options = {
-               "igeopt": "1",        
+        options = { 
                "isolv" : "2",
                "maxitg" : "10",
                "basis" : "6-31g**",
