@@ -128,7 +128,7 @@ def corrector(input_folder,
         path_pl_output = os.path.join(path_pl_simulation, 'output')
         path_pl_results = os.path.join(path_pl_simulation, 'strain')
 
-        path_l_simulation = os.path.join(path, residue_name + '_linen')
+        path_l_simulation = os.path.join(path, residue_name + '_ligand')
 
         if os.path.isdir(path_pl_simulation) == False:
             raise Exception('PathError: There is no folder with this path: ' +
@@ -305,6 +305,28 @@ def corrector(input_folder,
 
         return column_current_energy, column_binding_energy, column_internal_energy
 
+    def trajectory_retriever(path):
+        """
+        Function
+        ----------
+        Retrieves the file format of trajectories.
+
+        Parameters
+        ----------
+        - path : str
+            The path to the epoch.
+
+        Returns
+        ----------
+        - file_format : int 
+            Format of the trajectories.
+        """
+
+        trajectory_list = [x for x in os.listdir(path) if x.startswith('trajectory_')]
+        file_format = trajectory_list[0].split('trajectory_')[-1].split('.')[-1]
+
+        return file_format
+
     def correction_implementer(column_current_energy,
                                column_binding_energy,
                                column_internal_energy,
@@ -466,7 +488,7 @@ def corrector(input_folder,
                                 line = line.split()
                                 line.append('strainEnergy')
                                 fileout.write(
-                                            "     ".join(str(v) for v in line) + '\n')
+                                            "    ".join(str(v) for v in line) + '\n')
 
                             else:
 
@@ -714,7 +736,7 @@ def corrector(input_folder,
                                               path_pl_results)
 
                 #
-                print('     -   Strain per cluster stored in\n ' +
+                print('     -   Strain per cluster stored in ' +
                       input_folder + '/strain/strain_cluster.csv.\n')
 
         else:
@@ -758,6 +780,7 @@ def corrector(input_folder,
         return ene_bz
 
     def analysis_files_writer(column_binding_energy,
+                              file_format,
                               path_pl_simulation):
         """
         Function
@@ -768,6 +791,8 @@ def corrector(input_folder,
         ----------
         - column_binding_energy : int
             Column of the report where the binding energy metric is located.
+        - file_format : str
+            Format of the trajectory files.
         - path_pl_simulation: str
             The path to the protein-ligand simulation.
 
@@ -778,6 +803,14 @@ def corrector(input_folder,
         """
 
         path_to_run = os.path.join(path_pl_simulation, 'run_analysis')
+        list_input_files = [x for x in os.listdir(os.path.join(path_pl_simulation,'input'))]
+
+        if 'receptor.pdb' in list_input_files:
+            list_input_files.remove('receptor.pdb')
+        if 'ligand.pdb' in list_input_files:
+            list_input_files.remove('ligand.pdb')
+        
+        topology_file = os.path.join(path_pl_simulation,'input',list_input_files[0])
 
         with open(path_to_run, 'w') as fileout:
 
@@ -808,7 +841,7 @@ def corrector(input_folder,
                 '\n'
                 'analysis = Analysis(resname="' + residue_name +
                 '", chain="L", simulation_output="output", be_column = ' + str(column_binding_energy) + ', report="' +
-                'mod_' + report_name + '", cpus=48)\n'
+                'mod_' + report_name + '", traj="trajectory.' + file_format + '",  topology = "' + topology_file + '", cpus=48)\n'
                 'analysis.generate(path="analysis", clustering_type="meanshift")\n'
             )
 
@@ -999,6 +1032,9 @@ def corrector(input_folder,
     column_current_energy, column_binding_energy, column_internal_energy = \
         column_retriever(file)
 
+    # Trajectories format
+    file_format = trajectory_retriever(os.path.join(path_pl_simulation, 'output', '1'))
+
     #
     print(' ')
     print(' -   Implementing corrections...')
@@ -1051,6 +1087,7 @@ def corrector(input_folder,
                    strain_bz)
 
     path_to_run = analysis_files_writer(column_binding_energy,
+                                        file_format,
                                         path_pl_simulation)
 
     #
@@ -1102,3 +1139,5 @@ if __name__ == '__main__':
 
     args = parse_args(sys.argv[1:])
     main(args)
+
+
