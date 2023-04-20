@@ -50,7 +50,9 @@ def parse_args(args):
     parser.add_argument("-T", "--temperature", type=float, dest="temperature",
                         default=298., help="Temperature of the experiment.")
     parser.add_argument("-a", "--action", type=str, dest="action",
-                        default='all', help="Function the user wants the script to do: all or evolution.")
+                        default='all', help="Function the user wants the script to do: all, first or evolution.")
+    parser.add_argument("-s", "--software", type=str, dest="software",
+                        default='platform', help="Select the software with whih the simulation has been carried out.")            
 
     parsed_args = parser.parse_args(args)
 
@@ -61,7 +63,8 @@ def statistics(input_folder,
                report_name,
                column,
                T,
-               action):
+               action,
+               software):
     """
     Function
     ----------
@@ -97,21 +100,16 @@ def statistics(input_folder,
         ----------
         - path_output : str
             Path to the output folder of the simulation.
-        - path_results : str 
-            Path to the results folder of the bootstrap analysis.
         """
 
         path = str(pathlib.Path().absolute())
         path_output = os.path.join(path, input_folder)
-        path_results = os.path.join(path, 'bootstrap')
-
-        if os.path.isdir(path_results) is False:
-            os.mkdir(path_results)
 
         return path_output, path
 
     def reader(folderpath,
-               report_name):
+               report_name,
+               software):
         """
         Function
         ----------
@@ -208,7 +206,7 @@ def statistics(input_folder,
 
             return be, te, step
 
-        def column_retriever(file):
+        def column_retriever(file, software):
             """
             Function
             ----------
@@ -234,20 +232,30 @@ def statistics(input_folder,
                 for line in filein:
 
                     if cont == 0:
-
                         line = line.split('    ')
 
-                        if 'BindingEnergy' in line:
+                        if software == 'platform':
+                            if 'BindingEnergy' in line:
+                                column_be = line.index('BindingEnergy') + 1
 
-                            column_be = line.index('BindingEnergy') + 1
-
-                        else:
-
-                            column_be = 1
+                            else:
+                                column_be = 1
 
                             #
                             print(
-                                ' -   No BindingEnergy column.')
+                            ' -   No BindingEnergy column.')
+                            #
+
+                        elif software == 'suite':
+                            if 'bindingEnergy' in line:
+                                column_be = line.index('bindingEnergy') + 1
+
+                            else:
+                                column_be = 1
+
+                            #
+                            print(
+                            ' -   No BindingEnergy column.')
                             #
 
                         column_te = line.index('currentEnergy') + 1
@@ -266,7 +274,7 @@ def statistics(input_folder,
 
             column_file = os.path.join(
                 folderpath, numeric_files[0], report_name + '_1')
-            column_be, column_te = column_retriever(column_file)
+            column_be, column_te = column_retriever(column_file, software)
 
             for document in numeric_files:
 
@@ -302,7 +310,7 @@ def statistics(input_folder,
                 Please check the path to the files and the files name.')
 
             column_file = os.path.join(folderpath, report_name + '_1')
-            column_be, column_te = column_retriever(column_file)
+            column_be, column_te = column_retriever(column_file,software)
 
             if column is None:
 
@@ -341,6 +349,202 @@ def statistics(input_folder,
                                            column_te)
 
         return be, te, step, column_be
+
+    def reader_first_step(folderpath,
+                          report_name,
+                          software):
+        """
+        Function
+        ----------
+        Reads the data from all the reports and stores it in lists.
+
+        Parameters
+        ----------
+        - files : list
+            The path to the directory where the output of the PELE simulation is located.
+        - folderpath : str
+            Path where the different epochs of the simulation are located.
+        - report_name : str
+            Name of the reports to obtain the data from
+
+
+        Returns
+        ----------
+        - be : list
+            Binding energies of all the simulation.
+        - te : list
+            Total energies of all the simulation.
+        - step : list
+            Steps associated to poses for all the simulation.
+        - column_be : int
+            Column where the Binding energy is located.
+        """
+
+        def file_reader_first_step(files,
+                        folderpath,
+                        report_name,
+                        column_be,
+                        column_te):
+            """
+            Function
+            ----------
+            Reads the data from all the reports in a list.
+
+            Parameters
+            ----------
+            - files : list
+                The path to the directory where the output of the PELE simulation is located.
+            - folderpath : str
+                Path where the different epochs of the simulation are located.
+            - report_name : str
+                Name of the reports to obtain the data from
+            - column_be : int 
+                Column where the binding energy data is located. 
+            - column_be : int 
+                Column where the total energy data is located. 
+
+            Returns
+            ----------
+            - be : list
+                Binding energies of all the simulation.
+            - te : list
+                Total energies of all the simulation.
+            - step : list
+                Steps associated to poses for all the simulation.
+            """
+
+            new_directory = folderpath
+
+            for file in files:
+
+                cont = 0
+
+                if file.startswith(report_name):
+
+                    file_path = os.path.join(new_directory, file)
+
+                    with open(file_path, 'r') as filein:
+
+                        for line in filein:
+
+                            line = line.split('    ')
+
+                            if cont == 1:
+
+                                be.append(float(line[column_be-1]))
+                                te.append(float(line[column_te-1]))
+                                step.append(int(line[1]))
+
+                            cont += 1
+
+            return be, te, step
+
+        def column_retriever(file,software):
+            """
+            Function
+            ----------
+            Retrieves the position of the binding energy and current energy.
+
+            Parameters
+            ----------
+            - file : list
+                The path to the one report.
+
+            Returns
+            ----------
+            - column_be : int 
+                Column where the binding energy data is located. 
+            - column_te : int 
+                Column where the total energy data is located. 
+            """
+
+            cont = 0
+
+            with open(file, 'r') as filein:
+
+                for line in filein:
+
+                    if cont == 0:
+
+                        line = line.split('    ')
+
+                        if software == 'platform':
+
+                            if 'BindingEnergy' in line:
+
+                                column_be = line.index('BindingEnergy') + 1
+
+                            else:
+
+                                column_be = 1
+
+                                #
+                                print(
+                                    ' -   No BindingEnergy column.')
+                                #
+
+                        elif software == 'suite':
+
+                            if 'bindingEnergy' in line:
+
+                                column_be = line.index('bindingEnergy') + 1
+
+                            else:
+
+                                column_be = 1
+
+                                #
+                                print(
+                                    ' -   No BindingEnergy column.')
+                                #
+
+                        else: raise Exception('InvalidSoftware: The flag -s or --software only accepts either platform or suite.')
+
+                        column_te = line.index('currentEnergy') + 1
+
+                    cont += 1
+
+            return column_be, column_te
+
+        be = []
+        te = []
+        step = []
+        files = os.listdir(folderpath)
+        numeric_files = [s for s in os.listdir(folderpath) if s.isnumeric()]
+
+        if len(numeric_files) != 0:
+
+            column_file = os.path.join(
+                folderpath, numeric_files[0], report_name + '_1')
+            column_be, column_te = column_retriever(column_file,software)
+
+            for document in numeric_files:
+
+                new_directory = os.path.join(folderpath, document)
+
+                if os.path.isdir(new_directory) and document.isnumeric():
+
+                    files = os.listdir(new_directory)
+
+                    if report_name in files == False:
+                        raise Exception('FilePathError: There is no file containing ' + report_name + ' in it. \
+                        Please check the path to the files and the files name.')
+
+                    if column is None:
+                        be, te, step = file_reader_first_step(files,
+                                                   new_directory,
+                                                   report_name,
+                                                   column_be,
+                                                   column_te)
+
+                    else:
+                        be, te, step = file_reader_first_step(files,
+                                                   new_directory,
+                                                   report_name,
+                                                   column,
+                                                   column_te)
+
+            return be, te, step, column_be
 
     def boltzmann_weighted(be,
                            te,
@@ -754,7 +958,8 @@ def statistics(input_folder,
 
         folderpath, path = path_definer(input_folder)
         be, te, _, column_be = reader(folderpath,
-                                      report_name)
+                                      report_name,
+                                      software)
 
         if action == 'all':
 
@@ -770,6 +975,12 @@ def statistics(input_folder,
 
                 ene_bz = boltzmann_weighted(be, te, T)
 
+                p5 = np.average(np.percentile(be,5))
+
+                p10 = np.average(np.percentile(be,10))
+
+                p25 = np.average(np.percentile(be,25))
+
             else:
 
                 minimum_energy = min(te)
@@ -779,20 +990,29 @@ def statistics(input_folder,
 
                 ene_bz = boltzmann_weighted(te, te, T)
 
+                p5 = np.average(np.percentile(te,5))
+
+                p10 = np.average(np.percentile(te,10))
+
+                p25 = np.average(np.percentile(te,25))
+
             #
             print(' ')
             print(' RESULTS:')
             print(' -   Minimum Binding Energy:', minimum_energy)
             print(' -   Average Binding Energy:', average)
             print(' -   Boltzmann weighted Energy:', ene_bz)
+            print(' -   5th percentile average:', p5)
+            print(' -   10th percentile average:', p10)
+            print(' -   25th percentile average:', p25)
             print(' ')
             #
 
             with open('energy.csv', 'w') as fileout:
                 fileout.writelines(
-                    'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
+                    'Minimum,Average,Boltzmann weighted,p5,p10,p25\n'
                     '' + str(minimum_energy) + ',' +
-                    str(average) + ',' + str(ene_bz) + '\n'
+                    str(average) + ',' + str(ene_bz) + ',' + str(p5) + ',' + str(p10) + ',' + str(p25) + '\n'
                 )
 
         elif action == 'evolution':
@@ -826,6 +1046,38 @@ def statistics(input_folder,
 
             #
             print(' -   Images have been stored in /evolution directory.\n')
+
+        elif action == 'first':
+
+            be_first, te_first, _, _ = reader_first_step(folderpath,report_name,software)
+
+            if column_be != 1:
+
+                min_energy = min(te_first)
+                te_first = np.array(te_first) - min_energy
+
+                minimum_energy = min(be_first)
+                be_first = np.array(be_first)
+
+                average = np.average(be_first)
+
+                ene_bz = boltzmann_weighted(be_first, te_first, T)
+
+            #
+            print(' ')
+            print(' RESULTS:')
+            print(' -   Minimum Binding Energy:', minimum_energy)
+            print(' -   Average Binding Energy:', average)
+            print(' -   Boltzmann weighted Energy:', ene_bz)
+            print(' ')
+            #
+
+            with open('energy.csv', 'w') as fileout:
+                fileout.writelines(
+                    'Minimum,Average,Boltzmann weighted,Step weighted,Step-Boltzmann weighted,Boltzmann weighted corrected\n'
+                    '' + str(minimum_energy) + ',' +
+                    str(average) + ',' + str(ene_bz) + '\n'
+                )
 
         else:
 
@@ -863,7 +1115,8 @@ def main(args):
                report_name=args.report_name,
                column=args.column,
                T=args.temperature,
-               action=args.action)
+               action=args.action,
+               software=args.software)
 
     print('*******************************************************************')
 
