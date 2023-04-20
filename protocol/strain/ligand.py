@@ -44,6 +44,8 @@ def parse_args(args):
                         default=None, help="Force field with which the simulation will run.")
     parser.add_argument("-sm", "--solvent_model", type=str, dest="solvent_model",
                         default=None, help="Solvent model with which the simulation will run.")
+    parser.add_argument("-lf", "--ligand_folder", type=str, dest="ligand_folder",
+                        default='LIG_ligand', help="Name of the output folder of the ligand simulation.")
 
     parser.add_argument("--skip_simulation", dest="simulation_bool",
                         default=False, action='store_true', help="Flag to choose if the PELE simulation is performed automatically or not.")
@@ -54,11 +56,12 @@ def parse_args(args):
 
 
 def ligand_prepare(input_folder,
-                  residue_name,
-                  pdb_name,
-                  force_field,
-                  solvent_model,
-                  simulation_bool):
+                   residue_name,
+                   pdb_name,
+                   force_field,
+                   solvent_model,
+                   simulation_bool,
+                   ligand_folder):
     """
     Function
     ----------
@@ -79,7 +82,7 @@ def ligand_prepare(input_folder,
     """
 
     def path_definer(input_folder,
-                     residue_name):
+                     ligand_folder):
         """
         Function
         ----------
@@ -111,12 +114,124 @@ def ligand_prepare(input_folder,
             raise Exception('PathError: There is no folder with this name: '
                             + path_previous_simulation + '. Please check the path and the folder name.')
 
-        path_ligand = os.path.join(path, residue_name + '_ligand')
+        path_ligand = os.path.join(path, ligand_folder)
 
         if os.path.exists(path_ligand) == False:
             os.mkdir(path_ligand)
 
         return path, path_previous_simulation, path_ligand
+
+    def simulations_checker(path_previous_simulation,
+                            path_ligand):
+        '''
+        Function
+        ----------
+        Checks whether the simulations have already been carried out
+        and if so, whether the internalEnergymetric has been added.
+
+        Parameters
+        ----------
+        - path_previous_simulation : str
+            Path to the protein ligand simulation.
+        - path_ligand : str
+            Path to the ligand simulation.
+          
+        Returns
+        ----------
+        - ligand_simulation_bool : bool
+            Bool that indicates whether the ligand simulation has been carried
+            out.
+        '''
+
+        def check_string_in_file(filename, string_to_search):
+            '''
+            Function
+            ----------
+            Checks if a certain string is in a file.
+
+            Parameters
+            ----------
+            - filename : str
+                Name of the file to check for a certain string.
+            - string_to_search : str
+                String pattern to search in the file.
+
+            Returns
+            ----------
+            string_in_file_bool : bool
+                Bool that indicates whether the pattern has been found in the file.
+            '''
+
+            string_in_file_bool = False
+
+            with open(filename, 'r') as file:
+                for line in file:
+                    if string_to_search in line:
+                        string_in_file_bool = True 
+                        return string_in_file_bool
+                        
+            return string_in_file_bool
+
+        def search_insert_string_in_file(filename, search_string, insert_string):
+            '''
+            Function
+            ----------
+            Searches for the "metrics" part in a pele.conf and adds the 
+            internalEnergy metric in it.
+
+            Parameters
+            ----------
+            - filename : str
+                Name of the file to check for a certain string.
+            - search_string : str
+                String pattern to search in the file.
+            insert_string : str
+                String that we want to add to the file.
+            '''
+
+            with open(filename, 'r') as f:
+                file_data = f.read()
+
+            index = file_data.find(search_string)
+
+            if index == -1:
+                # Search string not found in file
+                raise Exception('MetricSectionError: No metrics bindingEnergy metric has been found in the pele.conf!')
+
+            # Insert the new string after the search string
+            new_data = file_data[:index+len(search_string)] + \
+                insert_string + file_data[index+len(search_string):]
+            
+            with open(filename, 'w') as f:
+                f.write(new_data)
+
+        # Checking existance of directories.
+        if os.path.isdir(os.path.join(path_previous_simulation, 'output')):
+            previous_simulation_bool = True
+        else:
+            previous_simulation_bool = False
+
+        # Checking if ligand simulation is done
+        if os.path.isdir(os.path.join(path_ligand, 'output')):
+            ligand_simulation_bool = True
+            print(
+                ' -   Ligand simulation already done, a new simulation will not be carried out.')
+        else:
+            ligand_simulation_bool = False
+
+        # Checking for internalEnergy metric
+        if previous_simulation_bool:
+            if not check_string_in_file(os.path.join(path_previous_simulation, 'pele.conf'), 'internalEnergy'):
+                print(
+                    ' -   Internal energy has not been computed. Strain cannot be calculated.')
+                print(' -   Adding internalEnergy metric in the pele.conf.\n')
+                search_insert_string_in_file(os.path.join(path_previous_simulation, 'pele.conf'),
+                                             '                        { "type": "bindingEnergy",\n                           "boundPartSelection": { "chains": { "names": ["L"] } }\n                        },',
+                                             '\n\n\n                        { "type": "internalEnergy",\n                           "atomSetSelection": { "chains": { "names": ["L"] } }\n                        },\n')
+            else:
+                print(' -   internalEnergy is already added in the pele.conf.\n')
+
+        return ligand_simulation_bool
 
     def ff_sm_checker(force_field,
                       solvent_model):
@@ -249,7 +364,7 @@ def ligand_prepare(input_folder,
                         line = line.split()
 
                         if len(line[4]) == 5:
-                        
+
                             chain = list(line[4])[0]
                             number = "".join(list(line[4])[1:])
                             atom = '_' + line[2] + '_'
@@ -457,7 +572,7 @@ def ligand_prepare(input_folder,
     #
     print(' ')
     print('*******************************************************************')
-    print('*                           peleLInEn                              *')
+    print('*                           peleLInEn                             *')
     print('* --------------------------------------------------------------- *')
     print('*      Ligand\'s internal energy from ligand PELE simulation       *')
     print('*******************************************************************')
@@ -465,43 +580,49 @@ def ligand_prepare(input_folder,
     #
 
     path, path_previous_simulation, path_ligand = \
-        path_definer(input_folder, residue_name)
+        path_definer(input_folder, ligand_folder)
 
-    force_field, solvent_model = ff_sm_checker(force_field, solvent_model)
+    ligand_simulation_bool = simulations_checker(path_previous_simulation,
+                                                 path_ligand)
 
-    print(' -   Writing necessary files to run a PELE simulation and')
-    print('     a PELE platform analysis afterwards.')
-    print(' -   Copying DataLocal and generating ligand.pdb file.\n')
+    if not ligand_simulation_bool:
 
-    directory_preparation(path,
-                          pdb_name,
-                          residue_name,
-                          path_ligand,
-                          path_previous_simulation)
+        print(' -   Writing necessary files to run a PELE simulation and')
+        print('     a PELE platform analysis afterwards.')
+        print(' -   Copying DataLocal and generating ligand.pdb file.\n')
 
-    chain, number, atom = constraint_retriever(pdb_name, path, residue_name)
+        force_field, solvent_model = ff_sm_checker(force_field, solvent_model)
 
-    path_to_run = write_files(force_field,
-                              solvent_model,
-                              chain,
-                              number,
-                              atom,
+        directory_preparation(path,
+                              pdb_name,
+                              residue_name,
                               path_ligand,
-                              pdb_name)
+                              path_previous_simulation)
 
-    if not simulation_bool:
+        chain, number, atom = constraint_retriever(
+            pdb_name, path, residue_name)
 
+        path_to_run = write_files(force_field,
+                                  solvent_model,
+                                  chain,
+                                  number,
+                                  atom,
+                                  path_ligand,
+                                  pdb_name)
+
+        if not simulation_bool:
+
+            print(' ')
+
+            os.chdir(path_ligand)
+            os.system("sbatch %s" % path_to_run)
+
+        else:
+
+            print(' -   PELE simulation skipped.')
+
+        #
         print(' ')
-
-        os.chdir(path_ligand)
-        os.system("sbatch %s" % path_to_run)
-
-    else:
-
-        print(' -   PELE simulation skipped.')
-
-    #
-    print(' ')
 
 
 def main(args):
@@ -516,11 +637,12 @@ def main(args):
     """
 
     ligand_prepare(input_folder=args.input_folder,
-                  residue_name=args.residue_name,
-                  pdb_name=args.input_file,
-                  force_field=args.force_field,
-                  solvent_model=args.solvent_model,
-                  simulation_bool=args.simulation_bool)
+                   residue_name=args.residue_name,
+                   pdb_name=args.input_file,
+                   force_field=args.force_field,
+                   solvent_model=args.solvent_model,
+                   simulation_bool=args.simulation_bool,
+                   ligand_folder=args.ligand_folder)
 
 
 if __name__ == '__main__':
