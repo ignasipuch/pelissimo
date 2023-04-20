@@ -60,6 +60,8 @@ def parse_args(args):
         to keep to assess the strain energy")
     parser.add_argument("-cl", "--clusters_folder", type=str, dest="clusters_folder",
                         default=None, help="Name of the folder you want to obtain the clusters information from.")
+    parser.add_argument("-lf", "--ligand_folder", type=str, dest="ligand_folder",
+                        default='LIG_ligand', help="Name of the output folder of the ligand simulation.")    
 
     parser.add_argument("--skip_strain_per_cluster", dest="strain_per_cluster_bool",
                         default=False, action='store_true', help="Flag to choose if strain per cluster code is skipped.")
@@ -72,6 +74,7 @@ def parse_args(args):
 
 
 def corrector(input_folder,
+              ligand_folder,
               residue_name,
               report_name,
               quantile,
@@ -97,6 +100,7 @@ def corrector(input_folder,
     """
 
     def path_definer(input_folder,
+                     ligand_folder,
                      residue_name):
         """
         Function
@@ -128,7 +132,7 @@ def corrector(input_folder,
         path_pl_output = os.path.join(path_pl_simulation, 'output')
         path_pl_results = os.path.join(path_pl_simulation, 'strain')
 
-        path_l_simulation = os.path.join(path, residue_name + '_ligand')
+        path_l_simulation = os.path.join(path, ligand_folder)
 
         if os.path.isdir(path_pl_simulation) == False:
             raise Exception('PathError: There is no folder with this path: ' +
@@ -1005,7 +1009,7 @@ def corrector(input_folder,
     path_pl_simulation,\
         path_pl_output,\
         path_l_simulation,\
-        path_pl_results = path_definer(input_folder, residue_name)
+        path_pl_results = path_definer(input_folder, ligand_folder, residue_name)
 
     correction_number = corrections_detector(
         path_pl_simulation, path_l_simulation)
@@ -1127,6 +1131,7 @@ def main(args):
     """
 
     corrector(input_folder=args.input_folder,
+              ligand_folder=args.ligand_folder,
               residue_name=args.residue_name,
               report_name=args.report_name,
               quantile=args.quantile,
