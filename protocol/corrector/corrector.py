@@ -1031,13 +1031,13 @@ def corrector(input_folder,
         entropy_change = entropy_correction(path_pl_simulation)
 
     # Corrections column location ---
-    file = os.path.join(path_pl_simulation, 'output', '1', report_name + '_1')
+    file = os.path.join(path_pl_simulation, 'output', '0', report_name + '_1')
 
     column_current_energy, column_binding_energy, column_internal_energy = \
         column_retriever(file)
 
     # Trajectories format
-    file_format = trajectory_retriever(os.path.join(path_pl_simulation, 'output', '1'))
+    file_format = trajectory_retriever(os.path.join(path_pl_simulation, 'output', '0'))
 
     #
     print(' ')

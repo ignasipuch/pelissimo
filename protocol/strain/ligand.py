@@ -206,7 +206,7 @@ def ligand_prepare(input_folder,
                 f.write(new_data)
 
         # Checking existance of directories.
-        if os.path.isdir(os.path.join(path_previous_simulation, 'output')):
+        if os.path.isdir(os.path.join(path_previous_simulation)):
             previous_simulation_bool = True
         else:
             previous_simulation_bool = False
