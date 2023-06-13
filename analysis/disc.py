@@ -52,7 +52,7 @@ def parse_args(args):
     parser.add_argument("-a", "--action", type=str, dest="action",
                         default='all', help="Function the user wants the script to do: all, first or evolution.")
     parser.add_argument("-s", "--software", type=str, dest="software",
-                        default='platform', help="Select the software with whih the simulation has been carried out.")            
+                        default='platform', help="Select the software with whih the simulation has been carried out: platform or suite.")            
 
     parsed_args = parser.parse_args(args)
 
