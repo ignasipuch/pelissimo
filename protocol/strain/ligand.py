@@ -448,7 +448,7 @@ def ligand_prepare(input_folder,
                 '        "savingFrequencyForAcceptedSteps": 1,\n'
                 '        "savingMode": "savingTrajectory",\n'
                 '        "reportPath": "output/report",\n'
-                '        "trajectoryPath": "output/trajectory.pdb"\n'
+                '        "trajectoryPath": "output/trajectory.xtc"\n'
                 '      },\n'
                 '      "PELE_Parameters": {\n'
                 '        "anmFrequency": 0,\n'
